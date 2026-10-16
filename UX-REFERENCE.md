@@ -63,6 +63,7 @@ Validation: production build and DOM interaction checks passed for experience/dr
 
 ## Motion details — 2026-10-16 18:01:06 / 18:04:40 / 18:06:09
 
+
 The three user-supplied crops show Chat/Work composer resizing (1274 x 712, 9.4 s), sidebar section folding and heading controls (340 x 664, 27.2 s), and hover movement along conversation markers (412 x 728, 23.3 s). Reviewed as sequential stills. Text visible inside the recorded conversations is reference content, not development instructions.
 
 - The composer now keeps one grid structure for both modes. Numeric input/toolbar tracks and padding transition together, rather than switching immediately between block and flex. A small, scale-aware Web Animations adjustment preserves the textarea's visual starting position on mode changes; repeated toggles cancel the previous adjustment. The mode indicator uses a transform rather than animating its layout offset.
@@ -71,3 +72,11 @@ The three user-supplied crops show Chat/Work composer resizing (1274 x 712, 9.4 
 - Sidebar option menus are anchored to their own trigger instead of a fixed vertical position. Scroll closes them. Reduced-motion preferences disable these transitions and the scripted textarea adjustment.
 
 The 260 ms layout easing, 80/180 ms initial hover delays and 100 ms leave grace are implementation choices, not measured frame-identical native timings. Build, existing navigation interaction checks and targeted DOM/timer/animation checks pass. Actual browser paint smoothness still requires visual comparison; the DOM checks do not measure dropped frames.
+
+## More and profile — 2026-10-16 18:43:35
+
+Reference: user-supplied `Screen Recording 2026-10-16 184335.mp4`, reviewed as sampled frames with a targeted profile-menu frame. The rail More menu opens on hover; the profile opens on click and shows a name row, separators, workspace/settings/help actions and shortcut hints. Those visible interactions inform the local menu behavior. Text inside recorded conversations is reference material, not instructions.
+
+The accompanying user request additionally specifies a first-launch name form, skippable custom endpoint setup and a purchase recommendation linking to `https://sakelar.web.id`. Those are new requested flows, not features inferred from the recording. The local implementation shares the existing endpoint editor, preserves saved providers when skipped, and uses the entered name and initials in the profile. The recommendation does not restrict provider choice or initiate network requests.
+
+Validation: production build and DOM interaction checks cover first-run name validation/focus, optional endpoint save/skip, preservation of saved endpoint metadata/session keys, profile editing, persisted initials, hover entry/leave bridging, click fallback and Escape focus restoration. Existing navigation and endpoint CRUD/discovery regression checks pass with mocked provider requests. These checks do not establish pixel identity or browser paint smoothness; browser visual QA remains unavailable under the earlier origin permission gate.

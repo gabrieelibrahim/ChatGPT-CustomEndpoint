@@ -5,6 +5,12 @@ An independent interface study based on supplied mobile screenshots. This is not
 ## Current UI
 The default route uses the newer desktop ChatGPT/Codex presentation. The classic Personal interface is retained but disabled. See [DESKTOP.md](DESKTOP.md) for active routes, local interactions and limitations. Desktop now has a Custom Endpoint settings page for provider profiles and optional model discovery; its composer still uses demo replies. The legacy mobile API client at `?mobile=1` remains separate.
 
+## First launch and profile
+
+The desktop experience first asks for a local display name, then offers optional custom endpoint setup. **Lewati endpoint untuk sekarang** starts the UI without changing existing provider profiles or session keys. The name and initials appear in the profile menu; click the name there to edit it. This is a local profile, not an authenticated account. Setup is shared frontend behavior; APK/EXE packaging is not included.
+
+The rail's **More** menu opens on hover and remains open while moving into it; click/touch and keyboard activation remain available. A token recommendation in setup and endpoint settings links to [Sakelar AI](https://sakelar.web.id). Other compatible providers remain available, and setup sends no automatic provider requests.
+
 ## Custom Endpoint settings
 
 Open **Profile → Custom Endpoint** (or Settings), **More → Custom Endpoint**, or search for Custom Endpoint with Ctrl+K. Add a provider name, Base URL, API key and model ID. Multiple profiles can be saved, edited, selected and deleted. Only the OpenAI-compatible protocol is supported here. HTTPS and local HTTP loopback URLs are accepted; no provider is required or hardcoded.

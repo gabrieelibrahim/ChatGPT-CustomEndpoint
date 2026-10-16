@@ -32,7 +32,15 @@ The current desktop composition follows a 1920px-wide reference canvas scaled to
 - Shared grid composer motion, retained animated sidebar sections and preview cards that stay mounted while changing hover targets. Motion helpers live in `src/desktop/Motion.tsx` and `motion.css`.
 - Custom Endpoint settings from Profile/Settings, More and the search palette: add/edit/delete/select profiles, manually choose a model or explicitly fetch `/models`. Metadata persists locally; API keys are session-scoped and never included in persistent profile JSON.
 
-Ctrl+Shift+S toggles the sidebar, Ctrl+N or Ctrl+Shift+O starts a new local conversation, Ctrl+K toggles search, Alt+Left/Right traverses local navigation, and Ctrl+Shift+J opens a temporary Chat session when the browser delivers those shortcuts. Browser-reserved shortcuts may take precedence. Settings and native commands in the search palette open local preview dialogs; Open folder uses the existing local project chooser.
+Ctrl+Shift+S toggles the sidebar, Ctrl+N or Ctrl+Shift+O starts a new local conversation, Ctrl+K toggles search, Alt+Left/Right traverses local navigation, and Ctrl+Shift+J opens a temporary Chat session when the browser delivers those shortcuts. Browser-reserved shortcuts may take precedence. Settings and Ctrl+, open Custom Endpoint settings; unsupported native commands in the search palette open local preview dialogs. Open folder uses the existing local project chooser.
+
+## First launch and profile
+
+The newer desktop UI requires a local display name on first launch, then offers the existing endpoint editor as an optional second step. Skipping preserves any saved endpoint metadata and session credentials. The form can be revisited through Profile / Custom Endpoint. No automatic connection test is performed. The local name persists under `client-local-profile-v1`; it updates avatar initials and the editable profile menu name, replacing the reference's hardcoded identity. This is not account authentication or cross-device identity.
+
+Setup and name editing use a responsive dialog outside the scaled desktop canvas, with initial focus, Tab containment and hidden/inert inactive steps. Existing chat state is retained. The rail More menu opens on pointer hover, with a short leave grace while crossing into its panel, and keeps click/touch and keyboard activation. Escape restores focus to its trigger without reopening the panel. Unsupported account actions remain previews; Invite a coworker is disabled to match the reference.
+
+A recommendation card in setup and endpoint settings links explicitly to `https://sakelar.web.id`; it does not preconfigure a provider or route requests through Sakelar. The startup flow can be reused by future native wrappers, but no APK/EXE packaging is implemented here.
 
 ## Fonts
 

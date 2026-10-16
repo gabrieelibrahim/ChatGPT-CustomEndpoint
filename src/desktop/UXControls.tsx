@@ -11,11 +11,15 @@ export const navigationItems = [
   { icon: 'globe', label: 'Custom Endpoint', screen: 'endpoints' },
 ];
 
-export function MoreNavigation({ pinned, onPin, onOpen }: {
+export function MoreNavigation({ pinned, onPin, onOpen, onEnter, onLeave, onClose }: {
   pinned: string[]; onPin: (label: string) => void;
   onOpen: (item: typeof navigationItems[number]) => void;
+  onEnter?: () => void; onLeave?: () => void; onClose?: () => void;
 }) {
-  return <div className="d-popover d-more" role="menu" aria-label="More navigation">
+  return <div id="d-more-navigation" className="d-popover d-more" role="menu" aria-label="More navigation" onMouseEnter={onEnter} onMouseLeave={onLeave} onFocusCapture={onEnter} onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))onLeave?.()}} onKeyDown={event=>{
+    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();onClose?.()}
+    if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();const items=Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role=menuitem]'));const index=items.indexOf(document.activeElement as HTMLButtonElement);items[event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowDown'?1:-1)+items.length)%items.length]?.focus()}
+  }}>
     {navigationItems.map(item => <div className="d-more-row" key={item.label}>
       <button role="menuitem" onClick={() => onOpen(item)}><I name={item.icon}/><span>{item.label}</span></button>
       <B icon="pin" label={(pinned.includes(item.label) ? 'Unpin ' + item.label + ' from sidebar' : 'Pin ' + item.label + ' to sidebar')}
