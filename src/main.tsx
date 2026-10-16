@@ -10,4 +10,5 @@ import './desktop/video-ux.css';
 import './desktop/shapes.css';
 import './desktop/chat-mode.css';
 import './desktop/navigation.css';
+import './desktop/motion.css';
 createRoot(document.getElementById('root')!).render(<Shell/>);

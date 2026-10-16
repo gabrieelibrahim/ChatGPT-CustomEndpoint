@@ -29,6 +29,7 @@ The current desktop composition follows a 1920px-wide reference canvas scaled to
 - Search palette with chat/content filtering, quick actions and navigation; arrows, Enter, Escape and Alt+1 through Alt+9 selection.
 - Sidebar collapse preserves scroll position and folded sections; Pinned is available in both experiences.
 - Local Back/Forward history and a sliding Chat/Work selection indicator, with reduced-motion support.
+- Shared grid composer motion, retained animated sidebar sections and preview cards that stay mounted while changing hover targets. Motion helpers live in `src/desktop/Motion.tsx` and `motion.css`.
 
 Ctrl+Shift+S toggles the sidebar, Ctrl+N or Ctrl+Shift+O starts a new local conversation, Ctrl+K toggles search, Alt+Left/Right traverses local navigation, and Ctrl+Shift+J opens a temporary Chat session when the browser delivers those shortcuts. Browser-reserved shortcuts may take precedence. Settings and native commands in the search palette open local preview dialogs; Open folder uses the existing local project chooser.
 
