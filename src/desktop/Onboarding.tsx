@@ -29,6 +29,7 @@ function ProfileOverlay({ children, label, close, fullPage = false }: { children
 
 export function Onboarding({ onComplete }: { onComplete: (profile: LocalProfile) => void }) {
   const [step, setStep] = useState(1), [name, setName] = useState(''), [error, setError] = useState('');
+  const [endpointOpen, setEndpointOpen] = useState(false);
   const nameInput = useRef<HTMLInputElement>(null);
   function finish() {
     try { const profile = saveLocalProfile(name); onComplete(profile); }
@@ -36,8 +37,10 @@ export function Onboarding({ onComplete }: { onComplete: (profile: LocalProfile)
   }
   useEffect(() => {
     if (step === 1) nameInput.current?.focus();
-    else document.querySelector<HTMLInputElement>('.d-setup #endpoint-name')?.focus();
-  }, [step]);
+    else if (endpointOpen) document.querySelector<HTMLInputElement>('.d-setup #endpoint-name')?.focus();
+    else document.querySelector<HTMLButtonElement>('.d-auth-connect-toggle')?.focus();
+    document.querySelector('.d-auth-page')?.scrollTo({ top: 0 });
+  }, [step, endpointOpen]);
   return <ProfileOverlay label="Pengaturan awal" fullPage>
     <div className="d-auth-step" role="status">Langkah {step} dari 2</div>
     <div className="d-auth-name-step" hidden={step !== 1} inert={step !== 1}>
@@ -52,10 +55,13 @@ export function Onboarding({ onComplete }: { onComplete: (profile: LocalProfile)
     <div className="d-auth-endpoint-step" hidden={step !== 2} inert={step !== 2}>
       <div className="d-auth-identity"><span>{profileInitials(name)}</span><b>{name.trim()}</b><button aria-label="Ubah nama" onClick={() => { setError(''); setStep(1); }}><I name="edit" size={17}/></button></div>
       <h1>Hubungkan AI pilihanmu</h1><p className="d-setup-intro">Tambahkan custom endpoint, atau atur nanti dari profil.</p>
-      <button className="d-setup-skip" onClick={finish}>Lewati endpoint untuk sekarang</button>
-      <div className="d-auth-divider"><span>ATAU</span></div>
-      <EndpointSettings setup onSaved={finish} onBack={() => { setError(''); setStep(1); }}/>
+      <button className="d-auth-connect-toggle" aria-expanded={endpointOpen} aria-controls="setup-endpoint-fields" onClick={() => setEndpointOpen(value => !value)}><span className="d-auth-connect-icon"><I name="globe" size={21}/></span><span><b>Custom endpoint</b><small>Gunakan penyedia AI pilihanmu</small></span><span className="d-auth-connect-chevron"><I name="down" size={18}/></span></button>
+      <div id="setup-endpoint-fields" hidden={!endpointOpen} inert={!endpointOpen}>
+        <EndpointSettings setup onSaved={finish} onBack={() => setEndpointOpen(false)}/>
+      </div>
       {error && step === 2 && <p className="d-setup-error" role="alert">{error}</p>}
+      <div className="d-auth-divider"><span>ATAU</span></div>
+      <button className="d-setup-skip" onClick={finish}>Lewati endpoint untuk sekarang</button>
       <SakelarRecommendation/>
       <p className="d-auth-footnote">Koneksi ini opsional. Kamu bebas memilih penyedia AI.<br/>Pengaturan tersimpan di perangkat ini.</p>
     </div>
