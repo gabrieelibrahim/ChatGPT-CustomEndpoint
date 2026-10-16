@@ -5,14 +5,15 @@ import { profileInitials, saveLocalProfile, type LocalProfile } from '../lib/loc
 import { EndpointSettings } from './EndpointSettings';
 import { SakelarRecommendation } from './SakelarRecommendation';
 
-function ProfileOverlay({ children, label, close }: { children: ReactNode; label: string; close?: () => void }) {
+function ProfileOverlay({ children, label, close, fullPage = false }: { children: ReactNode; label: string; close?: () => void; fullPage?: boolean }) {
   const dialog = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     dialog.current?.querySelector<HTMLInputElement>('input')?.focus();
     return () => { if (previous?.isConnected && !previous.closest('[inert]')) previous.focus(); };
   }, []);
-  const content = <div className="d-setup" onMouseDown={event => { if (close && event.target === event.currentTarget) close(); }}>
+  const content = <div className={'d-setup' + (fullPage ? ' d-auth-page' : '')} onMouseDown={event => { if (close && event.target === event.currentTarget) close(); }}>
+    {fullPage && <div className="d-auth-wordmark">Sakelar <span>AI</span></div>}
     <div className="d-setup-dialog" ref={dialog} role="dialog" aria-modal="true" aria-label={label}
       onKeyDown={event => {
         if (event.key === 'Escape') { event.stopPropagation(); if (close) close(); }
@@ -37,24 +38,26 @@ export function Onboarding({ onComplete }: { onComplete: (profile: LocalProfile)
     if (step === 1) nameInput.current?.focus();
     else document.querySelector<HTMLInputElement>('.d-setup #endpoint-name')?.focus();
   }, [step]);
-  return <ProfileOverlay label="Pengaturan awal">
-    <div className="d-setup-brand"><span>S</span>Sakelar Universal AI Client</div>
-    <div className="d-setup-progress" aria-label={'Langkah ' + step + ' dari 2'}><span className="d-done"/><span className={step === 2 ? 'd-done' : ''}/></div>
-    <div hidden={step !== 1} inert={step !== 1}>
-      <h1>Selamat datang</h1><p className="d-setup-intro">Kita mulai dari namamu. Nama ini akan tampil di profil aplikasi.</p>
+  return <ProfileOverlay label="Pengaturan awal" fullPage>
+    <div className="d-auth-step" role="status">Langkah {step} dari 2</div>
+    <div className="d-auth-name-step" hidden={step !== 1} inert={step !== 1}>
+      <h1>Selamat datang</h1><p className="d-setup-intro">Masukkan namamu untuk mulai menggunakan Sakelar.</p>
       <form className="d-name-form" onSubmit={event => { event.preventDefault(); if (!name.trim()) { setError('Isi namamu terlebih dahulu.'); return; } setError(''); setStep(2); }}>
         <label htmlFor="setup-name">Nama kamu</label><input ref={nameInput} id="setup-name" maxLength={80} autoComplete="name" placeholder="Masukkan nama" value={name} onChange={event => { setName(event.target.value); setError(''); }} required/>
-        <p>Disimpan di perangkat ini. Kamu bisa mengubahnya nanti lewat profil.</p>
         {error && step === 1 && <p className="d-setup-error" role="alert">{error}</p>}
-        <button className="d-setup-primary" type="submit">Lanjut <I name="arrow" size={18}/></button>
+        <button className="d-setup-primary" type="submit">Lanjut</button>
       </form>
+      <p className="d-auth-footnote">Nama disimpan di perangkat ini dan bisa diubah dari profil.<br/>Sakelar Universal AI Client adalah aplikasi independen.</p>
     </div>
-    <div hidden={step !== 2} inert={step !== 2}>
-      <h1>Hubungkan AI pilihanmu</h1><p className="d-setup-intro">Hai, {name.trim()}. Tambahkan custom endpoint sekarang, atau atur nanti dari menu profil.</p>
-      <SakelarRecommendation/>
+    <div className="d-auth-endpoint-step" hidden={step !== 2} inert={step !== 2}>
+      <div className="d-auth-identity"><span>{profileInitials(name)}</span><b>{name.trim()}</b><button aria-label="Ubah nama" onClick={() => { setError(''); setStep(1); }}><I name="edit" size={17}/></button></div>
+      <h1>Hubungkan AI pilihanmu</h1><p className="d-setup-intro">Tambahkan custom endpoint, atau atur nanti dari profil.</p>
+      <button className="d-setup-skip" onClick={finish}>Lewati endpoint untuk sekarang</button>
+      <div className="d-auth-divider"><span>ATAU</span></div>
       <EndpointSettings setup onSaved={finish} onBack={() => { setError(''); setStep(1); }}/>
       {error && step === 2 && <p className="d-setup-error" role="alert">{error}</p>}
-      <button className="d-setup-skip" onClick={finish}>Lewati endpoint untuk sekarang</button>
+      <SakelarRecommendation/>
+      <p className="d-auth-footnote">Koneksi ini opsional. Kamu bebas memilih penyedia AI.<br/>Pengaturan tersimpan di perangkat ini.</p>
     </div>
   </ProfileOverlay>;
 }
