@@ -32,7 +32,7 @@ The current desktop composition follows a 1920px-wide reference canvas scaled to
 - Shared grid composer motion, retained animated sidebar sections and preview cards that stay mounted while changing hover targets. Motion helpers live in `src/desktop/Motion.tsx` and `motion.css`.
 - Custom Endpoint settings from Profile/Settings, More and the search palette: add/edit/delete/select profiles, manually choose a model or explicitly fetch `/models`. Metadata persists locally; API keys are session-scoped and never included in persistent profile JSON.
 
-Ctrl+Shift+S toggles the sidebar, Ctrl+N or Ctrl+Shift+O starts a new local conversation, Ctrl+K toggles search, Alt+Left/Right traverses local navigation, and Ctrl+Shift+J opens a temporary Chat session when the browser delivers those shortcuts. Browser-reserved shortcuts may take precedence. Settings and Ctrl+, open Custom Endpoint settings; external integrations in the search palette show their missing prerequisites explicitly. Open folder uses the existing local project chooser.
+Ctrl+Shift+S toggles the sidebar, Ctrl+N or Ctrl+Shift+O starts a new local conversation, Ctrl+K toggles search, Alt+Left/Right traverses local navigation, and Ctrl+Shift+J opens a temporary Chat session when the browser delivers those shortcuts. Browser-reserved shortcuts may take precedence. Settings and Ctrl+, open General in the searchable Settings page; external integrations in the search palette show their missing prerequisites explicitly. Open folder uses the existing local project chooser.
 
 ## First launch and profile
 
@@ -43,6 +43,10 @@ Setup uses a full-page dark authentication-style presentation outside the scaled
 Name editing retains its existing responsive dialog. Both use initial focus, Tab containment and hidden/inert inactive steps. The endpoint step first shows a compact connection choice and Skip; activating Custom endpoint reveals the editor and focuses its first field. Kembali collapses it without discarding the draft. Returning to edit the name also retains the endpoint draft. Existing chat state is retained. The rail More menu opens on pointer hover, with a short leave grace while crossing into its panel, and keeps click/touch and keyboard activation. Escape restores focus to its trigger without reopening the panel. Unsupported account actions identify their integration requirements; Invite a coworker is disabled to match the reference.
 
 A recommendation card in setup and endpoint settings links explicitly to `https://sakelar.web.id`; it does not preconfigure a provider or route requests through Sakelar. The startup flow can be reused by future native wrappers, but no APK/EXE packaging is implemented here.
+
+## Functional Settings tabs
+
+The reference recording's settings navigation now has actual pages rather than a shared generic dialog. Appearance, keyboard, dictation/read-aloud, composer behavior, model/effort, prompt personalization, local storage/import/archive and usage reporting are wired to the existing UI/engine. Local agent network/file policies and configured MCP enablement are applied to real runtime sessions. Browser mini chat and local emoji companions are independent client features. See [SETTINGS.md](SETTINGS.md) for the control inventory, privacy, tests and honest native/cloud limitations.
 
 ## Endpoint settings theme
 

@@ -3,6 +3,7 @@ import { B, I } from './Desktop';
 import { parseThinking } from '../lib/endpointChat';
 
 export { parseThinking };
+import { speakText } from '../lib/clientSettings';
 
 export const navigationItems = [
   { icon: 'folder', label: 'Projects', screen: 'projects' },
@@ -173,8 +174,7 @@ export function MessageActions({ text, user = false, timestamp, onEdit, onNotice
   function content() { return typeof text === 'function' ? text() : text; }
   async function copy() { try { await navigator.clipboard.writeText(content()); setCopied(true); } catch { onNotice('Clipboard tidak tersedia'); } }
   function speak() {
-    if (!('speechSynthesis' in window)) { onNotice('Read aloud tidak tersedia di browser ini'); return; }
-    window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(content()));
+    try { speakText(content()); } catch (failure) { onNotice((failure as Error).message); }
   }
   return <div className={'d-message-actions d-live-actions ' + (user ? 'd-user-actions' : '')} ref={menuRef}>
     {user && timestamp && <time>{new Date(timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</time>}

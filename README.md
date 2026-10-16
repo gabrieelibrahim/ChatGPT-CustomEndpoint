@@ -13,7 +13,7 @@ The rail's **More** menu opens on hover and remains open while moving into it; c
 
 ## Custom Endpoint settings
 
-Open **Profile → Custom Endpoint** (or Settings), **More → Custom Endpoint**, or search for Custom Endpoint with Ctrl+K. Add a provider name, Base URL, API key and model ID. Multiple profiles can be saved, edited, selected and deleted. Only the OpenAI-compatible protocol is supported here. HTTPS and local HTTP loopback URLs are accepted; no provider is required or hardcoded.
+Open **Profile → Custom Endpoint** (or the Custom Endpoint tab in Settings), **More → Custom Endpoint**, or search for Custom Endpoint with Ctrl+K. Add a provider name, Base URL, API key and model ID. Multiple profiles can be saved, edited, selected and deleted. Only the OpenAI-compatible protocol is supported here. HTTPS and local HTTP loopback URLs are accepted; no provider is required or hardcoded.
 
 Profile metadata is stored in localStorage; API keys stay in sessionStorage for the current tab session. Keys are masked and excluded from profile serialization. **Tes & ambil model** explicitly requests the configured provider's `/models` endpoint; discovered models can be searched and selected, and IDs can also be entered manually. The composer model menu uses saved provider models. Effort is sent only if **Kirim reasoning_effort** is explicitly enabled for a compatible model; supported values depend on the provider. Text attachments and PNG/JPEG/WebP/GIF images can be sent explicitly with Send. Images require a vision-capable model. Files persist in the local IndexedDB library; unsupported formats fail clearly. See [FEATURE-STATUS.md](FEATURE-STATUS.md) for bounds and feature status.
 
@@ -32,6 +32,10 @@ The Codex experience can use an installed **Codex CLI/app-server** through a loc
 Keys are passed to the private runtime process via its environment, never CLI arguments or persistent config. A temporary isolated CODEX_HOME prevents importing the user's main Codex account, plugins or settings. Sessions are ephemeral, closed when starting/opening another chat, and idle sessions expire after 15 minutes. Local text history remains in this client; reopening a conversation starts a fresh native thread with that text as context, without reconstructing old tool state. Only the workspace path/access preference is persisted; enabling agent execution and confirming Responses support must be repeated after reload.
 
 This bridge runs only in localhost development. Production static hosting cannot execute local tools. Native packaging, browser/desktop computer-use adapters, hosted Codex services, OAuth-authenticated MCP configuration and full native thread restoration are not implemented. Plugins now stores independent HTTP/stdio MCP profiles that are passed to the next private runtime session. Unknown native interaction requests fail explicitly instead of being approved. It is not full feature parity with the official application. See [AGENT-RUNTIME.md](AGENT-RUNTIME.md) for evidence and verification.
+
+## Functional settings
+
+Profile → Settings and Ctrl+, open the searchable settings sidebar from the supplied recording. Sixteen tabs connect appearance, keyboard, voice, instructions/memory notes, storage, archive/import, real provider configuration, usage reporting and local-agent access to actual behavior. A compact provider chat is available at `?mini=1`. See [SETTINGS.md](SETTINGS.md) for per-control behavior and native/service boundaries. Settings content is loaded on demand; there are no new runtime dependencies.
 
 ## Local client features
 
@@ -52,7 +56,7 @@ npm run test:workspace
 npm run test:files
 ```
 
-`npm test` runs all 27 transport/workspace/file/history tests. Optional `npm run test:runtime` requires an installed Codex runtime and executes a harmless local command and MCP echo against a fake-key local gateway; it uses no external inference.
+`npm test` runs all 36 transport/workspace/file/history/settings tests. Optional `npm run test:runtime` requires an installed Codex runtime and executes a harmless local command and MCP echo against a fake-key local gateway; it uses no external inference.
 
 ## Production
 ```sh

@@ -22,7 +22,8 @@ export function parseThinking(text: string, explicitReasoning?: string): { reaso
   return { reasoning: '', content: text, isThinking: false };
 }
 
-export async function streamEndpointChat(profile: EndpointProfile, key: string, model: string, messages: ProviderMessage[], signal: AbortSignal, onText: (text: string, reasoning?: string) => void, reasoningEffort?: string): Promise<void> {
+export async function streamEndpointChat(profile: EndpointProfile, key: string, model: string, messages: ProviderMessage[], signal: AbortSignal, onText: (text: string, reasoning?: string) => void, reasoningEffort?: string, onUsage?: (usage: { input?: number; output?: number }) => void): Promise<void> {
+  function usage(value: unknown) { const tokens = value as { prompt_tokens?: unknown; completion_tokens?: unknown } | undefined; if (!tokens) return; const input = typeof tokens.prompt_tokens === 'number' && Number.isFinite(tokens.prompt_tokens) && tokens.prompt_tokens >= 0 ? tokens.prompt_tokens : undefined, output = typeof tokens.completion_tokens === 'number' && Number.isFinite(tokens.completion_tokens) && tokens.completion_tokens >= 0 ? tokens.completion_tokens : undefined; if (input !== undefined || output !== undefined) onUsage?.({ input, output }); }
   if (profile.auth === 'bearer' && !key.trim()) throw Error('API key sesi ini belum tersedia. Masukkan ulang di Custom Endpoint.');
   const response = await providerFetch(normalizeBaseUrl(profile.baseUrl) + '/chat/completions', profile.auth === 'bearer' ? key : '', signal, {
     model, stream: true, messages: messages.filter(message => message.text || message.images?.length).map(message => ({ role: message.role, content: message.images?.length ? [{ type: 'text', text: message.text }, ...message.images.map(url => ({ type: 'image_url', image_url: { url } }))] : message.text })),
@@ -32,6 +33,7 @@ export async function streamEndpointChat(profile: EndpointProfile, key: string, 
   const contentType = response.headers.get('content-type') || '';
   if (contentType.includes('application/json')) {
     const json = await response.json();
+    usage(json.usage);
     const text = json?.choices?.[0]?.message?.content;
     const reasoning = json?.choices?.[0]?.message?.reasoning_content ?? json?.choices?.[0]?.message?.reasoning ?? json?.choices?.[0]?.message?.thought ?? '';
     if (typeof text !== 'string' || !text) throw Error('Penyedia tidak mengirim jawaban teks yang dikenali.');
@@ -47,6 +49,7 @@ export async function streamEndpointChat(profile: EndpointProfile, key: string, 
     let json;
     try { json = JSON.parse(raw); } catch { throw Error('Respons streaming penyedia tidak valid.'); }
     if (json.error) throw Error('Penyedia menghentikan jawaban. Periksa model, kuota, dan izin API key.');
+    usage(json.usage);
     const delta = json.choices?.[0]?.delta;
     const deltaContent = delta?.content;
     const deltaReasoning = delta?.reasoning_content ?? delta?.reasoning ?? delta?.thought;

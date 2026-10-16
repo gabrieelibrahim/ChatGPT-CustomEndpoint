@@ -18,6 +18,8 @@ The custom client integrates through the documented [Codex App Server protocol](
 | Chat | Agent deltas/final messages streamed into existing composer/history flow; explicit text/image attachments |
 | Terminal | Native commandExecution items and live output, with exit/status details |
 | Files | Native fileChange items and turn diff shown as inert, expandable text |
+| Usage | Actual cumulative native token notifications converted to per-turn input/output counts for the local usage page |
+| Network | Explicit setting applies to native sandbox commands; Plan-only sandbox commands always disable network. Gateway/MCP connections have independent access |
 | Plan | Native plan notifications displayed; existing Plan mode constrains the turn to read-only with no approval escalation |
 | Approval | Command/file requests require explicit accept-once or decline from client; unsupported interaction requests return errors |
 | Stop | turn/interrupt; handles cancellation while waiting for turn identity |
@@ -32,15 +34,15 @@ Workspace editing follows the runtime's sandbox, not a custom string-based comma
 
 Runtime home directories are newly created under the OS temp directory. The bridge does not read or modify the user's existing Codex config/account/plugins. The selected provider key is an environment variable; the private runtime's provider configuration contains only its variable name. Temporary homes are removed after closing owned processes, with bounded retries. An abnormal OS/process termination can leave temporary runtime files; this is not a permanent credential-vault implementation.
 
-Browser session history and native agent state remain distinct. Native threads are ephemeral; reconnecting sends old local text as context, without claiming to restore original command state or tool history. The agent's active connection and Responses acknowledgment are not persisted. Native activity output/diffs remain in memory for the current session.
+Browser session history and native agent state remain distinct. Native threads are ephemeral; reconnecting sends old local text as context, without claiming to restore original command state or tool history. The agent's active connection and Responses acknowledgment are not persisted. Native activity output/diffs remain in memory for the current session. Numeric usage metadata is stored separately without prompts, answers or credentials; see [SETTINGS.md](SETTINGS.md).
 
 ## Verification
 
 - `npm run build`: TypeScript and production bundle.
-- `npm run test:providers`: eight provider/relay tests, including vision request payloads.
+- `npm run test:providers`: nine provider/relay tests, including vision and actual provider usage payloads.
 - `npm run test:files`: asynchronous storage lifecycle fixtures, text/vision hydration, unsupported/missing files, size/count limits and cancellation. Native browser IndexedDB behavior still needs visual/manual verification.
 - `npm run test:workspace`: real folder/index/UTF-8 preview, traversal/symlink containment, binary/size rejection and MCP option validation.
-- `npm run test:agent`: loopback/origin checks, folder/provider validation, RPC tool streaming, explicit approvals, unknown-request rejection, secret redaction, stop during turn creation and HTTP session isolation and native image-input payloads.
+- `npm run test:agent`: loopback/origin checks, folder/provider validation, RPC tool streaming, explicit approvals, unknown-request rejection, secret redaction, stop during turn creation and HTTP session isolation, native image-input payloads, explicit network/Plan policies and per-turn token deltas.
 - `npm run test:runtime`: reproducible installed-runtime command + local stdio MCP echo smoke test against a fake-key loopback gateway.
 - Installed Windows runtime: real initialize and thread/start succeeded using an isolated home and fake key.
 - Real runtime with a local mock Responses gateway: a deterministic function call requested a harmless PowerShell `Write-Output` command. Approval was explicitly accepted by the test, command exited 0, output streamed, and the runtime made the next model request and completed its answer. No external inference service or paid key was used.

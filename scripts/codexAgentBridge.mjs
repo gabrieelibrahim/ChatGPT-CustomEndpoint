@@ -46,7 +46,7 @@ export async function validateAgentConnection(payload) {
     else if (item.kind === 'stdio' && typeof item.command === 'string' && item.command.trim() && item.command.length <= 2048 && !/[\r\n\0]/.test(item.command) && Array.isArray(item.args) && item.args.length <= 50 && item.args.every(arg => typeof arg === 'string' && arg.length <= 4000 && !arg.includes('\0'))) mcp.push({ id: item.id, command: item.command, args: item.args });
     else throw Error('Konfigurasi MCP tidak valid.');
   }
-  return { cwd, baseUrl: url.toString().replace(/\/$/, ''), key: payload.key, model: payload.model.trim(), sandbox: payload.sandbox === 'workspace-write' ? 'workspace-write' : 'read-only', mcp };
+  return { cwd, baseUrl: url.toString().replace(/\/$/, ''), key: payload.key, model: payload.model.trim(), sandbox: payload.sandbox === 'workspace-write' ? 'workspace-write' : 'read-only', networkAccess: payload.networkAccess === true, mcp };
 }
 
 // A private app-server instance per browser session. No existing Codex accounts,
@@ -57,6 +57,7 @@ export class CodexAgentSession {
     this.id = randomUUID(); this.pending = new Map(); this.approvals = new Map();
     this.sequence = 0; this.threadId = ''; this.turnId = ''; this.sink = null; this.closed = false;
     this.busy = false; this.touched = Date.now();
+    this.tokenTotal = { inputTokens: 0, outputTokens: 0 }; this.tokensAtTurnStart = { ...this.tokenTotal };
     this.lines = createInterface({ input: child.stdout, crlfDelay: Infinity });
     this.lines.on('line', line => { try { this.receive(JSON.parse(line)); } catch { /* Ignore non-protocol output. */ } });
     child.stderr.resume(); // Never log payloads, command output, or credentials.
@@ -109,6 +110,11 @@ export class CodexAgentSession {
         break;
       case 'turn/diff/updated': this.emit({ type: 'diff', diff: p.diff || '' }); break;
       case 'turn/plan/updated': this.emit({ type: 'plan', explanation: p.explanation, plan: p.plan || [] }); break;
+      case 'thread/tokenUsage/updated': {
+        const total = p.tokenUsage?.total;
+        if (Number.isFinite(total?.inputTokens) && Number.isFinite(total?.outputTokens)) { this.tokenTotal = { inputTokens: total.inputTokens, outputTokens: total.outputTokens }; this.emit({ type: 'usage', input: Math.max(0, total.inputTokens - this.tokensAtTurnStart.inputTokens), output: Math.max(0, total.outputTokens - this.tokensAtTurnStart.outputTokens) }); }
+        break;
+      }
       case 'serverRequest/resolved': this.approvals.delete(String(p.requestId)); this.emit({ type: 'resolved', id: String(p.requestId) }); break;
       case 'error': if (!p.willRetry) this.emit({ type: 'error', text: p.error?.message || 'Permintaan agent gagal.' }); break;
       case 'turn/completed':
@@ -124,9 +130,10 @@ export class CodexAgentSession {
   }
   async turn(text, sink, effort, planOnly = false, images = []) {
     if (this.busy) throw Error('Agent masih bekerja. Hentikan atau tunggu jawaban selesai.');
-    this.busy = true; this.stopRequested = false; this.sink = sink; this.touched = Date.now();
+    this.busy = true; this.stopRequested = false; this.sink = sink; this.touched = Date.now(); this.tokensAtTurnStart = { ...this.tokenTotal };
     try {
-      const sandboxPolicy = planOnly || this.options.sandbox !== 'workspace-write' ? { type: 'readOnly', networkAccess: false } : { type: 'workspaceWrite', writableRoots: [this.options.cwd], networkAccess: false };
+      const networkAccess = !planOnly && this.options.networkAccess === true;
+      const sandboxPolicy = planOnly || this.options.sandbox !== 'workspace-write' ? { type: 'readOnly', networkAccess } : { type: 'workspaceWrite', writableRoots: [this.options.cwd], networkAccess };
       const result = await this.rpc('turn/start', { threadId: this.threadId, input: [{ type: 'text', text: planOnly ? 'Plan only. Explain your proposed steps; do not make changes.\n\n' + text : text }, ...images.map(url => ({ type: 'image', url }))], sandboxPolicy, approvalPolicy: planOnly ? 'never' : 'on-request', ...(effort ? { effort } : {}) });
       if (this.busy) this.turnId = result.turn.id;
       if (this.stopRequested && this.turnId) await this.rpc('turn/interrupt', { threadId: this.threadId, turnId: this.turnId }, 5000);
@@ -177,7 +184,7 @@ export async function createCodexAgent(options, executable) {
     ...(options.key ? { 'model_providers.custom_gateway.env_key': 'SAKELAR_AGENT_API_KEY' } : {}),
     sandbox_mode: options.sandbox, approval_policy: 'on-request',
     'shell_environment_policy.exclude': ['SAKELAR_AGENT_API_KEY'],
-    'sandbox_workspace_write.network_access': false, web_search: 'disabled',
+    'sandbox_workspace_write.network_access': options.networkAccess === true, web_search: 'disabled',
   };
   const args = Object.entries(config).flatMap(([name, value]) => ['-c', name + '=' + JSON.stringify(value)]);
   for (const server of options.mcp || []) {

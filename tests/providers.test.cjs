@@ -94,6 +94,16 @@ test('does not call network without required session credential', async () => {
   global.fetch = () => { throw Error('Unexpected network'); };
   await assert.rejects(streamEndpointChat(profile, '', profile.model, [], new AbortController().signal, () => {}), /API key sesi/);
 });
+
+test('usage callbacks report actual provider values for JSON and SSE without requesting unsupported options', async () => {
+  const reported = []; let body;
+  global.fetch = async (_, options) => { body = JSON.parse(options.body); return Response.json({ choices: [{ message: { content: 'Ready' } }], usage: { prompt_tokens: 123, completion_tokens: 45 } }); };
+  await streamEndpointChat(profile, 'fake', profile.model, [], new AbortController().signal, () => {}, undefined, value => reported.push(value));
+  assert.deepEqual(reported[0], { input: 123, output: 45 }); assert.equal(body.stream_options, undefined);
+  global.fetch = async () => new Response('data: {"choices":[{"delta":{"content":"Ready"}}]}\n\ndata: {"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":2}}\n\ndata: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } });
+  await streamEndpointChat(profile, 'fake', profile.model, [], new AbortController().signal, () => {}, undefined, value => reported.push(value));
+  assert.deepEqual(reported[1], { input: 10, output: 2 });
+});
 test('safe errors exclude provider error body and credentials', async () => {
   global.fetch = async () => Response.json({ error: { message: 'leaked fake-secret' } }, { status: 401 });
   await assert.rejects(streamEndpointChat(profile, 'fake-secret', profile.model, [], new AbortController().signal, () => {}), error => /Akses ditolak/.test(error.message) && !error.message.includes('fake-secret'));

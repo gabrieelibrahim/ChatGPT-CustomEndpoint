@@ -7,7 +7,7 @@ import type { McpProfile } from './ClientCollections';
 type AgentConfig = { enabled: boolean; cwd: string; sandbox: 'read-only' | 'workspace-write'; responsesConfirmed: boolean };
 type AgentItem = { id: string; type: string; status?: string; command?: string; aggregatedOutput?: string; changes?: { path: string; diff?: string; kind?: { type: string } }[]; server?: string; tool?: string };
 type Approval = { id: string; kind: string; details: { command?: string; cwd?: string; reason?: string; grantRoot?: string; additionalPermissions?: unknown } };
-type AgentEvent = { type: string; delta?: string; text?: string; itemId?: string; item?: AgentItem; id?: string; kind?: string; details?: Approval['details']; diff?: string; status?: string; error?: string; plan?: { step: string; status: string }[] };
+type AgentEvent = { type: string; delta?: string; text?: string; itemId?: string; item?: AgentItem; id?: string; kind?: string; details?: Approval['details']; diff?: string; status?: string; error?: string; input?: number; output?: number; plan?: { step: string; status: string }[] };
 
 export async function agentRequest(payload: object, signal?: AbortSignal) {
   if (!usesLocalProviderRelay()) throw Error('Agent memerlukan runtime lokal. Jalankan project dengan npm run dev.');
@@ -35,18 +35,18 @@ export function useCodexAgent() {
     catch (error) { setNotice((error as Error).message); }
     finally { setPendingDecision(''); }
   }
-  async function run(endpoint: EndpointProfile, key: string, model: string, history: { role: string; text: string; images?: string[] }[], conversation: string, forceNew: boolean, signal: AbortSignal, onText: (text: string) => void, effort?: string, planOnly = false, mcp: McpProfile[] = []) {
+  async function run(endpoint: EndpointProfile, key: string, model: string, history: { role: string; text: string; images?: string[] }[], conversation: string, forceNew: boolean, signal: AbortSignal, onText: (text: string) => void, effort?: string, planOnly = false, mcp: McpProfile[] = [], runtimeOptions: { networkAccess?: boolean; onUsage?: (usage: { input?: number; output?: number }) => void } = {}) {
     if (busy.current) throw Error('Agent masih bekerja.');
     if (!config.cwd || !config.responsesConfirmed) { setDialog(true); throw Error('Pilih folder dan konfirmasikan dukungan Responses API.'); }
     busy.current = true; setItems([]); setApprovals([]); setDiff(''); setPlan([]); setNotice('');
-    const fingerprint = JSON.stringify([endpoint.id, endpoint.baseUrl, model, key, config.cwd, config.sandbox, mcp]);
+    const fingerprint = JSON.stringify([endpoint.id, endpoint.baseUrl, model, key, config.cwd, config.sandbox, mcp, runtimeOptions.networkAccess === true]);
     const stop = () => { if (session.current) void agentRequest({ action: 'stop', sessionId: session.current.id }).catch(() => {}); };
     signal.addEventListener('abort', stop, { once: true });
     try {
       if (forceNew || session.current?.fingerprint !== fingerprint || session.current?.conversation !== conversation) await disconnect();
       let first = false;
       if (!session.current) {
-        const response = await agentRequest({ action: 'connect', cwd: config.cwd, sandbox: config.sandbox, responsesConfirmed: true, baseUrl: endpoint.baseUrl, key, model, mcp });
+        const response = await agentRequest({ action: 'connect', cwd: config.cwd, sandbox: config.sandbox, networkAccess: runtimeOptions.networkAccess === true, responsesConfirmed: true, baseUrl: endpoint.baseUrl, key, model, mcp });
         const result = await response.json(); session.current = { id: result.sessionId, fingerprint, conversation }; first = true;
       }
       signal.throwIfAborted();
@@ -67,6 +67,7 @@ export function useCodexAgent() {
         if (event.type === 'diff') setDiff((event.diff || '').slice(0, 150000));
         if (event.type === 'plan') setPlan(event.plan || []);
         if (event.type === 'notice') setNotice(event.text || '');
+        if (event.type === 'usage' && Number.isFinite(event.input) && Number.isFinite(event.output)) runtimeOptions.onUsage?.({ input: event.input, output: event.output });
         if (event.type === 'error') failure = event.text || 'Agent gagal.';
         if (event.type === 'done') { ended = true; if (event.error) failure = event.error; if (event.status === 'interrupted') failure = 'Agent dihentikan.'; }
       }

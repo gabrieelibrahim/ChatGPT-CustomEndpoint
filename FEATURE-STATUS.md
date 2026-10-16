@@ -18,7 +18,7 @@ This client preserves the existing ChatGPT/Codex experiences. UI availability do
 | Scheduled | Local dated reminders and notifications while app is open; Run prepares a prompt for user review |
 | Plugins | Explicit HTTP or stdio MCP profiles; configure/enable/disable/remove; applied on next native agent connection |
 | Voice | Browser-dependent speech recognition and speech synthesis; clear unsupported/error states |
-| Settings | Local name, providers, folders, access, backup/import/archive and reduced motion |
+| Settings | Sixteen searchable tabs with applied appearance, shortcuts, voice, instructions/memory, storage/import/archive, usage metadata and agent permissions; see [SETTINGS.md](SETTINGS.md) |
 | Git review | Actual tracked Git status/diff from chosen project, exportable to a review prompt |
 
 New installs contain no fictional conversations, installed plugins, documents or background processes. Existing user history is preserved. Feedback marking is transient within the current view.
@@ -40,10 +40,10 @@ The browser cannot grant unrestricted native access. Approval labels no longer p
 
 ## External capabilities still requiring implementation
 
-Native window chrome/packaging; desktop mouse/keyboard/screenshot automation; browser extension/tab attachment; private Codex cloud/review/account integration; native worktree management; Pets; Hooks; maps/GPT marketplace services; MCP OAuth/authenticated profiles; background scheduling while the app is closed; image generation, browsing and research adapters. These do not become functional merely by renaming a UI button. Existing entry points disclose missing integrations instead of reporting simulated success. “Open on chatgpt.com” is disabled because local conversations have no official ChatGPT URL.
+Native window chrome/packaging; desktop mouse/keyboard/screenshot automation; browser extension/tab attachment; private Codex cloud/review/account integration; native worktree management; official pet-service integration; Hooks; maps/GPT marketplace services; MCP OAuth/authenticated profiles; background scheduling while the app is closed; image generation, browsing and research adapters. These do not become functional merely by renaming a UI button. Existing entry points disclose missing integrations instead of reporting simulated success. “Open on chatgpt.com” is disabled because local conversations have no official ChatGPT URL.
 
 ## Verification
 
-`npm run build` and `npm test` (27 tests: eight provider, seven agent protocol/transport, four workspace/security, five file-library/hydration and three experience-specific history tests). Optional `npm run test:runtime` repeats the real installed-runtime smoke test. Additional synthetic DOM tests cover the original project/computer regression, computed form/header styles, CRUD flows and agent approvals. An installed-runtime smoke test used a fake-key local mock gateway to execute a harmless PowerShell command and a real local MCP echo tool, then verified the returned tool result. No paid inference was performed.
+`npm run build` and `npm test` (38 tests: eleven provider, nine agent protocol/transport, four workspace/security, five file-library/hydration, three experience-specific history and six settings tests). Optional `npm run test:runtime` repeats the real installed-runtime smoke test. Additional synthetic DOM tests cover the original project/computer regression, computed form/header styles, CRUD flows and agent approvals. An installed-runtime smoke test used a fake-key local mock gateway to execute a harmless PowerShell command and a real local MCP echo tool, then verified the returned tool result. No paid inference was performed.
 
 Live browser visual verification was blocked by the saved origin access permission. Synthetic DOM checks do not establish pixel identity, exact animation timing or native folder-dialog appearance.

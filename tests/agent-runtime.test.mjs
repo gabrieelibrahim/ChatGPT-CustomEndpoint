@@ -119,3 +119,24 @@ test('native vision input uses image items alongside text without treating paths
   reply({ id: sent[0].id, result: { turn: { id: 'turn' } } }); await starting;
   session.fail('closed'); session.lines.close(); child.stdout.end();
 });
+
+test('explicit network setting reaches ordinary sandbox turns but Plan always disables network', async () => {
+  const { child, sent, reply } = fakeProcess(); const session = new CodexAgentSession(child, { key: '', cwd: '/project', sandbox: 'workspace-write', networkAccess: true }, 'unused'); session.threadId = 'thread';
+  const first = session.turn('Task', () => {}); assert.equal(sent[0].params.sandboxPolicy.networkAccess, true); reply({ id: sent[0].id, result: { turn: { id: 'one' } } }); await first;
+  reply({ method: 'turn/completed', params: { turn: { status: 'completed' } } }); await new Promise(resolve => setImmediate(resolve));
+  const second = session.turn('Plan', () => {}, undefined, true); assert.equal(sent[1].params.sandboxPolicy.networkAccess, false); assert.equal(sent[1].params.approvalPolicy, 'never'); reply({ id: sent[1].id, result: { turn: { id: 'two' } } }); await second;
+  session.fail('closed'); session.lines.close(); child.stdout.end();
+});
+
+test('native cumulative usage becomes per-turn usage across successive model calls', async () => {
+  const { child, sent, reply } = fakeProcess(); const session = new CodexAgentSession(child, { key: '' }, 'unused'); session.threadId = 'thread'; const events = [];
+  const first = session.turn('Task', event => events.push(event)); reply({ id: sent[0].id, result: { turn: { id: 'one' } } }); await first;
+  reply({ method: 'thread/tokenUsage/updated', params: { threadId: 'thread', tokenUsage: { total: { inputTokens: 100, outputTokens: 20 } } } });
+  reply({ method: 'thread/tokenUsage/updated', params: { threadId: 'thread', tokenUsage: { total: { inputTokens: 250, outputTokens: 40 } } } });
+  reply({ method: 'turn/completed', params: { turn: { status: 'completed' } } }); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(events.filter(event => event.type === 'usage').at(-1), { type: 'usage', input: 250, output: 40 });
+  const second = session.turn('Next', event => events.push(event)); reply({ id: sent[1].id, result: { turn: { id: 'two' } } }); await second;
+  reply({ method: 'thread/tokenUsage/updated', params: { threadId: 'thread', tokenUsage: { total: { inputTokens: 300, outputTokens: 45 } } } }); await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(events.filter(event => event.type === 'usage').at(-1), { type: 'usage', input: 50, output: 5 });
+  session.fail('closed'); session.lines.close(); child.stdout.end();
+});
