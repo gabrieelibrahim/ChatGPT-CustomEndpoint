@@ -34,7 +34,7 @@ export function MoreNavigation({ pinned, onPin, onOpen, onEnter, onLeave, onClos
   </div>;
 }
 
-export function usePopoverAnchor(open: boolean, anchor: RefObject<HTMLElement | null>, preferredHeight = 480, preferredWidth?: number) {
+export function usePopoverAnchor(open: boolean, anchor: RefObject<HTMLElement | null>, preferredHeight = 480, preferredWidth?: number, preferredPlacement: 'auto' | 'below' = 'auto') {
   const [position, setPosition] = useState({ left: 0, top: 0, width: 0, maxHeight: preferredHeight });
   useLayoutEffect(() => {
     if (!open || !anchor.current) return;
@@ -47,7 +47,7 @@ export function usePopoverAnchor(open: boolean, anchor: RefObject<HTMLElement | 
       const scale = bounds.width / root.offsetWidth;
       const above = (rect.top - bounds.top) / scale - 74;
       const below = (bounds.bottom - rect.bottom) / scale - 12;
-      const useAbove = above >= 220 || above > below;
+      const useAbove = preferredPlacement === 'below' && below >= preferredHeight ? false : above >= 220 || above > below;
       const available = Math.max(80, useAbove ? above : below);
       const height = Math.min(preferredHeight, available);
       const width = Math.min(preferredWidth || rect.width / scale, root.offsetWidth - 16);
@@ -62,7 +62,7 @@ export function usePopoverAnchor(open: boolean, anchor: RefObject<HTMLElement | 
     observer.observe(anchor.current);
     window.addEventListener('resize', update);
     return () => { observer.disconnect(); window.removeEventListener('resize', update); };
-  }, [open, anchor, preferredHeight, preferredWidth]);
+  }, [open, anchor, preferredHeight, preferredWidth, preferredPlacement]);
   return position;
 }
 
