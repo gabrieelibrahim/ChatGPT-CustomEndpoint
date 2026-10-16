@@ -38,6 +38,7 @@ export function usePopoverAnchor(open: boolean, anchor: RefObject<HTMLElement | 
       const target = anchor.current;
       if (!root || !target) return;
       const bounds = root.getBoundingClientRect(), rect = target.getBoundingClientRect();
+      if (!root.offsetWidth || !bounds.width) return;
       const scale = bounds.width / root.offsetWidth;
       const above = (rect.top - bounds.top) / scale - 74;
       const below = (bounds.bottom - rect.bottom) / scale - 12;

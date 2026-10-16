@@ -3,7 +3,7 @@
 An independent interface study based on supplied mobile screenshots. This is not an official OpenAI application or the original ChatGPT source code.
 
 ## Current UI
-The default route uses the newer desktop ChatGPT/Codex presentation. The classic Personal interface is retained but disabled. See [DESKTOP.md](DESKTOP.md) for active routes, local interactions and limitations. Desktop now has a Custom Endpoint settings page for provider profiles and optional model discovery; its composer still uses demo replies. The legacy mobile API client at `?mobile=1` remains separate.
+The default route uses the newer desktop ChatGPT/Codex presentation. The classic Personal interface is retained but disabled. See [DESKTOP.md](DESKTOP.md) for active routes, local interactions and limitations. Desktop text conversations use the selected custom endpoint and model, with streaming, stop, retry and local history. No built-in model list or demo reply is used by the desktop composer. The legacy mobile API client at `?mobile=1` remains separate.
 
 ## First launch and profile
 
@@ -15,7 +15,9 @@ The rail's **More** menu opens on hover and remains open while moving into it; c
 
 Open **Profile → Custom Endpoint** (or Settings), **More → Custom Endpoint**, or search for Custom Endpoint with Ctrl+K. Add a provider name, Base URL, API key and model ID. Multiple profiles can be saved, edited, selected and deleted. Only the OpenAI-compatible protocol is supported here. HTTPS and local HTTP loopback URLs are accepted; no provider is required or hardcoded.
 
-Profile metadata is stored in localStorage; API keys stay in sessionStorage for the current tab session. Keys are masked and excluded from profile serialization. **Tes & ambil model** explicitly requests the configured provider's `/models` endpoint directly, without a proxy, cookies or redirects. Providers must allow browser CORS; model IDs can be entered manually when discovery is unsupported. Saving or selecting a profile does not yet connect the desktop composer.
+Profile metadata is stored in localStorage; API keys stay in sessionStorage for the current tab session. Keys are masked and excluded from profile serialization. **Tes & ambil model** explicitly requests the configured provider's `/models` endpoint; discovered models can be searched and selected, and IDs can also be entered manually. The composer model menu uses saved provider models. Effort is sent only if **Kirim reasoning_effort** is explicitly enabled for a compatible model; supported values depend on the provider. Attachments and agent tools are not sent by this text-only client.
+
+During `npm run dev` on localhost, a development-only same-origin relay in the Vite process forwards requests from this computer to the configured provider. This handles providers that reject browser CORS preflight, without routing through Sakelar or another hosted proxy. It accepts only same-origin JSON POST requests from loopback, allows only `/models` and `/chat/completions`, refuses redirects and never logs or saves payloads/credentials. **Production web builds call providers directly and still require provider CORS support.** The relay is not a production backend or native packaging solution.
 
 ## Stack
 React 19, TypeScript, Vite 6, Tailwind CSS 4. All icons are inline SVG; no CDN or runtime asset dependency.
@@ -24,6 +26,7 @@ React 19, TypeScript, Vite 6, Tailwind CSS 4. All icons are inline SVG; no CDN o
 ```sh
 npm install
 npm run dev
+npm run test:providers
 ```
 
 ## Production
@@ -47,7 +50,7 @@ Deploy `dist/` to any static hosting service. `.openai/hosting.json` is hosting-
 - `src/lib/endpointProfiles.ts`: profile validation/storage, session credentials and OpenAI-compatible model discovery.
 - `src/styles.css`: Tailwind import plus reference-specific style rules. Components also use Tailwind utilities. Remaining rules can migrate gradually without changing state logic.
 
-## Behavior
+## Legacy mobile behavior (`?mobile=1`)
 New chat uses a capsule composer while the keyboard is closed, expanding into a rounded rectangle when the mobile visual viewport shrinks during input focus. Existing conversations retain the compact composer. No fake keyboard is rendered.
 
 Without API configuration, replies use an explicitly labeled demo mode. Configure a compatible HTTPS base URL (including `/v1` when required), model, and key under the three-dot menu. The browser calls `/chat/completions`; the endpoint must allow CORS. API keys stay in sessionStorage; messages stay in localStorage. Temporary chat is not written to history.

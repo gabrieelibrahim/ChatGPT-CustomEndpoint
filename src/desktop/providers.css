@@ -1,0 +1,39 @@
+/* Provider controls retain the existing desktop geometry and reference rounding. */
+.d-root .d-provider-models{display:flex;flex-direction:column;height:420px;min-height:120px;padding:8px;overflow:hidden;color-scheme:dark;border-radius:24px;background:#2b2b2b}
+.d-model-search{display:flex;align-items:center;gap:10px;margin:4px 4px 8px;padding:9px 10px;border:1px solid #484848;border-radius:14px;color:#aaa;flex-shrink:0}
+.d-root .d-model-search input{width:100%;min-width:0;font-size:17px;line-height:24px;background:none;border:0;outline:none;color:#eee}
+.d-model-options{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#606060 transparent}
+.d-model-options [role=group]>p{font-size:13px;line-height:22px;color:#999;padding:8px 12px 4px}
+.d-root .d-model-options [role=option]{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:14px;font-size:18px;line-height:26px;text-align:left}
+.d-model-options [role=option]>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-model-options [role=option]>svg{flex-shrink:0}
+.d-root .d-model-options [role=option]:hover,.d-root .d-model-options [role=option]:focus-visible{background:#383838;outline:none}
+.d-model-options .d-model-empty{padding:18px 12px;font-size:16px;line-height:24px;color:#aaa}
+.d-root .d-provider-models>.d-model-settings{display:flex;align-items:center;gap:10px;flex-shrink:0;border-top:1px solid #424242;border-radius:0 0 16px 16px;margin-top:6px;padding:12px;font-size:16px;line-height:24px;text-align:left}
+.d-root .d-model{display:flex;align-items:center;gap:7px;max-width:360px;min-width:0;border-radius:999px;padding:7px 10px}
+.d-root .d-model:hover{background:#ffffff0a}
+.d-model .d-active-model{min-width:0;max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#eee}
+.d-model>span:not(.d-active-model){flex-shrink:0}
+.d-root .d-effort{color-scheme:dark;overflow:auto;scrollbar-width:thin;scrollbar-color:#555 transparent}
+.d-effort-lightning{position:absolute;left:18px;top:18px;color:#999}
+.d-root .d-effort .d-effort-value{padding:0 36px}
+.d-root .d-effort .d-effort-value small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-root .d-effort .d-effort-hint{font-size:12px;line-height:17px;color:#aaa;font-weight:400;text-align:center;margin-top:8px}
+.d-root .d-effort-dot:first-of-type{left:21px!important}
+.d-root .d-effort-dot:last-of-type{left:calc(100% - 21px)!important}
+.d-root .d-chat-error{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border:1px solid #68453e;background:#362722;padding:12px 16px;margin:0 0 12px;border-radius:16px;font-size:16px;line-height:24px;color:#ffbfb0}
+.d-chat-error>span{flex:1;min-width:160px}
+.d-root .d-chat-error>button{font-size:14px;line-height:22px;padding:5px 10px;border-radius:999px;background:#ffffff0b;white-space:nowrap}
+.d-assistant-message:empty::before{content:'Sedang menjawab…';color:#999;font-size:18px}
+.d-discovered-models{margin:14px 0;border:1px solid #454545;border-radius:14px;overflow:hidden;color-scheme:dark}
+.d-discovered-models>div:first-child{padding:12px;border-bottom:1px solid #444}
+.d-discovered-models b{display:block;font-size:14px;line-height:22px;font-weight:500;color:#bbb}
+:is(.d-root,.d-setup) .d-discovered-models input{min-height:38px!important;font-size:14px!important;line-height:20px!important;padding:8px 12px!important;border-radius:999px!important;margin-top:8px!important}
+.d-discovered-models>[role=listbox]{max-height:200px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#606060 transparent;padding:4px}
+:is(.d-root,.d-setup) .d-discovered-models button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:10px;font-size:14px;line-height:22px;text-align:left;color:#ddd}
+.d-discovered-models button>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-discovered-models button>svg{flex-shrink:0}
+.d-discovered-models button:hover,.d-discovered-models button:focus-visible{background:#ffffff0a;outline:none}
+.d-discovered-models p{font-size:14px;line-height:22px;color:#999;padding:10px}
+.d-auth-page .d-discovered-models{margin:12px 0}
+.d-auth-page .d-discovered-models>[role=listbox]{max-height:150px}

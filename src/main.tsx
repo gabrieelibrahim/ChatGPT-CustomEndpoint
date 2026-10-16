@@ -13,4 +13,5 @@ import './desktop/navigation.css';
 import './desktop/motion.css';
 import './desktop/endpoints.css';
 import './desktop/onboarding.css';
+import './desktop/providers.css';
 createRoot(document.getElementById('root')!).render(<Shell/>);

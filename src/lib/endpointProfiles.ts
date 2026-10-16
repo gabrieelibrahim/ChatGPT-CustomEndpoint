@@ -1,6 +1,7 @@
+import { providerFetch } from './providerTransport';
 export type EndpointProfile = {
   id: string; name: string; baseUrl: string; protocol: 'openai-compatible';
-  model: string; models: string[]; auth: 'bearer' | 'none';
+  model: string; models: string[]; auth: 'bearer' | 'none'; sendReasoning?: boolean;
 };
 export type EndpointStore = { version: 1; profiles: EndpointProfile[]; selectedId: string | null };
 export const endpointStorageKey = 'client-endpoint-profiles-v1';
@@ -25,8 +26,8 @@ export function loadEndpointStore(): EndpointStore {
     for (const value of data.profiles.slice(0, 50)) {
       if (!value || typeof value.id !== 'string' || !value.id || value.id.length > 100 || Object.hasOwn(Object.prototype, value.id) || profiles.some(profile => profile.id === value.id) || typeof value.name !== 'string' || !value.name.trim() || typeof value.model !== 'string' || !value.model.trim() || typeof value.baseUrl !== 'string' || value.protocol !== 'openai-compatible') continue;
       try {
-        const models = Array.isArray(value.models) ? value.models.filter((model: unknown): model is string => typeof model === 'string' && model.length <= 160).slice(0, 500) : [];
-        profiles.push({ id: value.id, name: value.name.slice(0, 80), baseUrl: normalizeBaseUrl(value.baseUrl), protocol: 'openai-compatible', model: value.model.slice(0, 160), models, auth: value.auth === 'none' ? 'none' : 'bearer' });
+        const models = Array.isArray(value.models) ? value.models.filter((model: unknown): model is string => typeof model === 'string' && model.length <= 160).slice(0, 5000) : [];
+        profiles.push({ id: value.id, name: value.name.slice(0, 80), baseUrl: normalizeBaseUrl(value.baseUrl), protocol: 'openai-compatible', model: value.model.slice(0, 160), models, auth: value.auth === 'none' ? 'none' : 'bearer', sendReasoning: value.sendReasoning === true });
       } catch { /* Ignore invalid stored profiles; never use them as request destinations. */ }
     }
     return { version: 1, profiles, selectedId: profiles.some(profile => profile.id === data.selectedId) ? data.selectedId : profiles[0]?.id || null };
@@ -42,7 +43,7 @@ export function loadEndpointKeys(profiles: EndpointProfile[]): Record<string, st
 
 // Serialize explicit fields so credentials never enter persistent profile storage.
 export function saveEndpointStore(store: EndpointStore, keys: Record<string, string>) {
-  const profiles = store.profiles.map(({ id, name, baseUrl, protocol, model, models, auth }) => ({ id, name, baseUrl, protocol, model, models, auth }));
+  const profiles = store.profiles.map(({ id, name, baseUrl, protocol, model, models, auth, sendReasoning }) => ({ id, name, baseUrl, protocol, model, models, auth, sendReasoning: sendReasoning === true }));
   const previousKeys = sessionStorage.getItem(endpointSecretsKey);
   sessionStorage.setItem(endpointSecretsKey, JSON.stringify(Object.fromEntries(profiles.filter(profile => profile.auth === 'bearer' && keys[profile.id]).map(profile => [profile.id, keys[profile.id]]))));
   try { localStorage.setItem(endpointStorageKey, JSON.stringify({ version: 1, profiles, selectedId: store.selectedId })); }
@@ -50,13 +51,11 @@ export function saveEndpointStore(store: EndpointStore, keys: Record<string, str
     try { if (previousKeys === null) sessionStorage.removeItem(endpointSecretsKey); else sessionStorage.setItem(endpointSecretsKey, previousKeys); } catch { /* Preserve the original storage failure. */ }
     throw error;
   }
+  window.dispatchEvent(new Event('client-endpoints-changed'));
 }
 
 export async function discoverEndpointModels(baseUrl: string, apiKey: string, signal: AbortSignal): Promise<string[]> {
-  const response = await fetch(normalizeBaseUrl(baseUrl) + '/models', {
-    method: 'GET', headers: { Accept: 'application/json', ...(apiKey ? { Authorization: 'Bearer ' + apiKey } : {}) },
-    signal, redirect: 'error', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
-  });
+  const response = await providerFetch(normalizeBaseUrl(baseUrl) + '/models', apiKey, signal);
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) throw Error('Akses ditolak. Periksa API key dan izin penyedia.');
     if (response.status === 404 || response.status === 405) throw Error('Daftar model tidak tersedia di alamat ini. Periksa Base URL, atau isi ID model secara manual.');
@@ -67,5 +66,5 @@ export async function discoverEndpointModels(baseUrl: string, apiKey: string, si
   try { data = await response.json(); } catch { throw Error('Respons penyedia bukan JSON. Periksa Base URL.'); }
   const models = (data as { data?: unknown })?.data;
   if (!Array.isArray(models)) throw Error('Format daftar model tidak dikenali. Isi ID model secara manual.');
-  return [...new Set(models.flatMap(value => typeof value?.id === 'string' && value.id.length <= 160 && value.id.trim() ? [value.id.trim()] : []))].slice(0, 500);
+  return [...new Set(models.flatMap(value => typeof value?.id === 'string' && value.id.length <= 160 && value.id.trim() ? [value.id.trim()] : []))].slice(0, 5000);
 }

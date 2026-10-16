@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
 import { discoverEndpointModels, loadEndpointKeys, loadEndpointStore, normalizeBaseUrl, saveEndpointStore, type EndpointProfile, type EndpointStore } from '../lib/endpointProfiles';
 import { SakelarRecommendation } from './SakelarRecommendation';
+import { usesLocalProviderRelay } from '../lib/providerTransport';
 
-type Draft = { id: string; name: string; baseUrl: string; model: string; key: string; auth: boolean; models: string[] };
+type Draft = { id: string; name: string; baseUrl: string; model: string; key: string; auth: boolean; models: string[]; sendReasoning?: boolean };
 const emptyDraft = (): Draft => ({ id: '', name: '', baseUrl: '', model: '', key: '', auth: true, models: [] });
 
 export function EndpointSettings({ setup = false, onSaved, onBack }: { setup?: boolean; onSaved?: () => void; onBack?: () => void } = {}) {
@@ -15,6 +16,7 @@ export function EndpointSettings({ setup = false, onSaved, onBack }: { setup?: b
   });
   const [revealed, setRevealed] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const [testing, setTesting] = useState(false), [testResult, setTestResult] = useState(''), [deleteId, setDeleteId] = useState('');
+  const [modelQuery, setModelQuery] = useState(''), [modelLimit, setModelLimit] = useState(100);
   const request = useRef<AbortController | null>(null), timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nameInput = useRef<HTMLInputElement>(null);
   function stopTest() { request.current?.abort(); request.current = null; if (timeout.current) clearTimeout(timeout.current); timeout.current = null; setTesting(false); }
@@ -38,7 +40,7 @@ export function EndpointSettings({ setup = false, onSaved, onBack }: { setup?: b
       if (draft.auth && !draft.key.trim()) throw Error('Isi API key, atau matikan autentikasi untuk server tanpa kunci.');
       if (!draft.id && store.profiles.length >= 50) throw Error('Maksimal 50 profil. Hapus profil yang tidak dipakai.');
       const id = draft.id || crypto.randomUUID();
-      const profile: EndpointProfile = { id, name: draft.name.trim(), baseUrl, model: draft.model.trim(), models: [...new Set([draft.model.trim(), ...draft.models])].slice(0, 500), protocol: 'openai-compatible', auth: draft.auth ? 'bearer' : 'none' };
+      const profile: EndpointProfile = { id, name: draft.name.trim(), baseUrl, model: draft.model.trim(), models: [...new Set([draft.model.trim(), ...draft.models])].slice(0, 5000), protocol: 'openai-compatible', auth: draft.auth ? 'bearer' : 'none', sendReasoning: draft.sendReasoning === true };
       const profiles = draft.id ? store.profiles.map(item => item.id === id ? profile : item) : [...store.profiles, profile];
       const nextKeys = { ...keys }; if (draft.auth) nextKeys[id] = draft.key.trim(); else delete nextKeys[id];
       if (persist({ version: 1, profiles, selectedId: store.selectedId || id }, nextKeys)) { setDraft(previous => ({ ...previous, id, baseUrl })); setNotice('Endpoint tersimpan.'); onSaved?.(); }
@@ -58,13 +60,15 @@ export function EndpointSettings({ setup = false, onSaved, onBack }: { setup?: b
       const models = await discoverEndpointModels(draft.baseUrl, draft.auth ? draft.key.trim() : '', controller.signal);
       if (request.current !== controller) return;
       setDraft(previous => ({ ...previous, models, model: previous.model || models[0] || '' }));
+      setModelQuery(''); setModelLimit(100);
       setTestResult(models.length ? 'Koneksi berhasil. ' + models.length + ' model tersedia.' : 'Koneksi berhasil, tetapi daftar model kosong. Isi ID model secara manual.');
     } catch (failure) {
       if (request.current !== controller) return;
-      setError(controller.signal.aborted ? 'Tes melewati batas 15 detik. Periksa koneksi dan alamat penyedia.' : failure instanceof TypeError ? 'Tidak bisa menghubungi endpoint. Periksa alamat, jaringan, dan dukungan CORS penyedia.' : failure instanceof Error ? failure.message : 'Koneksi belum berhasil.');
+      setError(controller.signal.aborted ? 'Tes melewati batas 15 detik. Periksa koneksi dan alamat penyedia.' : failure instanceof TypeError ? 'Koneksi terblokir atau gagal. Untuk web, penyedia harus mengizinkan CORS; preview localhost menyediakan koneksi lokal.' : failure instanceof Error ? failure.message : 'Koneksi belum berhasil.');
     } finally { if (request.current === controller) { request.current = null; if (timeout.current) clearTimeout(timeout.current); timeout.current = null; setTesting(false); } }
   }
   const editing = store.profiles.find(profile => profile.id === draft.id);
+  const matchingModels = draft.models.filter(model => model.toLowerCase().includes(modelQuery.toLowerCase()));
   return <section className="d-endpoint-page" aria-labelledby={setup ? undefined : 'endpoint-heading'} aria-label={setup ? 'Custom Endpoint' : undefined}>
     {!setup && <header><div><p className="d-endpoint-eyebrow">AI CONNECTIONS</p><h1 id="endpoint-heading">Custom Endpoint</h1><p>Simpan koneksi dan model dari penyedia AI pilihanmu.</p></div><button className="d-endpoint-primary" onClick={() => edit()}><I name="plus" size={20}/>Tambah endpoint</button></header>}
     <div className="d-endpoint-layout">{!setup && <aside className="d-endpoint-profiles" aria-label="Endpoint tersimpan"><h2>Endpoint tersimpan <span>{store.profiles.length}</span></h2>
@@ -84,9 +88,11 @@ export function EndpointSettings({ setup = false, onSaved, onBack }: { setup?: b
       {!draft.auth && <p className="d-endpoint-hint">Gunakan tanpa kunci hanya jika servermu tidak memerlukan autentikasi.</p>}
       <div className="d-endpoint-model-heading"><label htmlFor="endpoint-model">Model ID</label><button type="button" className="d-endpoint-test" disabled={testing || !draft.baseUrl.trim()} onClick={() => void test()}><I name="refresh" size={17}/>{testing ? 'Menguji koneksi…' : 'Tes & ambil model'}</button></div>
       <input id="endpoint-model" list="endpoint-models" maxLength={160} spellCheck={false} placeholder="Masukkan ID model dari penyedia" value={draft.model} onChange={event => update({ model: event.target.value })} required/><datalist id="endpoint-models">{draft.models.map(model => <option key={model} value={model}/>)}</datalist>
-      <p className="d-endpoint-hint">Model bisa diisi manual. Tes mengakses /models langsung ke alamat yang kamu masukkan; penyedia harus mengizinkan CORS.</p>
+      {draft.models.length > 0 && <div className="d-discovered-models"><div><b>{draft.models.length} model tersedia</b><input aria-label="Cari model endpoint" placeholder="Cari model…" value={modelQuery} onChange={event => { setModelQuery(event.target.value); setModelLimit(100); }}/></div><div role="listbox" aria-label="Model terdeteksi">{matchingModels.slice(0, modelLimit).map(model => <button type="button" role="option" aria-selected={draft.model === model} key={model} onClick={() => update({ model })}><span>{model}</span>{draft.model === model && <I name="check" size={16}/>}</button>)}{!matchingModels.length && <p>Model tidak ditemukan.</p>}{matchingModels.length > modelLimit && <button type="button" onClick={() => setModelLimit(value => value + 100)}>Tampilkan lebih banyak ({matchingModels.length - modelLimit})</button>}</div></div>}
+      <p className="d-endpoint-hint">{usesLocalProviderRelay() ? 'Koneksi preview berjalan lewat proses lokal di komputer ini, lalu ke penyedia pilihanmu. Tidak lewat server Sakelar.' : 'Koneksi langsung ke penyedia. Penyedia harus mengizinkan CORS untuk aplikasi web.'} Model juga bisa diisi manual.</p>
+      <label className="d-endpoint-auth"><input type="checkbox" checked={!!draft.sendReasoning} onChange={event => update({ sendReasoning: event.target.checked })}/><span>Kirim reasoning_effort (jika model mendukung)</span></label>
       {error && <p className="d-endpoint-status d-error" role="alert">{error}</p>}{(notice || testResult) && <p className="d-endpoint-status" role="status"><I name="check" size={18}/>{notice || testResult}</p>}
       <footer><button type="button" className="d-endpoint-secondary" onClick={setup ? onBack : () => edit(editing)}>{setup ? 'Kembali' : 'Reset'}</button><button className="d-endpoint-primary" type="submit">{setup ? 'Simpan & mulai' : 'Simpan endpoint'}</button></footer>
-    </form></div>{!setup && <p className="d-endpoint-scope"><I name="shield" size={18}/>Halaman ini menyimpan pengaturan koneksi. Percakapan desktop masih memakai mode demo.</p>}
+    </form></div>{!setup && <p className="d-endpoint-scope"><I name="shield" size={18}/>Endpoint pilihan dipakai untuk percakapan teks. API key hanya disimpan selama sesi tab ini.</p>}
   </section>;
 }
