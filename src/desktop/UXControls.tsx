@@ -97,16 +97,16 @@ export function ComposerAddMenu({ anchor, plan, onFiles, onSelect, onUnavailable
 }
 
 export type PreviewMessage = { role: 'user' | 'assistant'; text: string; timestamp?: number };
-export function ChatMessage({ message, onEdit, onNotice }: {
-  message: PreviewMessage; onEdit: (text: string) => void; onNotice: (text: string) => void;
+export function ChatMessage({ message, onEdit, onNotice, streaming = false }: {
+  message: PreviewMessage; onEdit: (text: string) => void; onNotice: (text: string) => void; streaming?: boolean;
 }) {
   const [editing, setEditing] = useState(false), [draft, setDraft] = useState(message.text);
   const [time] = useState(() => message.timestamp || Date.now());
   return <section className={'d-chat-message d-chat-message-' + message.role}>
     {editing ? <div className="d-message-editor"><textarea aria-label="Edit message" autoFocus value={draft} onChange={e => setDraft(e.target.value)}
       onKeyDown={event => { if (event.key === 'Escape') setEditing(false); }}/><div><button onClick={() => setEditing(false)}>Cancel</button><button disabled={!draft.trim()} onClick={() => { onEdit(draft.trim()); setEditing(false); }}>Save</button></div></div>
-      : <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'}>{message.text}</div>}
-    {!editing && <MessageActions text={message.text} user={message.role === 'user'} timestamp={time} onNotice={onNotice} onEdit={() => { setDraft(message.text); setEditing(true); }}/ >}
+      : <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !message.text ? 'status' : undefined} aria-label={message.role === 'assistant' && !message.text ? 'Menunggu jawaban' : undefined}>{message.text}</div>}
+    {!editing && !streaming && message.text && <MessageActions text={message.text} user={message.role === 'user'} timestamp={time} onNotice={onNotice} onEdit={() => { setDraft(message.text); setEditing(true); }}/ >}
   </section>;
 }
 
