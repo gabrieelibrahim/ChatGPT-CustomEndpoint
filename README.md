@@ -1,6 +1,9 @@
-# Mobile Chat Reference
+# ChatGPT-CustomEndpoint
 
 An independent interface study based on supplied mobile screenshots. This is not an official OpenAI application or the original ChatGPT source code.
+
+## Current UI
+The default route uses the newer desktop ChatGPT/Codex presentation. The classic Personal interface is retained but disabled. See [DESKTOP.md](DESKTOP.md) for active routes, local interactions and limitations. API configuration described below applies to the legacy mobile study at ?mobile=1; the active desktop composer currently uses demo replies.
 
 ## Stack
 React 19, TypeScript, Vite 6, Tailwind CSS 4. All icons are inline SVG; no CDN or runtime asset dependency.

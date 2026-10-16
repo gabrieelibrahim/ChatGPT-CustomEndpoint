@@ -25,3 +25,22 @@ Sidebar boundary dragging, row hover actions, Recents collapse and the Explore â
 TypeScript/production build and server rendering checks pass. Browser screenshot comparison remains unavailable in this session, so visual identity is not established. The 180 ms sidebar transition and 130 ms page fade are implementation estimates, not measured frame-exact timings. The observed Library network loading duration is not reproduced as an indefinite loading state; the preview resolves to its local data/empty state.
 
 Real task scheduling, image generation, connector installation, browser-tab access and Maps data are not connected. The Work modal retains the requested unavailable message.
+
+## Newer desktop recording â€” 2026-10-16 13:27:50
+
+Reference: user-supplied `Screen Recording 2026-10-16 132750.mp4`, 1920 x 1008, 30 fps, 127.6 seconds. This is a separate reference from the classic video above. It was reviewed using 26 overview samples and targeted full-resolution frames; the video itself is not committed.
+
+| Approximate time | Observed interaction | Implemented local behavior |
+| --- | --- | --- |
+| 0-15 s | Rail/titlebar tooltip labels | Root-anchored tooltip portals and shortcut hints |
+| 15-24 s | More row hover and navigation pins | Row highlight and saved sidebar pin toggles |
+| 37-50 s | Projects/Recents heading hover | Chevron, options, add/new-chat controls and collapse |
+| 51-69 s | Chat hover card and pin/archive tooltips | Delayed hover preview, local pin/archive actions |
+| 74-89 s | Turn markers with previews | User-turn markers, reply snippets and smooth jumps |
+| 91-103 s | Message actions and conversation scroll | Copy, read aloud, feedback preview and latest-scroll control |
+| 111-113 s | Full-width Add menu | Composer-anchored menu with files, commands, sketch and plugin selection |
+| 121-124 s | User-message hover controls | Timestamp, copy and local editing |
+
+The Add menu is measured against the actual composer position rather than a fixed screen coordinate. Hover delays and animation easing are estimates. Chrome access, plugin execution and agent functions remain unavailable or clearly local preview behavior. The patch is not a claim of pixel-identical native behavior.
+
+Validation: TypeScript/production build and server-render smoke checks passed. Browser observation of the final patch was denied by the browser origin permission gate, so final browser screenshot/interaction QA remains outstanding.
