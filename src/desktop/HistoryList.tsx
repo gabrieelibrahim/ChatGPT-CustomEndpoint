@@ -5,13 +5,13 @@ import { Disclosure, useHoverPreview } from './Motion';
 
 export type HistoryListProps = {
   titles: string[]; pinned: string[]; archived: string[]; active: string;
-  projects?: string[]; showPinned?: boolean;
+  projects?: string[]; showPinned?: boolean; experience?: 'ChatGPT' | 'Codex';
   onNew: () => void; onOpen: (title: string) => void; onPin: (title: string) => void;
-  onArchive: (title: string) => void; onCreateProject?: () => void; onProject?: (title: string) => void;
+  onArchive: (title: string) => void; onOptions?: (title: string) => void; onCreateProject?: () => void; onProject?: (title: string) => void;
 };
 
 export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, onPin, onArchive,
-  showPinned = true, projects = [], onCreateProject, onProject }: HistoryListProps) {
+  showPinned = true, projects = [], experience = 'ChatGPT', onOptions, onCreateProject, onProject }: HistoryListProps) {
   const preview = useHoverPreview<{ title: string; top: number }>(180);
   const [collapsed, setCollapsed] = useState(false), [projectsCollapsed, setProjectsCollapsed] = useState(false);
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
@@ -43,8 +43,9 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
       onFocus={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) enter(title, event.currentTarget, true); }}
       onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) preview.leave(); }}>
       <button className="d-history-open" onClick={() => { preview.close(); onOpen(title); }}>{title}</button>
-      <div className="d-history-actions"><B icon="pin" label={pinned.includes(title) ? 'Unpin chat' : 'Pin chat'} onClick={() => onPin(title)}/>
-        <B icon="archive" label="Archive chat" onClick={() => { preview.close(); onArchive(title); }}/></div>
+      <div className="d-history-actions"><B icon="dots" label="Conversation options" onClick={() => { preview.close(); onOptions?.(title); }}/>
+        {experience === 'ChatGPT' ? <B icon="pin" label={pinned.includes(title) ? 'Unpin chat' : 'Pin chat'} onClick={() => onPin(title)}/>
+          : <B icon="archive" label="Archive chat" onClick={() => { preview.close(); onArchive(title); }}/>}</div>
     </div>;
   }
   const visibleTitles = titles.filter(title => (!showPinned || !pinned.includes(title)) && !archived.includes(title));
