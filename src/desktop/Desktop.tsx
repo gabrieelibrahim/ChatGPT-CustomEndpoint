@@ -35,7 +35,7 @@ export function B({icon,label,onClick,children,className='',disabled,expanded,co
 const initialTitles:string[]=[];
 const effortNames=['Light','Low','Medium','High','Extra High','Max'];
 type Screen='chat'|'scheduled'|'plugins'|'sites'|'pages'|'images'|'projects'|'skills'|'endpoints';
-type Msg={role:'user'|'assistant';text:string;timestamp?:number;attachments?:FileRef[]};
+type Msg={role:'user'|'assistant';text:string;reasoning?:string;timestamp?:number;attachments?:FileRef[]};
 type NavigationView={screen:Screen;home:boolean;title:string;experience:'ChatGPT'|'Codex';chatMode:'Chat'|'Work';messages:Msg[];text:string;scrollTop:number;temporary:boolean};
 export function Desktop(){
  const agent=useCodexAgent();
@@ -139,16 +139,16 @@ export function Desktop(){
   const value=retry?history.at(-1)!.text:text.trim()||'Review attached files.';
   const base=value.slice(0,45);let name=home?base:title,n=2;if(home)while(titles.includes(name)||Object.hasOwn(Object.prototype,name))name=base+' ('+n+++')';
   const next:Msg[]=retry?[...history]:[...history,{role:'user',text:value,timestamp:Date.now(),...(files.length?{attachments:files.map(({id,name,type})=>({id,name,type}))}:{})}];
-  const pending=[...next,{role:'assistant' as const,text:'',timestamp:Date.now()}];
+  const pending=[...next,{role:'assistant' as const,text:'',reasoning:'',timestamp:Date.now()}];
   const persist=!(compactChat&&temporary);
   const publish=(updated:Msg[],save=false)=>{setMessages(updated);if(save&&persist)setChatContent(previous=>({...previous,[name]:updated}));requestAnimationFrame(()=>{const el=scroll.current;if(el&&el.scrollHeight-el.scrollTop-el.clientHeight<240)el.scrollTo({top:el.scrollHeight})})};
   if(home){setTitle(name);if(persist)setTitles((previous:string[])=>[name,...previous.filter(item=>item!==name)]);setHome(false)}
   setChatError('');setText('');publish(pending);if(persist)setChatContent(previous=>({...previous,[name]:next}));setGeneration(true);
-  let received='';const controller=new AbortController();const active={controller,timer:setTimeout(()=>controller.abort('timeout'),experience==='Codex'&&agent.config.enabled?600000:120000),clearPlaceholder:()=>publish(received?[...next,{role:'assistant',text:received,timestamp:Date.now()}]:next,true)};request.current=active;
-  const onText=(value:string)=>{if(request.current!==active)return;received=value;publish([...next,{role:'assistant',text:value,timestamp:Date.now()}])};
+  let received='';let receivedReasoning='';const controller=new AbortController();const active={controller,timer:setTimeout(()=>controller.abort('timeout'),experience==='Codex'&&agent.config.enabled?600000:120000),clearPlaceholder:()=>publish(received||receivedReasoning?[...next,{role:'assistant',text:received,reasoning:receivedReasoning,timestamp:Date.now()}]:next,true)};request.current=active;
+  const onText=(value:string,reasoning?:string)=>{if(request.current!==active)return;received=value;if(reasoning!==undefined)receivedReasoning=reasoning;publish([...next,{role:'assistant',text:value,reasoning:receivedReasoning,timestamp:Date.now()}])};
   try{if(!retry)await Promise.all(files.map(file=>file.pending));const resolved=next.some(message=>message.attachments?.length)?await resolveMessageFiles(next,controller.signal):next;controller.signal.throwIfAborted();if(!retry&&request.current===active){for(const file of files){URL.revokeObjectURL(file.url);fileResources.current.delete(file.url)}setFiles([])}if(experience==='Codex'&&agent.config.enabled)await agent.run(endpoint,key,model,resolved,name,home,controller.signal,onText,['minimal','low','medium','high','xhigh','max'][effort],planMode,client.data.mcp);else await streamEndpointChat(endpoint,key,model,resolved,controller.signal,onText,['minimal','low','medium','high','xhigh','max'][effort])}
-  catch(failure){if(request.current===active){if(!received)publish(next);setChatError(controller.signal.aborted?(controller.signal.reason==='timeout'?'Penyedia terlalu lama merespons. Coba lagi.':'Jawaban dihentikan.'):failure instanceof TypeError?'Koneksi ke penyedia gagal. Periksa jaringan dan dukungan CORS.':failure instanceof Error?failure.message:'Jawaban gagal dimuat.')}}
-  finally{clearTimeout(active.timer);if(request.current===active){publish(received?[...next,{role:'assistant',text:received,timestamp:Date.now()}]:next,true);request.current=null;setGeneration(false)}}
+  catch(failure){if(request.current===active){if(!received&&!receivedReasoning)publish(next);setChatError(controller.signal.aborted?(controller.signal.reason==='timeout'?'Penyedia terlalu lama merespons. Coba lagi.':'Jawaban dihentikan.'):failure instanceof TypeError?'Koneksi ke penyedia gagal. Periksa jaringan dan dukungan CORS.':failure instanceof Error?failure.message:'Jawaban gagal dimuat.')}}
+  finally{clearTimeout(active.timer);if(request.current===active){publish(received||receivedReasoning?[...next,{role:'assistant',text:received,reasoning:receivedReasoning,timestamp:Date.now()}]:next,true);request.current=null;setGeneration(false)}}
  }
  function stopAnswer(){const active=request.current;if(active){clearTimeout(active.timer);active.controller.abort()}}
 

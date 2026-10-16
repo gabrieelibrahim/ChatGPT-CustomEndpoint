@@ -13,7 +13,7 @@ function load(file) {
   new Function('require', 'module', 'exports', output)(name => load(path.resolve(path.dirname(file), name + '.ts')), module, module.exports);
   return module.exports;
 }
-const { streamEndpointChat } = load('src/lib/endpointChat.ts');
+const { streamEndpointChat, parseThinking } = load('src/lib/endpointChat.ts');
 const { discoverEndpointModels } = load('src/lib/endpointProfiles.ts');
 const profile = { id: 'test', name: 'Custom', baseUrl: 'https://provider.example/v1', model: 'vendor/model', models: [], auth: 'bearer', protocol: 'openai-compatible' };
 const realFetch = global.fetch;
@@ -30,6 +30,50 @@ test('streams fragmented UTF-8 / CRLF events and sends configured model/history 
   assert.equal(sent.options.headers.Authorization, 'Bearer fake-secret');
   assert.equal(sent.options.redirect, 'error'); assert.equal(sent.options.credentials, 'omit');
   assert.deepEqual(JSON.parse(sent.options.body), { model: 'vendor/selected', stream: true, messages: [{ role: 'user', content: 'Hi' }] });
+});
+
+test('streams reasoning_content before text delta and forwards both to onText callback', async () => {
+  const chunks = [
+    'data: {"choices":[{"delta":{"reasoning_content":"Thinking step 1... "}}]}\r\n\r\n',
+    'data: {"choices":[{"delta":{"reasoning_content":"step 2 complete."}}]}\r\n\r\n',
+    'data: {"choices":[{"delta":{"content":"Final "}}]}\r\n\r\n',
+    'data: {"choices":[{"delta":{"content":"answer."}}]}\r\n\r\n',
+    'data: [DONE]\r\n\r\n',
+  ];
+  const bytes = new TextEncoder().encode(chunks.join(''));
+  global.fetch = async () => new Response(new ReadableStream({
+    start(controller) {
+      for (let i = 0; i < bytes.length; i += 8) controller.enqueue(bytes.slice(i, i + 8));
+      controller.close();
+    }
+  }), { headers: { 'content-type': 'text/event-stream' } });
+
+  const states = [];
+  await streamEndpointChat(profile, 'fake-secret', 'deepseek-r1', [{ role: 'user', text: 'Solve x' }], new AbortController().signal, (text, reasoning) => {
+    states.push({ text, reasoning });
+  });
+
+  assert.equal(states.at(-1).text, 'Final answer.');
+  assert.equal(states.at(-1).reasoning, 'Thinking step 1... step 2 complete.');
+  assert.ok(states.some(s => s.reasoning && !s.text), 'captures intermediate thinking state before text output');
+});
+
+test('parseThinking extracts explicit reasoning, <think> tags, and in-progress thinking state', () => {
+  const explicit = parseThinking('Final answer', 'Step by step deduction');
+  assert.deepEqual(explicit, { reasoning: 'Step by step deduction', content: 'Final answer', isThinking: false });
+
+  const tagged = parseThinking('<think>\n1. Plan logic\n2. Compute result\n</think>\n42 is the answer.');
+  assert.equal(tagged.reasoning, '1. Plan logic\n2. Compute result');
+  assert.equal(tagged.content, '42 is the answer.');
+  assert.equal(tagged.isThinking, false);
+
+  const streamingThink = parseThinking('<think>Currently pondering quantum state...');
+  assert.equal(streamingThink.reasoning, 'Currently pondering quantum state...');
+  assert.equal(streamingThink.content, '');
+  assert.equal(streamingThink.isThinking, true);
+
+  const plain = parseThinking('Simple hello');
+  assert.deepEqual(plain, { reasoning: '', content: 'Simple hello', isThinking: false });
 });
 test('supports JSON responses and sends effort only when explicitly enabled', async () => {
   let body;

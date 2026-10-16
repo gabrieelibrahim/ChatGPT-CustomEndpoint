@@ -2,7 +2,27 @@ import { normalizeBaseUrl, type EndpointProfile } from './endpointProfiles';
 import { providerFetch, providerStatusError } from './providerTransport';
 export type ProviderMessage = { role: 'user' | 'assistant'; text: string; images?: string[] };
 
-export async function streamEndpointChat(profile: EndpointProfile, key: string, model: string, messages: ProviderMessage[], signal: AbortSignal, onText: (text: string) => void, reasoningEffort?: string): Promise<void> {
+export function parseThinking(text: string, explicitReasoning?: string): { reasoning: string; content: string; isThinking: boolean } {
+  if (explicitReasoning) {
+    return { reasoning: explicitReasoning, content: text, isThinking: false };
+  }
+  const thinkOpen = text.indexOf('<think>');
+  if (thinkOpen !== -1) {
+    const thinkClose = text.indexOf('</think>', thinkOpen + 7);
+    if (thinkClose !== -1) {
+      const reasoning = text.slice(thinkOpen + 7, thinkClose).trim();
+      const content = (text.slice(0, thinkOpen) + text.slice(thinkClose + 8)).trim();
+      return { reasoning, content, isThinking: false };
+    } else {
+      const reasoning = text.slice(thinkOpen + 7);
+      const content = text.slice(0, thinkOpen).trim();
+      return { reasoning, content, isThinking: true };
+    }
+  }
+  return { reasoning: '', content: text, isThinking: false };
+}
+
+export async function streamEndpointChat(profile: EndpointProfile, key: string, model: string, messages: ProviderMessage[], signal: AbortSignal, onText: (text: string, reasoning?: string) => void, reasoningEffort?: string): Promise<void> {
   if (profile.auth === 'bearer' && !key.trim()) throw Error('API key sesi ini belum tersedia. Masukkan ulang di Custom Endpoint.');
   const response = await providerFetch(normalizeBaseUrl(profile.baseUrl) + '/chat/completions', profile.auth === 'bearer' ? key : '', signal, {
     model, stream: true, messages: messages.filter(message => message.text || message.images?.length).map(message => ({ role: message.role, content: message.images?.length ? [{ type: 'text', text: message.text }, ...message.images.map(url => ({ type: 'image_url', image_url: { url } }))] : message.text })),
@@ -13,12 +33,13 @@ export async function streamEndpointChat(profile: EndpointProfile, key: string, 
   if (contentType.includes('application/json')) {
     const json = await response.json();
     const text = json?.choices?.[0]?.message?.content;
+    const reasoning = json?.choices?.[0]?.message?.reasoning_content ?? json?.choices?.[0]?.message?.reasoning ?? json?.choices?.[0]?.message?.thought ?? '';
     if (typeof text !== 'string' || !text) throw Error('Penyedia tidak mengirim jawaban teks yang dikenali.');
-    onText(text); return;
+    onText(text, reasoning); return;
   }
   if (!response.body) throw Error('Penyedia mengirim respons kosong.');
   const reader = response.body.getReader(), decoder = new TextDecoder();
-  let buffer = '', answer = '', done = false;
+  let buffer = '', answer = '', reasoning = '', done = false;
   function event(block: string) {
     const raw = block.split('\n').filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n').trim();
     if (!raw) return;
@@ -26,8 +47,23 @@ export async function streamEndpointChat(profile: EndpointProfile, key: string, 
     let json;
     try { json = JSON.parse(raw); } catch { throw Error('Respons streaming penyedia tidak valid.'); }
     if (json.error) throw Error('Penyedia menghentikan jawaban. Periksa model, kuota, dan izin API key.');
-    const delta = json.choices?.[0]?.delta?.content;
-    if (typeof delta === 'string') { answer += delta; if (answer.length > 2 * 1024 * 1024) throw Error('Jawaban penyedia terlalu panjang.'); onText(answer); }
+    const delta = json.choices?.[0]?.delta;
+    const deltaContent = delta?.content;
+    const deltaReasoning = delta?.reasoning_content ?? delta?.reasoning ?? delta?.thought;
+    let changed = false;
+    if (typeof deltaReasoning === 'string' && deltaReasoning) {
+      reasoning += deltaReasoning;
+      if (reasoning.length > 4 * 1024 * 1024) throw Error('Proses reasoning penyedia terlalu panjang.');
+      changed = true;
+    }
+    if (typeof deltaContent === 'string' && deltaContent) {
+      answer += deltaContent;
+      if (answer.length > 2 * 1024 * 1024) throw Error('Jawaban penyedia terlalu panjang.');
+      changed = true;
+    }
+    if (changed) {
+      onText(answer, reasoning);
+    }
   }
   try {
     while (!done) {
@@ -40,6 +76,6 @@ export async function streamEndpointChat(profile: EndpointProfile, key: string, 
       if (buffer.length > 2 * 1024 * 1024) throw Error('Respons streaming penyedia terlalu besar.');
       if (result.done) { if (!done && buffer.trim()) event(buffer); break; }
     }
-    if (!answer.trim()) throw Error('Penyedia tidak mengirim jawaban teks. Model ini mungkin memerlukan protokol lain.');
+    if (!answer.trim() && !reasoning.trim()) throw Error('Penyedia tidak mengirim jawaban teks. Model ini mungkin memerlukan protokol lain.');
   } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
 }
