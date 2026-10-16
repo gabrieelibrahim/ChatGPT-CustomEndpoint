@@ -125,3 +125,37 @@ html[data-reduce-motion=true] .d-root *,html[data-reduce-motion=true] .d-root *:
  @keyframes d-effort-open{from{opacity:0;transform:translateY(4px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
  @keyframes d-toast-in{from{opacity:0;transform:translate(-50%,8px) scale(.98)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 }
+
+/* Project creation and execution picker follow the supplied desktop references. */
+.d-modal-backdrop:has(.d-create-project){background:#0003}
+.d-root .d-local-dialog.d-create-project{width:min(780px,calc(100% - 48px));padding:30px;border-radius:30px;background:#292929;border-color:#2c2c2c;box-shadow:0 4px 20px #0001}
+.d-create-project .d-local-heading{margin-bottom:20px;height:40px;align-items:center}
+.d-create-project .d-local-heading h2{font-size:30px;line-height:40px;letter-spacing:-.5px}
+.d-create-project .d-local-heading>button{width:24px;height:32px;color:#c8c8c8;align-self:flex-start}
+.d-create-project .d-local-heading>button svg{width:20px;height:20px}
+.d-root .d-create-project form{margin:0;padding:0}
+.d-create-project-name{display:flex;align-items:center;height:60px;border:1px solid #454545;border-radius:20px;overflow:hidden;background:#2b2b2b}
+.d-create-project-name:focus-within{border-color:#5085f4}
+.d-create-project-name>svg{flex-shrink:0;width:60px!important;height:24px!important;padding:0 18px;box-sizing:content-box;padding-left:0;padding-right:0}
+.d-root .d-create-project .d-create-project-name input{height:100%;min-height:0;border:0;border-left:1px solid #414141;border-radius:0;padding:0 12px;margin:0;background:none;font-size:20px;line-height:28px;box-shadow:none;outline:0}
+.d-create-project-name input::placeholder{color:#939393}
+.d-create-project h3{margin:20px 0 12px;font-size:20px;line-height:26px;font-weight:600}
+.d-project-sources{position:relative;min-height:154px;border:1px solid #3b3b3b;border-radius:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;background:#2b2b2b}
+.d-root .d-source-method{display:flex;align-items:center;gap:5px;color:#aaa;font-size:20px;line-height:26px;padding:0}
+.d-source-method>span{color:#eee}.d-source-method>svg{margin-left:4px;color:#eee}
+.d-root .d-source-add{display:flex;align-items:center;gap:7px;padding:5px 14px;border-radius:999px;background:#373737;font-size:20px;line-height:26px}
+.d-root .d-source-add:hover{background:#414141}
+.d-source-methods{position:absolute;z-index:2;top:75px;left:50%;transform:translateX(-50%);width:230px;padding:6px;background:#333;border:1px solid #484848;border-radius:14px;box-shadow:0 8px 24px #0005}
+.d-source-methods>button{display:block;width:100%;padding:8px 12px;text-align:left;border-radius:9px;font-size:16px}.d-source-methods>button:hover{background:#444}
+.d-source-path{display:flex;align-items:center;gap:10px;width:100%}.d-root .d-create-project .d-source-path input{margin:0;font-size:16px}.d-source-path>button{white-space:nowrap;border-radius:999px;padding:9px 14px;background:#414141;font-size:16px}
+.d-project-source{display:flex;align-items:center;gap:14px;width:100%;min-width:0}.d-project-source>span{flex:1;min-width:0}.d-project-source b{display:block;font-size:20px;font-weight:500}.d-project-source small{display:block;font-size:15px;color:#999;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-create-project-footer{display:flex;justify-content:flex-end;align-items:center;gap:30px;margin-top:48px;height:48px}
+.d-root .d-create-project-footer>button{font-size:20px;line-height:28px;padding:10px 12px;color:#999;border-radius:14px}
+.d-root .d-create-project-footer>button[type=submit]{padding:10px 26px;color:#333;background:#fff}
+.d-create-project-footer>button:disabled{cursor:default;opacity:1;color:#999!important}
+.d-root .d-work-in-menu{position:fixed;z-index:45;padding:10px;border-radius:26px;background:#292929;border:1px solid #373737;box-shadow:0 8px 28px #0002;max-height:calc(100% - 24px);overflow:auto}
+.d-root .d-work-in-menu>p{font-size:20px;line-height:26px;padding:0 8px;margin:0 0 4px;color:#999}
+.d-root .d-work-in-menu>button{display:flex;align-items:center;gap:10px;width:100%;height:43px;padding:7px 9px;border-radius:12px;font-size:20px;line-height:28px;text-align:left}
+.d-work-in-menu>button>span{flex:1}.d-work-in-menu>button>svg{flex-shrink:0;color:#bcbcbc}
+.d-work-in-menu>button:not(:disabled):hover{background:#383838}.d-work-in-menu>button:disabled{opacity:.5;cursor:not-allowed}
+.d-root .d-codex-context>button.d-context-open{background:#383838;border-radius:999px}

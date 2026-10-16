@@ -6,8 +6,8 @@ This client preserves the existing ChatGPT/Codex experiences. UI availability do
 
 | Area | Current behavior |
 | --- | --- |
-| Choose project | Native folder dialog or absolute-path entry; real directory validation, recent folders and forgetting entries without deleting files |
-| This computer | Actual host name/platform/runtime availability; separate agent configuration |
+| Choose project | Create project modal with a custom name and local source folder; native folder dialog or manual-path fallback; recent project selection; Cancel never saves the draft |
+| This computer | Anchored Work in menu with This computer selected; Cloud/Remote disabled until their runtimes exist. Actual host/platform/runtime information remains in environment settings |
 | Project files | Source index/search, bounded text preview and attach-to-chat; hidden/dependency folders and symlinks skipped |
 | Chat | Selected provider/model, streaming, stop, retry, edit/copy/read-aloud, local history and temporary chat |
 | Conversation actions | Rename, pin/unpin, archive/restore, delete confirmation, copy, local text fork and project membership |
