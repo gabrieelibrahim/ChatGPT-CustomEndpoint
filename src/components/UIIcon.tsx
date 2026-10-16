@@ -7,7 +7,8 @@ const icons: Record<string, ReactNode> = {
   spaces: <><path d="m10.2 3.3 8.6 1.5a2 2 0 0 1 1.6 2.3l-2.1 11.4a2 2 0 0 1-2.3 1.6"/><rect x="3.5" y="6.5" width="13" height="15" rx="2.3" transform="rotate(-7 10 14)"/><path d="M9.4 5.3 9.7 4a1 1 0 0 1 .5-.7"/></>,
   image: <><rect x="3" y="3.5" width="18" height="17" rx="3"/><circle cx="15.8" cy="8.7" r="1.7"/><path d="m3.5 16 4.3-4.6a1.5 1.5 0 0 1 2.2 0l6 6.1M14.2 16.2l1.5-1.5a1.4 1.4 0 0 1 2 0l2.8 2.8"/></>,
   clock: <><circle cx="12" cy="12" r="9.3"/><path d="M12 6.3v6l-3.2 2.4"/></>,
-  plugin: <><path d="M20.7 15.8A9.45 9.45 0 1 1 19 4.9"/><path d="M17.4 3.5c3.6.7 5.4 4.5 3.8 7.7-1.5 3-4.4 4.8-7.6 5.6a6.7 6.7 0 0 1-6.7-1.9c-1.3-1.4-1.2-3.6.3-4.8l3-2.2.2-3.4 3.5 2.8 2.8 3.7-3.4 2.5-3-3.4"/></>,
+  // Preserve the previously approved Plugins asset and its original 27px canvas.
+  plugin: <use href="/plugins-symbol.svg#plugins"/>,
   grid: <><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></>,
   dots: <g fill="currentColor" stroke="none"><circle cx="4" cy="12" r="1.55"/><circle cx="12" cy="12" r="1.55"/><circle cx="20" cy="12" r="1.55"/></g>,
   search: <><circle cx="10.6" cy="10.6" r="7.1"/><path d="m16 16 4.6 4.6"/></>,
@@ -78,7 +79,7 @@ export function UIIcon({ name, size }: { name: string; size?: number }) {
   if (resolved === 'gmail') drawing = <g fill="none" strokeWidth="3.4" strokeLinejoin="round"><path stroke="#4285f4" d="M3 20V6.8"/><path stroke="#34a853" d="M21 20V6.8"/><path stroke="#fbbc04" d="m21 6.8-4.5 3.7"/><path stroke="#ea4335" d="m3 6.8 9 7.2 9-7.2"/></g>;
   if (resolved === 'drive') drawing = <g stroke="none"><path fill="#2684fc" d="M2 16.5h20l-3 5H5Z"/><path fill="#00ac47" d="m8.5 2.5 6 1L6 18H1.2Z"/><path fill="#ffba00" d="m8.5 2.5 6 0 9 15.5H17Z"/></g>;
   if (resolved === 'brave') drawing = <><path fill="#fa5a19" stroke="none" d="m6 3 2-1h8l2 1 3 1-1 4v7c0 3-4 5.8-8 8-4-2.2-8-5-8-8V8L3 4l3-1Z"/><path d="m8 7 2-1 2 1 2-1 2 1 1 3-2 2 1 3-4 4-4-4 1-3-2-2 1-3ZM9 9l1.5 1M15 9l-1.5 1M10 14l2 1 2-1M12 12v3" stroke="#fff" strokeWidth="1.3"/></>;
-  const style: CSSProperties | undefined = size === undefined ? undefined : { width: size, height: size };
+  const style: CSSProperties | undefined = resolved === 'plugin' ? { ...(size === undefined ? {} : { width: size, height: size }), fill: 'currentColor', stroke: 'none' } : size === undefined ? undefined : { width: size, height: size };
   return <svg data-icon={resolved} data-icon-missing={drawing ? undefined : name} width={size || 24} height={size || 24} style={style}
-    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{drawing || fallback}</svg>;
+    viewBox={resolved === 'plugin' ? '0 0 27 27' : '0 0 24 24'} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{drawing || fallback}</svg>;
 }

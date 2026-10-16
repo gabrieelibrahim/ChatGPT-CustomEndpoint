@@ -35,7 +35,7 @@ The active UI uses the installed `Segoe UI Variable Text` font first, followed b
 
 ## Icon and corner geometry
 
-`src/components/UIIcon.tsx` supplies the shared smooth SVG paths. Active desktop icons no longer use pixel-grid traces, Unicode window-control glyphs, or a four-square fallback for unknown names. `src/desktop/shapes.css` keeps icon strokes, rounded corners and toolbar hover shapes consistent without replacing the existing page layout. All 66 registered icons render at 27px and 54px; rectangle shapes use explicit corner radii. These are independent reference-based drawings, not an official icon package.
+`src/components/UIIcon.tsx` supplies the shared smooth SVG paths. Active desktop line icons no longer use pixel-grid traces, Unicode window-control glyphs, or a four-square fallback for unknown names. The previously approved Plugins symbol is intentionally preserved as `public/plugins-symbol.svg` on its original 27px canvas and is exempt from generic stroke styling. `src/desktop/shapes.css` keeps icon strokes, rounded corners and toolbar hover shapes consistent without replacing the existing page layout. All 66 registered icons render at 27px and 54px; rectangle shapes use explicit corner radii. These are independent reference-based drawings, not an official icon package.
 
 ## Functional limits and verification
 

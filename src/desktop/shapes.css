@@ -8,7 +8,8 @@
   --d-radius-composer:34px;
 }
 .d-root svg[data-icon]{stroke-linecap:round;stroke-linejoin:round;shape-rendering:geometricPrecision}
-.d-root svg[data-icon=plugin]{fill:none;stroke:currentColor;stroke-width:var(--d-icon-stroke)}
+/* The approved Plugins symbol is a filled asset, not a stroked line icon. */
+.d-root svg[data-icon=plugin]{fill:currentColor;stroke:none;shape-rendering:auto}
 .d-rail svg[data-icon=plugin]{width:27px;height:27px}
 .d-rail .d-button[aria-label=Plugins]{border-radius:var(--d-radius-rail)}
 .d-rail>.d-button{border-radius:var(--d-radius-rail)}
