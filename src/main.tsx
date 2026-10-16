@@ -1,6 +1,6 @@
+import './sdk-ui.css';
 import { createRoot } from 'react-dom/client';
 import { Shell } from './Shell';
-import './sdk-ui.css';
 import './styles.css';
 import './desktop/desktop.css';
 import './desktop/interactions.css';
