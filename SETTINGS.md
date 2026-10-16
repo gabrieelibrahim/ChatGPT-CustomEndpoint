@@ -41,7 +41,7 @@ The recording also shows native startup registration, global OS shortcuts, exter
 
 ## Verification
 
-- `npm test`: 38 tests, including settings validation/persistence, prompt augmentation without history mutation, custom shortcuts, punctuation, usage privacy, actual provider usage callbacks, native sandbox network/Plan isolation, per-turn token deltas and provider reasoning streams.
+- `npm test`: 43 tests, including settings validation/persistence, prompt augmentation without history mutation, custom shortcuts, punctuation, usage privacy, actual provider usage callbacks, native sandbox network/Plan isolation, per-turn token deltas and provider reasoning streams.
 - `npm run test:runtime`: installed Codex runtime executes a harmless local command and local MCP echo through a fake-key loopback Responses gateway. Actual usage notifications also stream through the bridge.
 - Synthetic DOM tests exercise every settings tab, stable instruction typing/focus, appearance effects, provider/model/effort, voice selection, shortcut execution, preference persistence, import/archive/restore, destructive-action confirmations, preservation of credentials/history boundaries, and mini chat response/stop/persistence.
 - Production build passes. Live browser visual QA remains blocked by the saved origin-access permission; no pixel or native service parity is claimed.

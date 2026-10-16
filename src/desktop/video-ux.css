@@ -108,7 +108,7 @@
 /* Reasoning / Thinking Stream Accordion */
 .d-thinking-block{margin:0 0 16px;border-radius:14px;background:#242424;border:1px solid #363636;overflow:hidden;transition:border-color .15s ease}
 .d-thinking-block[data-streaming="true"]{border-color:#3c82f555}
-.d-thinking-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;padding:10px 15px;color:#aaa;font-size:16px;cursor:pointer;background:transparent;transition:background .12s,color .12s}
+.d-root .d-thinking-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;padding:10px 15px;color:#aaa;font-size:16px;cursor:pointer;background:transparent;transition:background .12s,color .12s}
 .d-thinking-toggle:hover{background:#ffffff08;color:#eee}
 .d-thinking-badge{display:flex;align-items:center;gap:10px;font-weight:500}
 .d-thinking-badge svg{color:#3c82f5}

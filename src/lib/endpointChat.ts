@@ -2,12 +2,21 @@ import { normalizeBaseUrl, type EndpointProfile } from './endpointProfiles';
 import { providerFetch, providerStatusError } from './providerTransport';
 export type ProviderMessage = { role: 'user' | 'assistant'; text: string; images?: string[] };
 
-export function parseThinking(text: string, explicitReasoning?: string): { reasoning: string; content: string; isThinking: boolean } {
-  if (explicitReasoning) {
+export function hasMessageContent(message: { role: string; text: string; reasoning?: unknown }): boolean {
+  return message.role !== 'assistant' || !!message.text || (typeof message.reasoning === 'string' && !!message.reasoning.trim());
+}
+
+function providerReasoning(message: { reasoning_content?: unknown; reasoning?: unknown; thought?: unknown } | undefined): string {
+  return [message?.reasoning_content, message?.reasoning, message?.thought].find((value): value is string => typeof value === 'string' && !!value) || '';
+}
+
+export function parseThinking(text: string, explicitReasoning?: unknown): { reasoning: string; content: string; isThinking: boolean } {
+  if (typeof explicitReasoning === 'string' && explicitReasoning) {
     return { reasoning: explicitReasoning, content: text, isThinking: false };
   }
-  const thinkOpen = text.indexOf('<think>');
-  if (thinkOpen !== -1) {
+  // Legacy gateways wrap reasoning at the start. Tags in prose/code are answer data.
+  const thinkOpen = text.search(/\S/);
+  if (thinkOpen !== -1 && text.startsWith('<think>', thinkOpen)) {
     const thinkClose = text.indexOf('</think>', thinkOpen + 7);
     if (thinkClose !== -1) {
       const reasoning = text.slice(thinkOpen + 7, thinkClose).trim();
@@ -34,9 +43,11 @@ export async function streamEndpointChat(profile: EndpointProfile, key: string, 
   if (contentType.includes('application/json')) {
     const json = await response.json();
     usage(json.usage);
-    const text = json?.choices?.[0]?.message?.content;
-    const reasoning = json?.choices?.[0]?.message?.reasoning_content ?? json?.choices?.[0]?.message?.reasoning ?? json?.choices?.[0]?.message?.thought ?? '';
-    if (typeof text !== 'string' || !text) throw Error('Penyedia tidak mengirim jawaban teks yang dikenali.');
+    const message = json?.choices?.[0]?.message;
+    const text = typeof message?.content === 'string' ? message.content : '';
+    const reasoning = providerReasoning(message);
+    if (!text.trim() && !reasoning.trim()) throw Error('Penyedia tidak mengirim jawaban teks yang dikenali.');
+    if (text.length > 2 * 1024 * 1024 || reasoning.length > 4 * 1024 * 1024) throw Error('Jawaban penyedia terlalu panjang.');
     onText(text, reasoning); return;
   }
   if (!response.body) throw Error('Penyedia mengirim respons kosong.');
@@ -52,7 +63,7 @@ export async function streamEndpointChat(profile: EndpointProfile, key: string, 
     usage(json.usage);
     const delta = json.choices?.[0]?.delta;
     const deltaContent = delta?.content;
-    const deltaReasoning = delta?.reasoning_content ?? delta?.reasoning ?? delta?.thought;
+    const deltaReasoning = providerReasoning(delta);
     let changed = false;
     if (typeof deltaReasoning === 'string' && deltaReasoning) {
       reasoning += deltaReasoning;

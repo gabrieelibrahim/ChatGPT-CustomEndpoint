@@ -83,6 +83,24 @@ test('supports JSON responses and sends effort only when explicitly enabled', as
   assert.equal(answer, 'Ready'); assert.equal(body.reasoning_effort, 'high');
 });
 
+test('JSON provider reasoning is validated before rendering and matches streaming fallback fields', async () => {
+  for (const invalid of [{ summary: 'vendor object' }, ['vendor array'], 5, true]) {
+    global.fetch = async () => Response.json({ choices: [{ message: { content: 'Valid answer', reasoning: invalid } }] });
+    let result;
+    await streamEndpointChat(profile, 'fake', profile.model, [], new AbortController().signal, (text, reasoning) => { result = { text, reasoning }; });
+    assert.deepEqual(result, { text: 'Valid answer', reasoning: '' });
+  }
+  global.fetch = async () => Response.json({ choices: [{ message: { content: null, reasoning_content: {}, reasoning: 'Partial reasoning' } }] });
+  let result;
+  await streamEndpointChat(profile, 'fake', profile.model, [], new AbortController().signal, (text, reasoning) => { result = { text, reasoning }; });
+  assert.deepEqual(result, { text: '', reasoning: 'Partial reasoning' });
+  global.fetch = async () => Response.json({ choices: [{ message: { content: null, reasoning: {} } }] });
+  await assert.rejects(streamEndpointChat(profile, 'fake', profile.model, [], new AbortController().signal, () => {}), /tidak mengirim jawaban/);
+  global.fetch = async () => new Response('data: {"choices":[{"delta":{"content":"Answer","reasoning_content":{},"reasoning":"Safe fallback"}}]}\n\ndata: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } });
+  await streamEndpointChat(profile, 'fake', profile.model, [], new AbortController().signal, (text, reasoning) => { result = { text, reasoning }; });
+  assert.deepEqual(result, { text: 'Answer', reasoning: 'Safe fallback' });
+});
+
 test('vision attachments produce OpenAI-compatible image content and preserve plain text history', async () => {
   let body;
   global.fetch = async (_, options) => { body = JSON.parse(options.body); return Response.json({ choices: [{ message: { content: 'Image received' } }] }); };

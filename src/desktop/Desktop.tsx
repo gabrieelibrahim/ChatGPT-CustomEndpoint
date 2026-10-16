@@ -12,7 +12,7 @@ import { Onboarding, ProfileNameDialog } from './Onboarding';
 import { ProfileMenu } from './ProfileMenu';
 import { ProviderModelMenu } from './ProviderModelMenu';
 import { loadEndpointStore, loadEndpointKeys, saveEndpointStore, type EndpointProfile } from '../lib/endpointProfiles';
-import { streamEndpointChat } from '../lib/endpointChat';
+import { streamEndpointChat, hasMessageContent } from '../lib/endpointChat';
 import { AgentActivity, AgentWorkspaceDialog, useCodexAgent } from './CodexAgent';
 import { ProjectChooser, CreateProjectDialog, WorkInMenu, ComputerChooser, ProjectFiles, type LocalProject, loadLocalProjects } from './WorkspaceControls';
 import { useClientData, CollectionScreen, CollectionEditor, downloadFile } from './ClientCollections';
@@ -100,7 +100,7 @@ export function Desktop(){
  const[,refreshNavigation]=useState(0);
  function currentView():NavigationView{return {screen,home,title,experience,chatMode,messages,text,scrollTop:scroll.current?.scrollTop||0,temporary}}
  function rememberNavigation(){navigationHistory.current.back.push(currentView());navigationHistory.current.forward=[];refreshNavigation(n=>n+1)}
- function restoreView(view:NavigationView){cancelGeneration();setChatError('');setScreen(view.screen);setHome(view.home);setTitle(view.title);setExperience(view.experience);setChatMode(view.chatMode);setMessages((view.temporary?view.messages:chatContent[view.title]||view.messages).filter(message=>message.role!=='assistant'||message.text));setText(view.text);setTemporary(view.temporary);setPopup('');setModal('');requestAnimationFrame(()=>{if(scroll.current)scroll.current.scrollTop=view.scrollTop})}
+ function restoreView(view:NavigationView){cancelGeneration();setChatError('');setScreen(view.screen);setHome(view.home);setTitle(view.title);setExperience(view.experience);setChatMode(view.chatMode);setMessages((view.temporary?view.messages:chatContent[view.title]||view.messages).filter(hasMessageContent));setText(view.text);setTemporary(view.temporary);setPopup('');setModal('');requestAnimationFrame(()=>{if(scroll.current)scroll.current.scrollTop=view.scrollTop})}
  function moveNavigation(direction:'back'|'forward'){const history=navigationHistory.current;const view=history[direction].pop();if(!view)return;history[direction==='back'?'forward':'back'].push(currentView());restoreView(view);refreshNavigation(n=>n+1)}
  function switchExperience(next:'ChatGPT'|'Codex'){setPopup('');if(next===experience)return;rememberNavigation();experienceViews.current[experience]=currentView();restoreView({...(experienceViews.current[next]||currentView()),experience:next,screen:'chat'});}
  function toggleSidebar(){setPopup('');setSide(value=>!value)}
@@ -143,7 +143,7 @@ export function Desktop(){
  function navigate(v:Screen){cancelGeneration();setChatError('');if(screen!==v)rememberNavigation();setScreen(v);setPopup('');setSearch('')}
  function resetChat(){cancelGeneration();agent.reset();setChatError('');setScreen('chat');setPopup('');setModal('');setHome(true);setTitle('New chat');setMessages([]);setText('');setTemporary(false);setCommand('');setPlanMode(false);for(const file of files){URL.revokeObjectURL(file.url);fileResources.current.delete(file.url)}setFiles([]);requestAnimationFrame(()=>area.current?.focus())}
  function newChat(){if(screen!=='chat'||!home||text.trim())rememberNavigation();resetChat()}
- function openChat(t:string){cancelGeneration();if(home||title!==t)agent.reset();setChatError('');if(home||title!==t||screen!=='chat')rememberNavigation();setScreen('chat');setPopup('');setModal('');setTemporary(false);setHome(false);setTitle(t);setMessages((t===title&&!home?messages:chatContent[t]||[]).filter(message=>message.role!=='assistant'||message.text));requestAnimationFrame(()=>{if(scroll.current)scroll.current.scrollTop=0})}
+ function openChat(t:string){cancelGeneration();if(home||title!==t)agent.reset();setChatError('');if(home||title!==t||screen!=='chat')rememberNavigation();setScreen('chat');setPopup('');setModal('');setTemporary(false);setHome(false);setTitle(t);setMessages((t===title&&!home?messages:chatContent[t]||[]).filter(hasMessageContent));requestAnimationFrame(()=>{if(scroll.current)scroll.current.scrollTop=0})}
  async function send(retry=false){
   if(request.current)return;
   const endpoint=endpoints.profiles.find(item=>item.id===endpoints.selectedId);
@@ -202,7 +202,7 @@ export function Desktop(){
     for(const entry of entries){
      if(typeof entry.title!=='string'||!entry.title.trim()||Object.hasOwn(Object.prototype,entry.title)||!Array.isArray(entry.messages))throw Error();
      let name=entry.title.slice(0,120),i=2;while(titles.includes(name)||Object.hasOwn(updates,name))name=entry.title.slice(0,100)+' (import '+i+++')';
-     updates[name]=entry.messages.slice(0,1000).map((message:Msg)=>{if(!message||!['user','assistant'].includes(message.role)||typeof message.text!=='string'||message.text.length>200000)throw Error();return {role:message.role,text:message.text,timestamp:typeof message.timestamp==='number'?message.timestamp:Date.now()}});
+     updates[name]=entry.messages.slice(0,1000).map((message:Msg)=>{if(!message||!['user','assistant'].includes(message.role)||typeof message.text!=='string'||message.text.length>200000)throw Error();if(message.reasoning!==undefined&&(typeof message.reasoning!=='string'||message.reasoning.length>200000))throw Error();return {role:message.role,text:message.text,...(message.reasoning?{reasoning:message.reasoning}:{}),timestamp:typeof message.timestamp==='number'?message.timestamp:Date.now()}});
      if(entry.pinned===true)importedPinned.push(name);if(entry.archived===true)importedArchived.push(name);
      if(typeof entry.project==='string'&&entry.project.trim())importedMembership[name]=entry.project.slice(0,100);
     }

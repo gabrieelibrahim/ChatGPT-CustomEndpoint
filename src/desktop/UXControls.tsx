@@ -153,7 +153,7 @@ export function ChatMessage({ message, onEdit, onNotice, streaming = false }: {
     {showThinking && <ThinkingBlock reasoning={parsed.reasoning} streaming={streaming && !parsed.content} />}
     {editing ? <div className="d-message-editor"><textarea aria-label="Edit message" autoFocus value={draft} onChange={e => setDraft(e.target.value)}
       onKeyDown={event => { if (event.key === 'Escape') setEditing(false); }}/><div><button onClick={() => setEditing(false)}>Cancel</button><button disabled={!draft.trim()} onClick={() => { onEdit(draft.trim()); setEditing(false); }}>Save</button></div></div>
-      : <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !parsed.content && !showThinking ? 'status' : undefined} aria-label={message.role === 'assistant' && !parsed.content && !showThinking ? 'Menunggu jawaban' : undefined}>{parsed.content || (showThinking ? '' : '')}</div>}
+      : (parsed.content || (streaming && !showThinking)) ? <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !parsed.content ? 'status' : undefined} aria-label={message.role === 'assistant' && !parsed.content ? 'Menunggu jawaban' : undefined}>{parsed.content}</div> : null}
     {!editing && !streaming && parsed.content && <MessageActions text={parsed.content} user={message.role === 'user'} timestamp={time} onNotice={onNotice} onEdit={() => { setDraft(message.text); setEditing(true); }}/ >}
   </section>;
 }
