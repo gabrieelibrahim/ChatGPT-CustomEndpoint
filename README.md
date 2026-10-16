@@ -19,6 +19,20 @@ Profile metadata is stored in localStorage; API keys stay in sessionStorage for 
 
 During `npm run dev` on localhost, a development-only same-origin relay in the Vite process forwards requests from this computer to the configured provider. This handles providers that reject browser CORS preflight, without routing through Sakelar or another hosted proxy. It accepts only same-origin JSON POST requests from loopback, allows only `/models` and `/chat/completions`, refuses redirects and never logs or saves payloads/credentials. **Production web builds call providers directly and still require provider CORS support.** The relay is not a production backend or native packaging solution.
 
+## Local Codex agent (development)
+
+The Codex experience can use an installed **Codex CLI/app-server** through a local bridge, alongside the existing text client. No Codex binary is bundled. On Windows the bridge discovers the installed OpenAI/Codex runtime, then falls back to PATH. Set `CODEX_RUNTIME_PATH` on the development server for another installation.
+
+1. Run `npm run dev` and select the **Codex** experience.
+2. Open **Agent workspace** in the conversation header, or **This computer** on its home screen.
+3. Enter an absolute project-folder path and choose read-only or workspace editing.
+4. Select an endpoint/model in the usual provider menu. Confirm that this provider supports **Responses API with tool calling**; Chat Completions compatibility alone is insufficient.
+5. Enable the local agent and send a request. Command output, file-change items, turn diffs, plan updates and permission requests appear below the answer. Stop interrupts the native turn. Plan mode uses a read-only turn policy and disables permission escalation.
+
+Keys are passed to the private runtime process via its environment, never CLI arguments or persistent config. A temporary isolated CODEX_HOME prevents importing the user's main Codex account, plugins or settings. Sessions are ephemeral, closed when starting/opening another chat, and idle sessions expire after 15 minutes. Local text history remains in this client; reopening a conversation starts a fresh native thread with that text as context, without reconstructing old tool state. Only the workspace path/access preference is persisted; enabling agent execution and confirming Responses support must be repeated after reload.
+
+This bridge runs only in localhost development. Production static hosting cannot execute local tools. Native packaging, browser/desktop computer-use adapters, hosted Codex services, additional MCP configuration and full native thread restoration are not implemented. Unknown native interaction requests fail explicitly instead of being approved. It is not full feature parity with the official application. See [AGENT-RUNTIME.md](AGENT-RUNTIME.md) for evidence and verification.
+
 ## Stack
 React 19, TypeScript, Vite 6, Tailwind CSS 4. All icons are inline SVG; no CDN or runtime asset dependency.
 
