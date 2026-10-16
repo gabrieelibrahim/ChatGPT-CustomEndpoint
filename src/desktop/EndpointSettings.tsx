@@ -73,18 +73,17 @@ export function EndpointSettings({ setup = false, onSaved, onBack, onNotice }: {
   }
   const editing = store.profiles.find(profile => profile.id === draft.id);
   const matchingModels = draft.models.filter(model => model.toLowerCase().includes(modelQuery.toLowerCase()));
-  return <section className="d-endpoint-page" aria-labelledby={setup ? undefined : 'endpoint-heading'} aria-label={setup ? 'Custom Endpoint' : undefined}>
-    {!setup && <header><div><p className="d-endpoint-eyebrow">AI CONNECTIONS</p><h1 id="endpoint-heading">Custom Endpoint</h1><p>Simpan koneksi dan model dari penyedia AI pilihanmu.</p></div><button className="d-endpoint-primary" onClick={() => edit()}><I name="plus" size={20}/>Tambah endpoint</button></header>}
+  return <section className={'d-endpoint-page' + (setup ? '' : ' d-endpoint-settings')} aria-labelledby={setup ? undefined : 'endpoint-heading'} aria-label={setup ? 'Custom Endpoint' : undefined}>
+    {!setup && <header><div><h1 id="endpoint-heading">Custom Endpoint</h1><p>Hubungkan AI pilihanmu.</p></div><button className="d-endpoint-primary" onClick={() => edit()}><I name="plus" size={20}/>Tambah endpoint</button></header>}
     <div className="d-endpoint-layout">{!setup && <aside className="d-endpoint-profiles" aria-label="Endpoint tersimpan"><h2>Endpoint tersimpan <span>{store.profiles.length}</span></h2>
-      {!store.profiles.length && <div className="d-endpoint-empty"><I name="globe" size={30}/><b>Belum ada endpoint</b><p>Tambahkan koneksi pertamamu di formulir sebelah.</p></div>}
+      {!store.profiles.length && <div className="d-endpoint-empty"><I name="globe" size={30}/><b>Belum ada endpoint</b><p>Tambahkan koneksi pertamamu di bawah.</p></div>}
       {store.profiles.map(profile => <div key={profile.id} className={'d-endpoint-card ' + (draft.id === profile.id ? 'd-is-editing' : '')}>
         <button className="d-endpoint-open" onClick={() => edit(profile)}><span className="d-endpoint-mark"><I name="globe" size={22}/></span><span><b>{profile.name}</b><small>{new URL(profile.baseUrl).host}</small></span>{store.selectedId === profile.id && <span className="d-endpoint-badge">Pilihan</span>}</button>
         <p>{profile.model}{profile.auth === 'bearer' && !keys[profile.id] && <small className="d-endpoint-key-needed">Masukkan ulang API key untuk sesi ini</small>}</p><div className="d-endpoint-card-actions"><button disabled={store.selectedId === profile.id} onClick={() => { setError(''); if (persist({ ...store, selectedId: profile.id })) { setNotice('Profil ' + profile.name + ' dipilih.'); notify(profile.name + ' dipilih'); } }}>{store.selectedId === profile.id ? <><I name="check" size={16}/>Dipilih</> : 'Pilih profil'}</button><button aria-label={'Hapus ' + profile.name} onClick={() => setDeleteId(deleteId === profile.id ? '' : profile.id)}>Hapus</button></div>
         {deleteId === profile.id && <div className="d-endpoint-delete"><p>Hapus endpoint ini?</p><button onClick={() => remove(profile.id)}>Hapus endpoint</button><button onClick={() => setDeleteId('')}>Batal</button></div>}
       </div>)}
-      <SakelarRecommendation/>
     </aside>}<form className="d-endpoint-form" onSubmit={event => { event.preventDefault(); save(); }} autoComplete="off">
-      <div className="d-endpoint-form-heading"><span className="d-endpoint-mark"><I name="terminal" size={25}/></span><div><h2>{editing ? 'Edit endpoint' : 'Tambah endpoint'}</h2><p>OpenAI-compatible API</p></div></div>
+      <div className="d-endpoint-form-heading">{setup && <span className="d-endpoint-mark"><I name="terminal" size={25}/></span>}<div><h2>{editing ? 'Pengaturan koneksi' : 'Endpoint baru'}</h2><p>OpenAI-compatible API</p></div></div>
       <label htmlFor="endpoint-name">Nama endpoint<input ref={nameInput} id="endpoint-name" maxLength={80} placeholder="Contoh: Gateway saya" value={draft.name} onChange={event => update({ name: event.target.value })} required/></label>
       <label htmlFor="endpoint-base-url">Base URL<input id="endpoint-base-url" type="url" maxLength={2048} spellCheck={false} placeholder="https://api.example.com/v1" value={draft.baseUrl} onChange={event => update({ baseUrl: event.target.value, models: [] })} required/><small>Masukkan alamat API, termasuk /v1 jika penyedia memerlukannya.</small></label>
       <label className="d-endpoint-auth"><input type="checkbox" checked={draft.auth} onChange={event => { setRevealed(false); update({ auth: event.target.checked, key: event.target.checked ? draft.key : '' }); }}/><span>Gunakan API key</span></label>
@@ -97,6 +96,6 @@ export function EndpointSettings({ setup = false, onSaved, onBack, onNotice }: {
       <label className="d-endpoint-auth"><input type="checkbox" checked={!!draft.sendReasoning} onChange={event => update({ sendReasoning: event.target.checked })}/><span>Kirim reasoning_effort (jika model mendukung)</span></label>
       {error && <p className="d-endpoint-status d-error" role="alert">{error}</p>}{(notice || testResult) && <p className="d-endpoint-status" role="status"><I name="check" size={18}/>{notice || testResult}</p>}
       <footer><button type="button" className="d-endpoint-secondary" onClick={setup ? onBack : () => edit(editing)}>{setup ? 'Kembali' : 'Reset'}</button><button className="d-endpoint-primary" type="submit">{setup ? 'Simpan & mulai' : 'Simpan endpoint'}</button></footer>
-    </form></div>{!setup && <p className="d-endpoint-scope"><I name="shield" size={18}/>Endpoint pilihan dipakai untuk percakapan teks. API key hanya disimpan selama sesi tab ini.</p>}
+    </form></div>{!setup && <><p className="d-endpoint-scope"><I name="shield" size={18}/>API key tersimpan hanya selama sesi tab ini.</p><SakelarRecommendation/></>}
   </section>;
 }

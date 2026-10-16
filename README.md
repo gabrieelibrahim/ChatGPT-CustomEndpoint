@@ -52,7 +52,7 @@ npm run test:workspace
 npm run test:files
 ```
 
-`npm test` runs all 24 transport/workspace/file tests. Optional `npm run test:runtime` requires an installed Codex runtime and executes a harmless local command and MCP echo against a fake-key local gateway; it uses no external inference.
+`npm test` runs all 27 transport/workspace/file/history tests. Optional `npm run test:runtime` requires an installed Codex runtime and executes a harmless local command and MCP echo against a fake-key local gateway; it uses no external inference.
 
 ## Production
 ```sh

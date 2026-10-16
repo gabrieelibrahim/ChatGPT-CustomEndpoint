@@ -19,6 +19,7 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
   const optionsRef = useRef<HTMLDivElement>(null), optionsAnchor = useRef<HTMLElement | null>(null);
   const [optionsPosition, setOptionsPosition] = useState({ left: 0, top: 0 });
   const [chatOptions, setChatOptions] = useState<{ title: string; left: number; top: number } | null>(null);
+  useEffect(() => { setChatOptions(null); setOptions(null); preview.close(); }, [experience]);
   const chatOptionsRef = useRef<HTMLDivElement>(null), chatOptionsAnchor = useRef<HTMLElement | null>(null);
   function toggleOptions(section: 'Projects' | 'Recents', anchor: HTMLElement) {
     optionsAnchor.current = anchor;
@@ -56,9 +57,10 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
       onFocus={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) enter(title, event.currentTarget, true); }}
       onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) preview.leave(); }}>
       <button className="d-history-open" onClick={() => { preview.close(); onOpen(title); }}>{title}</button>
-      <div className="d-history-actions"><B icon="dots" label="Conversation options" expanded={chatOptions?.title === title} onClick={event => toggleChatOptions(title, event.currentTarget)}/>
-        {experience === 'ChatGPT' ? <B icon="pin" label={pinned.includes(title) ? 'Unpin chat' : 'Pin chat'} onClick={() => onPin(title)}/>
-          : <B icon="archive" label="Archive chat" onClick={() => { preview.close(); onArchive(title); }}/>}</div>
+      <div className="d-history-actions">
+        {experience === 'ChatGPT' && <B icon="dots" label="Conversation options" expanded={chatOptions?.title === title} onClick={event => toggleChatOptions(title, event.currentTarget)}/>}
+        <B icon="pin" label={pinned.includes(title) ? 'Unpin chat' : 'Pin chat'} onClick={() => onPin(title)}/>
+        {experience === 'Codex' && <B icon="archive" label="Archive chat" onClick={() => { preview.close(); onArchive(title); }}/>}</div>
     </div>;
   }
   const visibleTitles = titles.filter(title => (!showPinned || !pinned.includes(title)) && !archived.includes(title));
@@ -78,7 +80,7 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
       <Disclosure open={!collapsed}>{sortedTitles.map(row)}</Disclosure>
     </div>
     {options && root && createPortal(<div className="d-history-options" style={{ ...optionsPosition, position: 'fixed' }} ref={optionsRef} role="menu" aria-label={options + ' options'}>{options === 'Projects' ? <button role="menuitem" onClick={() => { onCreateProject?.(); setOptions(null); }}>New project</button> : <><button role="menuitemradio" aria-checked={!alphabetical} onClick={() => { setAlphabetical(false); setOptions(null); }}>Recent first{!alphabetical && <I name="check" size={18}/>}</button><button role="menuitemradio" aria-checked={alphabetical} onClick={() => { setAlphabetical(true); setOptions(null); }}>Alphabetical{alphabetical && <I name="check" size={18}/>}</button></>}</div>, root)}
-    {chatOptions && root && createPortal(<div className="d-history-chat-options" style={{ left: chatOptions.left, top: chatOptions.top, position: 'fixed' }} ref={chatOptionsRef} role="menu" aria-label={'Options for ' + chatOptions.title}>
+    {experience === 'ChatGPT' && chatOptions && root && createPortal(<div className="d-history-chat-options" style={{ left: chatOptions.left, top: chatOptions.top, position: 'fixed' }} ref={chatOptionsRef} role="menu" aria-label={'Options for ' + chatOptions.title}>
       <button role="menuitem" onClick={() => { onOptions?.(chatOptions.title, 'Rename'); setChatOptions(null); }}><I name="edit" size={22}/><span>Rename</span><small>Ctrl+Alt+R</small></button>
       <button role="menuitem" onClick={() => { onPin(chatOptions.title); setChatOptions(null); }}><I name="pin" size={22}/><span>{pinned.includes(chatOptions.title) ? 'Unpin' : 'Pin'}</span><small>Ctrl+Alt+P</small></button>
       {experience === 'ChatGPT' && <button role="menuitem" onClick={() => { onOptions?.(chatOptions.title, 'Section'); setChatOptions(null); }}><I name="list" size={22}/><span>Section</span><I name="down" size={16}/></button>}

@@ -44,6 +44,6 @@ Native window chrome/packaging; desktop mouse/keyboard/screenshot automation; br
 
 ## Verification
 
-`npm run build` and `npm test` (24 tests: eight provider, seven agent protocol/transport, four workspace/security and five file-library/hydration tests). Optional `npm run test:runtime` repeats the real installed-runtime smoke test. Additional synthetic DOM tests cover the original project/computer regression, computed form/header styles, CRUD flows and agent approvals. An installed-runtime smoke test used a fake-key local mock gateway to execute a harmless PowerShell command and a real local MCP echo tool, then verified the returned tool result. No paid inference was performed.
+`npm run build` and `npm test` (27 tests: eight provider, seven agent protocol/transport, four workspace/security, five file-library/hydration and three experience-specific history tests). Optional `npm run test:runtime` repeats the real installed-runtime smoke test. Additional synthetic DOM tests cover the original project/computer regression, computed form/header styles, CRUD flows and agent approvals. An installed-runtime smoke test used a fake-key local mock gateway to execute a harmless PowerShell command and a real local MCP echo tool, then verified the returned tool result. No paid inference was performed.
 
 Live browser visual verification was blocked by the saved origin access permission. Synthetic DOM checks do not establish pixel identity, exact animation timing or native folder-dialog appearance.

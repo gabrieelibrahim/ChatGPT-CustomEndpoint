@@ -19,7 +19,7 @@ The current desktop composition follows a 1920px-wide reference canvas scaled to
 ## Local interactions
 
 - Experience selector with descriptions, current selection and keyboard navigation.
-- Collapsible Projects/Recents, independently scrolling history, hover previews and pin/archive controls.
+- Collapsible Projects/Recents and independently scrolling history with hover previews. ChatGPT rows expose dots + pin; Codex rows expose pin + archive. Open conversation menus are dismissed when switching experiences.
 - Navigation pinning from More, saved on this device.
 - Tooltips with shortcut labels, anchored in the scaled interface.
 - Conversation markers based on user turns, smooth jumps and a scroll-to-latest button.
@@ -43,6 +43,10 @@ Setup uses a full-page dark authentication-style presentation outside the scaled
 Name editing retains its existing responsive dialog. Both use initial focus, Tab containment and hidden/inert inactive steps. The endpoint step first shows a compact connection choice and Skip; activating Custom endpoint reveals the editor and focuses its first field. Kembali collapses it without discarding the draft. Returning to edit the name also retains the endpoint draft. Existing chat state is retained. The rail More menu opens on pointer hover, with a short leave grace while crossing into its panel, and keeps click/touch and keyboard activation. Escape restores focus to its trigger without reopening the panel. Unsupported account actions identify their integration requirements; Invite a coworker is disabled to match the reference.
 
 A recommendation card in setup and endpoint settings links explicitly to `https://sakelar.web.id`; it does not preconfigure a provider or route requests through Sakelar. The startup flow can be reused by future native wrappers, but no APK/EXE packaging is implemented here.
+
+## Endpoint settings theme
+
+Custom Endpoint uses a centered single-column desktop layout with compact saved connections above a flat editor, rounded fields, neutral toggles and pill actions. The Sakelar recommendation is secondary below the form. Model discovery, session-scoped keys and profile add/select/edit/delete keep their existing behavior. Desktop styling is scoped with `.d-endpoint-settings`; onboarding retains its narrow layout.
 
 ## Fonts
 
