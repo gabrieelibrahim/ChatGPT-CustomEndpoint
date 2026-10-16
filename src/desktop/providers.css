@@ -37,3 +37,20 @@
 .d-discovered-models p{font-size:14px;line-height:22px;color:#999;padding:10px}
 .d-auth-page .d-discovered-models{margin:12px 0}
 .d-auth-page .d-discovered-models>[role=listbox]{max-height:150px}
+
+/* Keep the actual range input for keyboard/touch semantics; animate its visual thumb. */
+.d-root .d-effort-thumb{position:absolute;top:0;z-index:1;width:42px;height:42px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0001;transform:translateX(-50%);pointer-events:none}
+.d-root .d-effort-slider input{z-index:2;opacity:0;touch-action:pan-y}
+.d-root .d-effort-slider:has(input:focus-visible){outline:2px solid #89b5ff;outline-offset:4px;border-radius:999px}
+.d-root .d-effort-slider[data-dragging=true] .d-effort-thumb,.d-root .d-effort-slider[data-dragging=true] .d-effort-progress{transition:none}
+.d-effort-label{display:block}
+.d-root .d-model>.d-effort-trigger-content{display:flex;align-items:center;gap:6px;min-width:0;flex-shrink:1}
+.d-effort-trigger-level{color:#999;flex-shrink:0}
+@media(prefers-reduced-motion:no-preference){
+ .d-effort-thumb{transition:left 180ms cubic-bezier(.2,.8,.2,1)}
+ .d-effort-progress{transition:width 180ms cubic-bezier(.2,.8,.2,1)}
+ .d-effort-label,.d-effort-trigger-content{animation:d-effort-text 120ms ease-out}
+ .d-root .d-effort{transform-origin:bottom right;animation:d-effort-open 140ms cubic-bezier(.2,.8,.2,1)}
+ @keyframes d-effort-text{from{opacity:.35;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}
+ @keyframes d-effort-open{from{opacity:0;transform:translateY(4px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+}
