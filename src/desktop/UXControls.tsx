@@ -8,6 +8,7 @@ export const navigationItems = [
   { icon: 'map', label: 'Maps', screen: '' },
   { icon: 'cube', label: 'GPTs', screen: '' },
   { icon: 'branch', label: 'Code Review', screen: '' },
+  { icon: 'globe', label: 'Custom Endpoint', screen: 'endpoints' },
 ];
 
 export function MoreNavigation({ pinned, onPin, onOpen }: {

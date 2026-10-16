@@ -11,4 +11,5 @@ import './desktop/shapes.css';
 import './desktop/chat-mode.css';
 import './desktop/navigation.css';
 import './desktop/motion.css';
+import './desktop/endpoints.css';
 createRoot(document.getElementById('root')!).render(<Shell/>);

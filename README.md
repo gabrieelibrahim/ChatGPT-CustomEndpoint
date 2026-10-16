@@ -3,7 +3,13 @@
 An independent interface study based on supplied mobile screenshots. This is not an official OpenAI application or the original ChatGPT source code.
 
 ## Current UI
-The default route uses the newer desktop ChatGPT/Codex presentation. The classic Personal interface is retained but disabled. See [DESKTOP.md](DESKTOP.md) for active routes, local interactions and limitations. API configuration described below applies to the legacy mobile study at ?mobile=1; the active desktop composer currently uses demo replies.
+The default route uses the newer desktop ChatGPT/Codex presentation. The classic Personal interface is retained but disabled. See [DESKTOP.md](DESKTOP.md) for active routes, local interactions and limitations. Desktop now has a Custom Endpoint settings page for provider profiles and optional model discovery; its composer still uses demo replies. The legacy mobile API client at `?mobile=1` remains separate.
+
+## Custom Endpoint settings
+
+Open **Profile → Custom Endpoint** (or Settings), **More → Custom Endpoint**, or search for Custom Endpoint with Ctrl+K. Add a provider name, Base URL, API key and model ID. Multiple profiles can be saved, edited, selected and deleted. Only the OpenAI-compatible protocol is supported here. HTTPS and local HTTP loopback URLs are accepted; no provider is required or hardcoded.
+
+Profile metadata is stored in localStorage; API keys stay in sessionStorage for the current tab session. Keys are masked and excluded from profile serialization. **Tes & ambil model** explicitly requests the configured provider's `/models` endpoint directly, without a proxy, cookies or redirects. Providers must allow browser CORS; model IDs can be entered manually when discovery is unsupported. Saving or selecting a profile does not yet connect the desktop composer.
 
 ## Stack
 React 19, TypeScript, Vite 6, Tailwind CSS 4. All icons are inline SVG; no CDN or runtime asset dependency.
@@ -31,6 +37,8 @@ Deploy `dist/` to any static hosting service. `.openai/hosting.json` is hosting-
 - `src/components/ApiSettings.tsx`: session-scoped endpoint configuration.
 - `src/hooks/useKeyboard.ts`: mobile visual viewport detection.
 - `src/lib/chat.ts`: message types, safe storage parsing, API client.
+- `src/desktop/EndpointSettings.tsx`: desktop provider profile editor and model discovery UI.
+- `src/lib/endpointProfiles.ts`: profile validation/storage, session credentials and OpenAI-compatible model discovery.
 - `src/styles.css`: Tailwind import plus reference-specific style rules. Components also use Tailwind utilities. Remaining rules can migrate gradually without changing state logic.
 
 ## Behavior
@@ -41,7 +49,7 @@ Without API configuration, replies use an explicitly labeled demo mode. Configur
 The attachment picker is a UI demonstration and does not upload files. Navigation sections are previews. Speech input and output depend on browser support.
 
 ## Icon provenance
-OpenAI's official brand resources were checked at https://openai.com/brand/ . No official complete ChatGPT UI symbol package was located. UI symbols here are reference-based redraws and are not represented as official or pixel-identical assets. The GitHub mark reproduces the familiar Octocat silhouette and is used to identify GitHub-related suggestions. Brand marks remain owned by their respective owners.
+The shared desktop icon wrapper uses selected MIT-licensed SVGs from [OpenAI Apps SDK UI](https://github.com/openai/apps-sdk-ui), with source revision and notices under `src/components/openai-icons/`. Reference-specific symbols and third-party marks remain local. This does not imply official affiliation or pixel identity with the current ChatGPT application.
 
 ## Verification
 `npm run build` type-checks the React/TypeScript source and builds the production bundle. Native Android keyboard behavior still requires device verification. UI is based on screenshots and is not claimed to be pixel-perfect.

@@ -16,7 +16,7 @@ const actionGroups: { label: string; actions: PaletteAction[] }[] = [
   { label: 'Settings', actions: [
     ['General', 'settings'], ['Import', 'download'], ['Profile', 'page'], ['Account', 'comment'],
     ['Appearance', 'bulb'], ['Voice', 'mic'], ['Storage', 'folder'], ['Mini & Pets', 'plugin'],
-    ['Git', 'branch'], ['Connections', 'globe'], ['Codex Cloud', 'cloud'], ['Code Review', 'branch'],
+    ['Git', 'branch'], ['Connections', 'globe'], ['Custom Endpoint', 'globe'], ['Codex Cloud', 'cloud'], ['Code Review', 'branch'],
     ['Environments', 'computer'], ['Worktrees', 'expand'], ['Configuration', 'shield'],
     ['Work preferences', 'settings'], ['Personalization', 'settings'], ['Browser', 'globe'],
     ['Computer use', 'computer'], ['MCP servers', 'terminal'], ['Hooks', 'terminal'],

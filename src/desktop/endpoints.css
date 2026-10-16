@@ -1,0 +1,56 @@
+.d-endpoint-page{height:100%;overflow:auto;padding:44px 54px;scrollbar-width:thin;scrollbar-color:#444 transparent}
+.d-root .d-endpoint-page>header{position:static;display:flex;align-items:flex-start;justify-content:space-between;gap:28px;background:none;padding:0;z-index:auto;max-width:1250px;margin:0 auto 32px}
+.d-root .d-endpoint-page h1{font-size:36px;line-height:50px;font-weight:600;margin:2px 0 10px}
+.d-endpoint-page header p{font-size:18px;line-height:28px;color:#999;max-width:700px}
+.d-root .d-endpoint-page .d-endpoint-eyebrow{font-size:13px;letter-spacing:1.4px;color:#888;font-weight:600}
+.d-root .d-endpoint-primary,.d-root .d-endpoint-secondary{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px;border-radius:999px;padding:9px 20px;font-size:17px;line-height:26px;white-space:nowrap;background:#f2f2f2;color:#222}
+.d-root .d-endpoint-primary:hover{background:#dcdcdc}
+.d-root .d-endpoint-secondary{background:#303030;color:#ddd;border:1px solid #424242}
+.d-endpoint-layout{display:grid;grid-template-columns:300px minmax(0,1fr);align-items:start;gap:28px;max-width:1250px;margin:auto}
+.d-root .d-endpoint-profiles h2{font-size:17px;line-height:28px;font-weight:500;color:#aaa;margin:0 0 16px;display:flex;justify-content:space-between}
+.d-endpoint-profiles h2>span{font-size:14px;color:#999;background:#292929;padding:0 9px;border-radius:8px}
+.d-endpoint-empty{border:1px dashed #3e3e3e;border-radius:20px;padding:28px 20px;color:#777;font-size:16px;line-height:26px;text-align:center}
+.d-endpoint-empty>svg{margin-bottom:12px}
+.d-endpoint-empty b{display:block;color:#bdbdbd;font-weight:500;margin-bottom:6px}
+.d-endpoint-card{padding:14px;border:1px solid #363636;background:#202020;border-radius:20px;margin-bottom:12px}
+.d-endpoint-card.d-is-editing{border-color:#737373;background:#252525}
+.d-root .d-endpoint-open{display:flex;width:100%;align-items:center;gap:10px;min-width:0}
+.d-endpoint-mark{width:42px;height:42px;flex-shrink:0;border:1px solid #404040;background:#2c2c2c;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#bbb}
+.d-endpoint-open>span:nth-child(2){min-width:0}
+.d-endpoint-open b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px;font-weight:500;line-height:25px}
+.d-endpoint-open small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#999;font-size:13px;line-height:22px}
+.d-endpoint-badge{font-size:11px;background:#363636;color:#ccc;padding:2px 7px;border-radius:8px;margin-left:auto;flex-shrink:0}
+.d-root .d-endpoint-card>p{color:#999;font-size:14px;line-height:24px;margin:13px 0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.d-endpoint-key-needed{display:block;color:#c6ae83;font-size:12px;line-height:21px;white-space:normal}
+.d-endpoint-card-actions{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.d-root .d-endpoint-card-actions button{display:flex;align-items:center;gap:6px;font-size:14px;padding:4px 8px;border-radius:8px;color:#bbb}
+.d-root .d-endpoint-card-actions button:hover{background:#ffffff0a}
+.d-root .d-endpoint-card-actions button:disabled{color:#888;cursor:default}
+.d-endpoint-delete{border-top:1px solid #444;padding-top:10px;margin-top:10px;font-size:15px}
+.d-endpoint-delete p{color:#bbb;margin-bottom:7px}
+.d-root .d-endpoint-delete button{font-size:14px;padding:5px 8px;border-radius:8px;margin-right:6px;background:#333}
+.d-endpoint-delete button:first-of-type{color:#ffaaa2}
+.d-root .d-endpoint-form{display:block;max-width:none;min-height:0;margin:0;padding:28px;background:#222;border:1px solid #393939;border-radius:24px;font-size:18px;line-height:28px}
+.d-endpoint-form-heading{display:flex;align-items:center;gap:14px;margin-bottom:28px}
+.d-root .d-endpoint-form h2{font-size:23px;line-height:32px;font-weight:600}
+.d-endpoint-form-heading p{font-size:15px;color:#999;line-height:24px}
+.d-root .d-endpoint-form>label{display:block;font-size:17px;font-weight:500;margin-bottom:22px}
+.d-root .d-endpoint-form input:not([type=checkbox]){display:block;width:100%;min-height:48px;border:1px solid #464646;background:#292929;border-radius:12px;padding:10px 14px;margin-top:8px;outline:none;color:#eee;font-size:17px;line-height:26px}
+.d-root .d-endpoint-form input::placeholder{color:#787878}
+.d-root .d-endpoint-form input:focus-visible{border-color:#888;outline:2px solid #7775;outline-offset:2px}
+.d-endpoint-form label small{display:block;margin-top:7px;font-size:14px;line-height:22px;font-weight:400;color:#999}
+.d-root .d-endpoint-form>.d-endpoint-auth{display:flex;gap:10px;align-items:center;font-size:16px;margin-bottom:18px;cursor:pointer}
+.d-root .d-endpoint-auth input{width:18px;height:18px;margin:0;accent-color:#4388f5}
+.d-endpoint-secret{position:relative}
+.d-root .d-endpoint-secret input{padding-right:112px!important}
+.d-root .d-endpoint-secret button{position:absolute;right:8px;top:8px;font-size:14px;line-height:24px;padding:4px 8px;border-radius:8px;color:#aaa}
+.d-root .d-endpoint-secret button:hover{background:#ffffff0a}
+.d-endpoint-model-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-top:24px}
+.d-endpoint-model-heading>label{font-size:17px;font-weight:500}
+.d-root .d-endpoint-test{display:inline-flex;gap:8px;align-items:center;padding:5px 10px;border:1px solid #424242;background:#2a2a2a;border-radius:10px;font-size:14px;line-height:24px;color:#ccc}
+.d-root .d-endpoint-test:disabled{opacity:.5;cursor:default}
+.d-root .d-endpoint-hint{color:#999;font-size:14px;line-height:23px;margin-top:8px}
+.d-root .d-endpoint-form .d-endpoint-status{display:flex;align-items:center;gap:9px;border:1px solid #475347;background:#293129;border-radius:12px;padding:11px 14px;color:#c9dfc9;font-size:15px;line-height:24px;margin-top:22px}
+.d-root .d-endpoint-form .d-error{display:block;border-color:#654541;background:#382826;color:#ffc0b8}
+.d-root .d-endpoint-form footer{position:static;display:flex;justify-content:flex-end;gap:12px;margin-top:28px;padding:20px 0 0;border-top:1px solid #383838;background:none}
+.d-root .d-endpoint-scope{display:flex;align-items:center;gap:10px;max-width:1250px;margin:24px auto 0;color:#888;font-size:14px;line-height:24px}

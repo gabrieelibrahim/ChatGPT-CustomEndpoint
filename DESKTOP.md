@@ -30,6 +30,7 @@ The current desktop composition follows a 1920px-wide reference canvas scaled to
 - Sidebar collapse preserves scroll position and folded sections; Pinned is available in both experiences.
 - Local Back/Forward history and a sliding Chat/Work selection indicator, with reduced-motion support.
 - Shared grid composer motion, retained animated sidebar sections and preview cards that stay mounted while changing hover targets. Motion helpers live in `src/desktop/Motion.tsx` and `motion.css`.
+- Custom Endpoint settings from Profile/Settings, More and the search palette: add/edit/delete/select profiles, manually choose a model or explicitly fetch `/models`. Metadata persists locally; API keys are session-scoped and never included in persistent profile JSON.
 
 Ctrl+Shift+S toggles the sidebar, Ctrl+N or Ctrl+Shift+O starts a new local conversation, Ctrl+K toggles search, Alt+Left/Right traverses local navigation, and Ctrl+Shift+J opens a temporary Chat session when the browser delivers those shortcuts. Browser-reserved shortcuts may take precedence. Settings and native commands in the search palette open local preview dialogs; Open folder uses the existing local project chooser.
 
@@ -45,6 +46,6 @@ The previously approved round Plugins symbol is preserved as `public/plugins-sym
 
 ## Functional limits and verification
 
-Desktop chat replies remain local demo replies. The legacy mobile API client has not been connected to the newer UI. Model names, approval controls, Plan/Goal chips and plugin selections do not grant permissions or invoke agent capabilities. Chrome attachment explicitly reports unavailable. Local file selection does not upload files to a provider.
+Desktop chat replies remain local demo replies. The new endpoint profiles and the legacy mobile API client have not been connected to the newer composer. Profile selection is a saved preference, not an indication of a live chat connection. The settings page explicitly explains this. Model discovery makes a real browser request only when its test button is clicked. Model names, approval controls, Plan/Goal chips and plugin selections do not grant permissions or invoke agent capabilities. Chrome attachment explicitly reports unavailable. Local file selection does not upload files to a provider.
 
 Production build and read-only server-render smoke checks cover both home variants, disabled classic routing, Add menu, navigation pin labels and user-turn markers. Browser visual QA was blocked by the browser origin permission gate. Pixel identity and exact animation timing are not established. Native window controls are decorative. Official SDK icons do not guarantee that every symbol matches the current ChatGPT desktop application.
