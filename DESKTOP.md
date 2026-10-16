@@ -4,7 +4,7 @@
 
 The default route opens the newer desktop interface. ChatGPT and Codex are presentation choices in the sidebar selector, not authenticated account tiers or provider/model restrictions. The earlier classic Personal implementation is retained under `src/personal/` but is not reachable through the active shell, including `?view=personal`. The older mobile study remains available at `?mobile=1`.
 
-ChatGPT starts with Chat/Work tabs, a centered composer and project/files/plugins actions. Codex starts with its own mark, build prompt, bottom composer and project/computer context bar. Selecting an experience opens its home screen. Existing chat reference data and local conversations remain available from the sidebar.
+ChatGPT has distinct Chat/Work presentations. Work uses a stacked composer with project/files/plugins actions. Chat uses the single-row capsule from the reference, the heading "Where should we begin?", an effort-only label and a temporary-chat toggle. The toggle skips local history persistence for that temporary Chat session; it does not configure a remote provider. Codex starts with its own mark, build prompt, bottom composer and project/computer context bar. Selecting an experience opens its home screen. Existing chat reference data and local conversations remain available from the sidebar.
 
 ## Development
 

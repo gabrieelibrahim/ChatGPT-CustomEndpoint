@@ -8,4 +8,5 @@ import './personal/video-ux.css';
 import './typography.css';
 import './desktop/video-ux.css';
 import './desktop/shapes.css';
+import './desktop/chat-mode.css';
 createRoot(document.getElementById('root')!).render(<Shell/>);
