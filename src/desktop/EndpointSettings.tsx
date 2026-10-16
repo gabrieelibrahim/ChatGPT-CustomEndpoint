@@ -7,7 +7,7 @@ import { usesLocalProviderRelay } from '../lib/providerTransport';
 type Draft = { id: string; name: string; baseUrl: string; model: string; key: string; auth: boolean; models: string[]; sendReasoning?: boolean };
 const emptyDraft = (): Draft => ({ id: '', name: '', baseUrl: '', model: '', key: '', auth: true, models: [] });
 
-export function EndpointSettings({ setup = false, onSaved, onBack }: { setup?: boolean; onSaved?: () => void; onBack?: () => void } = {}) {
+export function EndpointSettings({ setup = false, onSaved, onBack, onNotice }: { setup?: boolean; onSaved?: () => void; onBack?: () => void; onNotice?: (message: string) => void } = {}) {
   const [store, setStore] = useState<EndpointStore>(loadEndpointStore);
   const [keys, setKeys] = useState<Record<string, string>>(() => loadEndpointKeys(store.profiles));
   const [draft, setDraft] = useState<Draft>(() => {
@@ -19,6 +19,7 @@ export function EndpointSettings({ setup = false, onSaved, onBack }: { setup?: b
   const [modelQuery, setModelQuery] = useState(''), [modelLimit, setModelLimit] = useState(100);
   const request = useRef<AbortController | null>(null), timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nameInput = useRef<HTMLInputElement>(null);
+  function notify(message: string) { if (onNotice) onNotice(message); else window.dispatchEvent(new CustomEvent('client-toast', { detail: message })); }
   function stopTest() { request.current?.abort(); request.current = null; if (timeout.current) clearTimeout(timeout.current); timeout.current = null; setTesting(false); }
   useEffect(() => () => { request.current?.abort(); if (timeout.current) clearTimeout(timeout.current); }, []);
   function update(change: Partial<Draft>) { stopTest(); setDraft(previous => ({ ...previous, ...change })); setError(''); setNotice(''); setTestResult(''); }
@@ -43,12 +44,12 @@ export function EndpointSettings({ setup = false, onSaved, onBack }: { setup?: b
       const profile: EndpointProfile = { id, name: draft.name.trim(), baseUrl, model: draft.model.trim(), models: [...new Set([draft.model.trim(), ...draft.models])].slice(0, 5000), protocol: 'openai-compatible', auth: draft.auth ? 'bearer' : 'none', sendReasoning: draft.sendReasoning === true };
       const profiles = draft.id ? store.profiles.map(item => item.id === id ? profile : item) : [...store.profiles, profile];
       const nextKeys = { ...keys }; if (draft.auth) nextKeys[id] = draft.key.trim(); else delete nextKeys[id];
-      if (persist({ version: 1, profiles, selectedId: store.selectedId || id }, nextKeys)) { setDraft(previous => ({ ...previous, id, baseUrl })); setNotice('Endpoint tersimpan.'); onSaved?.(); }
-    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Periksa isian endpoint.'); }
+      if (persist({ version: 1, profiles, selectedId: store.selectedId || id }, nextKeys)) { setDraft(previous => ({ ...previous, id, baseUrl })); setNotice('Endpoint tersimpan.'); notify('Endpoint tersimpan'); onSaved?.(); }
+    } catch (failure) { const message = failure instanceof Error ? failure.message : 'Periksa isian endpoint.'; setError(message); notify(message); }
   }
   function remove(id: string) {
     const profiles = store.profiles.filter(profile => profile.id !== id), nextKeys = { ...keys }; delete nextKeys[id];
-    if (persist({ version: 1, profiles, selectedId: store.selectedId === id ? profiles[0]?.id || null : store.selectedId }, nextKeys)) { if (draft.id === id) edit(); setDeleteId(''); setNotice('Endpoint dihapus dari perangkat ini.'); }
+    if (persist({ version: 1, profiles, selectedId: store.selectedId === id ? profiles[0]?.id || null : store.selectedId }, nextKeys)) { if (draft.id === id) edit(); setDeleteId(''); setNotice('Endpoint dihapus dari perangkat ini.'); notify('Endpoint dihapus'); }
   }
   async function test() {
     stopTest(); setError(''); setNotice(''); setTestResult('');
@@ -61,10 +62,13 @@ export function EndpointSettings({ setup = false, onSaved, onBack }: { setup?: b
       if (request.current !== controller) return;
       setDraft(previous => ({ ...previous, models, model: previous.model || models[0] || '' }));
       setModelQuery(''); setModelLimit(100);
+      const message = models.length ? 'Koneksi berhasil · ' + models.length + ' model tersedia' : 'Koneksi berhasil · daftar model kosong';
       setTestResult(models.length ? 'Koneksi berhasil. ' + models.length + ' model tersedia.' : 'Koneksi berhasil, tetapi daftar model kosong. Isi ID model secara manual.');
+      notify(message);
     } catch (failure) {
       if (request.current !== controller) return;
-      setError(controller.signal.aborted ? 'Tes melewati batas 15 detik. Periksa koneksi dan alamat penyedia.' : failure instanceof TypeError ? 'Koneksi terblokir atau gagal. Untuk web, penyedia harus mengizinkan CORS; preview localhost menyediakan koneksi lokal.' : failure instanceof Error ? failure.message : 'Koneksi belum berhasil.');
+      const message = controller.signal.aborted ? 'Tes melewati batas 15 detik. Periksa koneksi dan alamat penyedia.' : failure instanceof TypeError ? 'Koneksi terblokir atau gagal. Untuk web, penyedia harus mengizinkan CORS; preview localhost menyediakan koneksi lokal.' : failure instanceof Error ? failure.message : 'Koneksi belum berhasil.';
+      setError(message); notify(message);
     } finally { if (request.current === controller) { request.current = null; if (timeout.current) clearTimeout(timeout.current); timeout.current = null; setTesting(false); } }
   }
   const editing = store.profiles.find(profile => profile.id === draft.id);
@@ -75,7 +79,7 @@ export function EndpointSettings({ setup = false, onSaved, onBack }: { setup?: b
       {!store.profiles.length && <div className="d-endpoint-empty"><I name="globe" size={30}/><b>Belum ada endpoint</b><p>Tambahkan koneksi pertamamu di formulir sebelah.</p></div>}
       {store.profiles.map(profile => <div key={profile.id} className={'d-endpoint-card ' + (draft.id === profile.id ? 'd-is-editing' : '')}>
         <button className="d-endpoint-open" onClick={() => edit(profile)}><span className="d-endpoint-mark"><I name="globe" size={22}/></span><span><b>{profile.name}</b><small>{new URL(profile.baseUrl).host}</small></span>{store.selectedId === profile.id && <span className="d-endpoint-badge">Pilihan</span>}</button>
-        <p>{profile.model}{profile.auth === 'bearer' && !keys[profile.id] && <small className="d-endpoint-key-needed">Masukkan ulang API key untuk sesi ini</small>}</p><div className="d-endpoint-card-actions"><button disabled={store.selectedId === profile.id} onClick={() => { setError(''); if (persist({ ...store, selectedId: profile.id })) setNotice('Profil ' + profile.name + ' dipilih.'); }}>{store.selectedId === profile.id ? <><I name="check" size={16}/>Dipilih</> : 'Pilih profil'}</button><button aria-label={'Hapus ' + profile.name} onClick={() => setDeleteId(deleteId === profile.id ? '' : profile.id)}>Hapus</button></div>
+        <p>{profile.model}{profile.auth === 'bearer' && !keys[profile.id] && <small className="d-endpoint-key-needed">Masukkan ulang API key untuk sesi ini</small>}</p><div className="d-endpoint-card-actions"><button disabled={store.selectedId === profile.id} onClick={() => { setError(''); if (persist({ ...store, selectedId: profile.id })) { setNotice('Profil ' + profile.name + ' dipilih.'); notify(profile.name + ' dipilih'); } }}>{store.selectedId === profile.id ? <><I name="check" size={16}/>Dipilih</> : 'Pilih profil'}</button><button aria-label={'Hapus ' + profile.name} onClick={() => setDeleteId(deleteId === profile.id ? '' : profile.id)}>Hapus</button></div>
         {deleteId === profile.id && <div className="d-endpoint-delete"><p>Hapus endpoint ini?</p><button onClick={() => remove(profile.id)}>Hapus endpoint</button><button onClick={() => setDeleteId('')}>Batal</button></div>}
       </div>)}
       <SakelarRecommendation/>
