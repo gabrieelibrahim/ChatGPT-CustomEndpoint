@@ -1,3 +1,4 @@
+import { ClientAlert } from '../components/SDKPrimitives';
 import { useEffect, useState } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
 import { LocalDialog, type LocalProject, loadLocalProjects } from './WorkspaceControls';
@@ -78,5 +79,5 @@ export function CollectionEditor({ feature, store, onClose, initialPrompt = '' }
     {mcp ? <><label>Transport<select value={kind} onChange={event => setKind(event.target.value as 'http' | 'stdio')}><option value="http">HTTP MCP</option><option value="stdio">Local executable (stdio)</option></select></label>{kind === 'http' ? <label>Server URL<input type="url" value={url} onChange={event => setUrl(event.target.value)} placeholder="https://example.com/mcp" required/></label> : <><label>Executable<input value={command} onChange={event => setCommand(event.target.value)} placeholder="C:\tools\mcp-server.exe" required/></label><label>Arguments (JSON)<input value={args} onChange={event => setArgs(event.target.value)}/></label></>}<p>Aktivasi server stdio menjalankan executable yang kamu pilih saat agent dimulai. Jangan masukkan rahasia ke URL atau arguments. Server yang membutuhkan autentikasi tambahan belum didukung form ini.</p></>
     : site ? <label>Website URL<input type="url" value={url} onChange={event => setUrl(event.target.value)} required/></label>
     : <><label>{task ? 'Prompt' : 'Content'}<textarea aria-label="Item content" maxLength={100000} rows={8} value={text} onChange={event => setText(event.target.value)}/></label>{task && <label>When<input type="datetime-local" required value={date} onChange={event => setDate(event.target.value)}/></label>}</>}
-    {error && <p className="d-local-error" role="alert">{error}</p>}<div className="d-local-actions"><button type="button" onClick={onClose}>Batal</button><button type="submit" className="d-local-primary">Save</button></div></form></LocalDialog>;
+    {error && <ClientAlert className="d-local-error">{error}</ClientAlert>}<div className="d-local-actions"><button type="button" onClick={onClose}>Batal</button><button type="submit" className="d-local-primary">Save</button></div></form></LocalDialog>;
 }

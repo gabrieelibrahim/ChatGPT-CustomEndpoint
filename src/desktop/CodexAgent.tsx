@@ -1,3 +1,4 @@
+import { ClientAlert } from '../components/SDKPrimitives';
 import { useEffect, useRef, useState } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
 import { usesLocalProviderRelay } from '../lib/providerTransport';
@@ -97,7 +98,7 @@ export function AgentWorkspaceDialog({ agent, providerName, onClose }: { agent: 
     <p>Agent memakai endpoint dan model pilihanmu untuk membaca project, menjalankan terminal, dan mengedit file.</p>
     <label>Folder project<input ref={first} required value={draft.cwd} placeholder="D:\\Projects\\my-app" onChange={event => setDraft({ ...draft, cwd: event.target.value })}/></label>
     <button type="button" className="d-local-primary" disabled={browsing} onClick={async () => { setBrowsing(true); setFolderError(''); try { const { project } = await (await agentRequest({ action: 'pickFolder' })).json(); if (project) setDraft(previous => ({ ...previous, cwd: project.path })); } catch (failure) { setFolderError((failure as Error).message); } finally { setBrowsing(false); } }}>{browsing ? 'Menunggu pilihan folder…' : 'Browse folders'}</button>
-    {folderError && <p role="alert">{folderError}</p>}
+    {folderError && <ClientAlert>{folderError}</ClientAlert>}
     <label>Akses project<select value={draft.sandbox} onChange={event => setDraft({ ...draft, sandbox: event.target.value as AgentConfig['sandbox'] })}><option value="read-only">Baca saja</option><option value="workspace-write">Baca & edit di folder project</option></select></label>
     <label className="d-agent-check"><input type="checkbox" checked={draft.responsesConfirmed} onChange={event => setDraft({ ...draft, responsesConfirmed: event.target.checked })}/><span>{providerName || 'Endpoint pilihan'} mendukung Responses API dan tool calling.</span></label>
     <label className="d-agent-check"><input type="checkbox" checked={draft.enabled} onChange={event => setDraft({ ...draft, enabled: event.target.checked })}/><span>Gunakan agent untuk pesan di mode Codex.</span></label>

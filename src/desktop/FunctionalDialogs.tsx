@@ -1,3 +1,4 @@
+import { ClientAlert } from '../components/SDKPrimitives';
 import { useEffect, useState } from 'react';
 import { LocalDialog } from './WorkspaceControls';
 import { agentRequest } from './CodexAgent';
@@ -37,6 +38,6 @@ export function FunctionalDialog({ feature, title, messages, titles, archived, p
     : feature === 'Usage remaining' ? <><p>Quota dan saldo dikelola penyedia API. Client belum menerima informasi saldo dari endpoint pilihanmu.</p><p>{titles.length} chat tersimpan · {messages.length} pesan di percakapan ini.</p><button className="d-local-primary" onClick={() => onAction('endpoints')}>Manage provider</button></>
     : feature === 'Voice mode' || feature === 'Voice' ? <><p>Dikte memakai pengenal suara browser. Read aloud memakai suara sistem.</p><button className="d-local-row" onClick={() => dictate(onDraft, onNotice)}>Start dictation</button><button className="d-local-row" onClick={() => { if (!('speechSynthesis' in window)) { setError('Browser tidak mendukung read aloud.'); return; } const answer = [...messages].reverse().find(message => message.role === 'assistant'); if (!answer) { setError('Belum ada jawaban untuk dibacakan.'); return; } try { speakText(answer.text); } catch (failure) { setError((failure as Error).message); } }}>Read latest answer</button><button className="d-local-row" onClick={() => window.speechSynthesis?.cancel()}>Stop reading</button></>
     : <><p>Fitur “{feature}” membutuhkan adapter atau layanan yang belum terhubung. Tidak ada aksi eksternal yang dijalankan dari tombol ini.</p><button className="d-local-row" onClick={() => onAction('plugins')}>Connect an MCP server</button><button className="d-local-row" onClick={() => onAction('skills')}>Manage local instructions</button><button className="d-local-row" onClick={() => onAction('endpoints')}>Manage provider capabilities</button></>}
-    {error && <p className="d-local-error" role="alert">{error}</p>}
+    {error && <ClientAlert className="d-local-error">{error}</ClientAlert>}
   </LocalDialog>;
 }

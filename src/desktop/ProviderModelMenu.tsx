@@ -1,3 +1,4 @@
+import { ClientEmpty } from '../components/SDKPrimitives';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
 import type { EndpointProfile } from '../lib/endpointProfiles';
@@ -25,7 +26,7 @@ export function ProviderModelMenu({ profiles, selectedId, model, availableKeyIds
     <div className="d-model-options" role="listbox" aria-label="Model tersedia">
       {visible.map(({ profile, models }) => <div role="group" aria-label={profile.name} key={profile.id}><p>{profile.name}</p>{models.map(id => <button role="option" aria-selected={selectedId === profile.id && model === id} key={id} onClick={() => onSelect(profile, id)}><span>{id}</span>{selectedId === profile.id && model === id && <I name="check" size={18}/>}</button>)}</div>)}
       {count > limit && <button className="d-model-load" onClick={() => setLimit(value => value + 100)}>Tampilkan lebih banyak ({count - limit})</button>}
-      {!groups.length && <p className="d-model-empty">{profiles.length ? 'Model tidak ditemukan.' : 'Tambahkan endpoint untuk memilih model.'}</p>}
+      {!groups.length && <ClientEmpty className="d-model-empty" title={profiles.length ? 'Model tidak ditemukan.' : 'Tambahkan endpoint untuk memilih model.'}/>}
     </div>
     <button className="d-model-settings" onClick={onSettings}><I name="settings" size={18}/>Kelola endpoint</button>
   </div>;

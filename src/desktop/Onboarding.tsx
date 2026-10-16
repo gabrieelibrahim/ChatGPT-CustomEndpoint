@@ -1,3 +1,4 @@
+import { ClientAlert, ClientButton, ClientInput } from '../components/SDKPrimitives';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { UIIcon as I } from '../components/UIIcon';
@@ -46,9 +47,9 @@ export function Onboarding({ onComplete }: { onComplete: (profile: LocalProfile)
     <div className="d-auth-name-step" hidden={step !== 1} inert={step !== 1}>
       <h1>Selamat datang</h1><p className="d-setup-intro">Masukkan namamu untuk mulai menggunakan Sakelar.</p>
       <form className="d-name-form" onSubmit={event => { event.preventDefault(); if (!name.trim()) { setError('Isi namamu terlebih dahulu.'); return; } setError(''); setStep(2); }}>
-        <label htmlFor="setup-name">Nama kamu</label><input ref={nameInput} id="setup-name" maxLength={80} autoComplete="name" placeholder="Masukkan nama" value={name} onChange={event => { setName(event.target.value); setError(''); }} required/>
-        {error && step === 1 && <p className="d-setup-error" role="alert">{error}</p>}
-        <button className="d-setup-primary" type="submit">Lanjut</button>
+        <label htmlFor="setup-name">Nama kamu</label><ClientInput pill ref={nameInput} id="setup-name" maxLength={80} autoComplete="name" placeholder="Masukkan nama" value={name} onChange={event => { setName(event.target.value); setError(''); }} required/>
+        {error && step === 1 && <ClientAlert className="d-setup-error">{error}</ClientAlert>}
+        <ClientButton color="primary" variant="solid" className="d-setup-primary" type="submit">Lanjut</ClientButton>
       </form>
       <p className="d-auth-footnote">Nama disimpan di perangkat ini dan bisa diubah dari profil.<br/>Sakelar Universal AI Client adalah aplikasi independen.</p>
     </div>
@@ -59,7 +60,7 @@ export function Onboarding({ onComplete }: { onComplete: (profile: LocalProfile)
       <div id="setup-endpoint-fields" hidden={!endpointOpen} inert={!endpointOpen}>
         <EndpointSettings setup onSaved={finish} onBack={() => setEndpointOpen(false)}/>
       </div>
-      {error && step === 2 && <p className="d-setup-error" role="alert">{error}</p>}
+      {error && step === 2 && <ClientAlert className="d-setup-error">{error}</ClientAlert>}
       <div className="d-auth-divider"><span>ATAU</span></div>
       <button className="d-setup-skip" onClick={finish}>Lewati endpoint untuk sekarang</button>
       <SakelarRecommendation/>
@@ -74,9 +75,9 @@ export function ProfileNameDialog({ profile, onSave, onClose }: { profile: Local
     <div className="d-profile-edit-heading"><span>{profileInitials(name)}</span><button aria-label="Tutup pengaturan nama" onClick={onClose}><I name="close" size={20}/></button></div>
     <h1>Nama profil</h1><p className="d-setup-intro">Gunakan nama yang ingin kamu tampilkan di aplikasi.</p>
     <form className="d-name-form" onSubmit={event => { event.preventDefault(); try { onSave(saveLocalProfile(name)); } catch (failure) { setError((failure as Error).message); } }}>
-      <label htmlFor="profile-name">Nama kamu</label><input id="profile-name" maxLength={80} autoComplete="name" value={name} onChange={event => { setName(event.target.value); setError(''); }} required/>
-      {error && <p className="d-setup-error" role="alert">{error}</p>}
-      <button className="d-setup-primary" type="submit">Simpan nama</button>
+      <label htmlFor="profile-name">Nama kamu</label><ClientInput pill id="profile-name" maxLength={80} autoComplete="name" value={name} onChange={event => { setName(event.target.value); setError(''); }} required/>
+      {error && <ClientAlert className="d-setup-error">{error}</ClientAlert>}
+      <ClientButton color="primary" variant="solid" className="d-setup-primary" type="submit">Simpan nama</ClientButton>
     </form>
   </ProfileOverlay>;
 }

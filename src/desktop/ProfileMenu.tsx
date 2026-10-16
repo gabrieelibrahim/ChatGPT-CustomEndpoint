@@ -1,3 +1,4 @@
+import { ClientAvatar } from '../components/SDKPrimitives';
 import { useEffect, useRef } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
 import { profileInitials } from '../lib/localProfile';
@@ -23,7 +24,7 @@ export function ProfileMenu({ name, onEdit, onAction, onClose }: { name: string;
       buttons[event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus();
     }
   }}>
-    <button role="menuitem" className="d-profile-name" aria-label="Ubah nama profil" onClick={onEdit}><i>{Array.from(profileInitials(name))[0]}</i><b>{name}</b></button><hr/>
+    <button role="menuitem" className="d-profile-name" aria-label="Ubah nama profil" onClick={onEdit}><ClientAvatar name={name} size={28}/><b>{name}</b></button><hr/>
     {rows.map(row => <button role="menuitem" className="d-button d-menurow" key={row.label} disabled={row.disabled} onClick={() => onAction(row.label)}><I name={row.icon}/><span>{row.label}</span>{row.shortcut && <small>{row.shortcut}</small>}{row.arrow && <span className="d-profile-chevron"><I name="down" size={17}/></span>}</button>)}
     <hr/><button role="menuitem" className="d-button d-menurow" onClick={() => onAction('Help')}><I name="globe"/><span>Help</span><span className="d-profile-chevron"><I name="down" size={17}/></span></button>
     <button role="menuitem" className="d-button d-menurow" onClick={() => onAction('Log out')}><I name="logout"/><span>Log out</span></button>

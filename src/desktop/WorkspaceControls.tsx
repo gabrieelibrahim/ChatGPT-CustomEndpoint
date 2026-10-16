@@ -1,3 +1,4 @@
+import { ClientAlert } from '../components/SDKPrimitives';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
 import { agentRequest } from './CodexAgent';
@@ -48,7 +49,7 @@ export function CreateProjectDialog({ onSelect, onClose }: { onSelect: (project:
       </>}
       {manual && !folder && <div className="d-source-path"><input aria-label="Project folder path" placeholder="D:\Projects\my-app" value={path} onChange={event => setPath(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void addFolder(true); } }}/><button type="button" disabled={busy || !path.trim()} onClick={() => void addFolder(true)}>Add folder</button></div>}
     </div>
-    {error && <p className="d-local-error" role="alert">{error}</p>}
+    {error && <ClientAlert className="d-local-error">{error}</ClientAlert>}
     <div className="d-create-project-footer"><button type="button" onClick={onClose}>Cancel</button><button type="submit" disabled={busy || !name.trim() || !folder}>Create project</button></div>
   </form></LocalDialog>;
 }
@@ -75,7 +76,7 @@ export function ProjectChooser({ onSelect, onClose }: { onSelect: (project: Loca
     <button className="d-local-primary d-local-wide" disabled={busy} onClick={() => void browse()}><I name="folder" size={20}/>{busy ? 'Menunggu pilihan folder…' : 'Browse folders'}</button>
     <form onSubmit={event => { event.preventDefault(); void select(path); }}><label>Path folder<input aria-label="Project folder path" placeholder="D:\Projects\my-app" value={path} onChange={event => setPath(event.target.value)} required/></label><button disabled={busy || !path.trim()}>Open folder</button></form>
     {!!projects.length && <><h3>Recent projects</h3><input aria-label="Search projects" placeholder="Search projects" value={query} onChange={event => setQuery(event.target.value)}/><div className="d-local-list">{projects.filter(project => (project.name + project.path).toLowerCase().includes(query.toLowerCase())).map(project => <div className="d-local-project-row" key={project.path+'|'+project.name}><button disabled={busy} onClick={() => void select(project.path)}><I name="folder" size={20}/><span><b>{project.name}</b><small>{project.path}</small></span></button><button aria-label={'Forget ' + project.name} onClick={() => { const next = projects.filter(item => item.path !== project.path); localStorage.setItem('client-project-folders-v1', JSON.stringify(next)); setProjects(next); }}><I name="close" size={17}/></button></div>)}</div></>}
-    {error && <p className="d-local-error" role="alert">{error}</p>}
+    {error && <ClientAlert className="d-local-error">{error}</ClientAlert>}
   </LocalDialog>;
 }
 
@@ -113,7 +114,7 @@ export function ComputerChooser({ folder, onSettings, onClose }: { folder: strin
     <button className="d-local-environment" onClick={onClose}><I name="computer" size={25}/><span><b>This computer</b><small>{computer ? computer.name + ' · ' + computer.platform : 'Memeriksa komputer…'}</small></span><I name="check" size={20}/></button>
     <dl><dt>Codex runtime</dt><dd>{computer ? computer.runtimeAvailable ? 'Available' : 'Not installed' : 'Checking…'}</dd><dt>Project</dt><dd>{folder || 'Belum dipilih'}</dd></dl>
     <p>Eksekusi berlangsung di komputer ini. Pengaturan agent menentukan akses folder dan koneksi model.</p>
-    {error && <p className="d-local-error" role="alert">{error}</p>}
+    {error && <ClientAlert className="d-local-error">{error}</ClientAlert>}
     <button className="d-local-primary d-local-wide" onClick={onSettings}>Agent settings</button>
   </LocalDialog>;
 }
@@ -122,5 +123,5 @@ export function ProjectFiles({ cwd, onChooseProject, onAttach, onClose }: { cwd:
   const [files, setFiles] = useState<string[]>([]), [query, setQuery] = useState(''), [error, setError] = useState(''), [limited, setLimited] = useState(false), [preview, setPreview] = useState<{ name: string; text: string } | null>(null);
   useEffect(() => { if (!cwd) return; const controller = new AbortController(); void agentRequest({ action: 'projectFiles', cwd }, controller.signal).then(response => response.json()).then(data => { setFiles(data.files); setLimited(data.limited); }).catch(failure => { if (!controller.signal.aborted) setError(failure.message); }); return () => controller.abort(); }, [cwd]);
   async function open(name: string) { try { setError(''); setPreview(await (await agentRequest({ action: 'projectFile', cwd, name })).json()); } catch (failure) { setError((failure as Error).message); } }
-  return <LocalDialog title="Project files" onClose={onClose} className="d-local-files"><p>{cwd || 'Pilih folder project untuk mencari file lokal.'}</p>{!cwd ? <button className="d-local-primary" onClick={onChooseProject}>Choose project</button> : <><input aria-label="Search project files" placeholder="Search files" value={query} onChange={event => setQuery(event.target.value)}/>{limited && <p>Menampilkan indeks terbatas; folder dependency dan file tersembunyi dilewati.</p>}<div className="d-file-explorer"><div>{files.filter(name => name.toLowerCase().includes(query.toLowerCase())).slice(0, 250).map(name => <button key={name} onClick={() => void open(name)}>{name}</button>)}{!files.length && <p>Belum ada file yang ditampilkan.</p>}</div><div>{preview ? <><b>{preview.name}</b><pre>{preview.text}</pre><button className="d-local-primary" onClick={() => { onAttach(new File([preview.text], preview.name, { type: 'text/plain' })); onClose(); }}>Attach to chat</button></> : <p>Pilih file untuk preview.</p>}</div></div></>}{error && <p role="alert" className="d-local-error">{error}</p>}</LocalDialog>;
+  return <LocalDialog title="Project files" onClose={onClose} className="d-local-files"><p>{cwd || 'Pilih folder project untuk mencari file lokal.'}</p>{!cwd ? <button className="d-local-primary" onClick={onChooseProject}>Choose project</button> : <><input aria-label="Search project files" placeholder="Search files" value={query} onChange={event => setQuery(event.target.value)}/>{limited && <p>Menampilkan indeks terbatas; folder dependency dan file tersembunyi dilewati.</p>}<div className="d-file-explorer"><div>{files.filter(name => name.toLowerCase().includes(query.toLowerCase())).slice(0, 250).map(name => <button key={name} onClick={() => void open(name)}>{name}</button>)}{!files.length && <p>Belum ada file yang ditampilkan.</p>}</div><div>{preview ? <><b>{preview.name}</b><pre>{preview.text}</pre><button className="d-local-primary" onClick={() => { onAttach(new File([preview.text], preview.name, { type: 'text/plain' })); onClose(); }}>Attach to chat</button></> : <p>Pilih file untuk preview.</p>}</div></div></>}{error && <ClientAlert className="d-local-error">{error}</ClientAlert>}</LocalDialog>;
 }

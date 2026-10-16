@@ -100,3 +100,5 @@ The top-right menu follows the supplied reference: share, pin/unpin, add to proj
 The uploaded-file menu accurately shows that server uploads are not yet implemented. Adding to the home screen shows browser-specific instructions. No server-side account or cross-device sync is included.
 
 Assistant messages, thinking panels and mini chat now use the official OpenAI Apps SDK UI Markdown/CodeBlock renderer, with its UI/monospace font stacks, formatted tables/lists, syntax highlighting, copyable code and asynchronous math. See [RICH-TEXT.md](RICH-TEXT.md) for sources and rendering/privacy behavior.
+
+The same SDK now supplies actual error/success alerts, controls, settings switches, tooltips, loading, empty states and profile indicators across the client. See [SDK-STYLE.md](SDK-STYLE.md) for the integration map and capability boundaries.
