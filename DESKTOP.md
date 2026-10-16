@@ -4,7 +4,7 @@
 
 The default route opens the newer desktop interface. ChatGPT and Codex are presentation choices in the sidebar selector, not authenticated account tiers or provider/model restrictions. The earlier classic Personal implementation is retained under `src/personal/` but is not reachable through the active shell, including `?view=personal`. The older mobile study remains available at `?mobile=1`.
 
-ChatGPT has distinct Chat/Work presentations. Work uses a stacked composer with project/files/plugins actions. Chat uses the single-row capsule from the reference, the heading "Where should we begin?", an effort-only label and a temporary-chat toggle. The toggle skips local history persistence for that temporary Chat session; it does not configure a remote provider. Codex starts with its own mark, build prompt, bottom composer and project/computer context bar. Selecting an experience opens its home screen. Existing chat reference data and local conversations remain available from the sidebar.
+ChatGPT has distinct Chat/Work presentations. Work uses a stacked composer with project/files/plugins actions. Chat uses the single-row capsule from the reference, the heading "Where should we begin?", an effort-only label and a temporary-chat toggle. The toggle skips local history persistence for that temporary Chat session; it does not configure a remote provider. Codex starts with its own mark, build prompt, bottom composer and project/computer context bar. Switching experiences preserves the active conversation and draft, restoring the destination's last view when one exists; only New chat resets to a home screen. Existing chat reference data and local conversations remain available from the sidebar.
 
 ## Development
 
@@ -26,8 +26,11 @@ The current desktop composition follows a 1920px-wide reference canvas scaled to
 - Message copy, local editing, hover timestamps and browser-dependent read aloud.
 - Full-width Add menu anchored to the composer; file previews, local selection chips and a sketch canvas.
 - Local project names and text conversations saved in localStorage.
+- Search palette with chat/content filtering, quick actions and navigation; arrows, Enter, Escape and Alt+1 through Alt+9 selection.
+- Sidebar collapse preserves scroll position and folded sections; Pinned is available in both experiences.
+- Local Back/Forward history and a sliding Chat/Work selection indicator, with reduced-motion support.
 
-Ctrl+Shift+S toggles the sidebar, Ctrl+Shift+O starts a new local conversation, and Ctrl+K opens search when the browser delivers those shortcuts to the page.
+Ctrl+Shift+S toggles the sidebar, Ctrl+N or Ctrl+Shift+O starts a new local conversation, Ctrl+K toggles search, Alt+Left/Right traverses local navigation, and Ctrl+Shift+J opens a temporary Chat session when the browser delivers those shortcuts. Browser-reserved shortcuts may take precedence. Settings and native commands in the search palette open local preview dialogs; Open folder uses the existing local project chooser.
 
 ## Fonts
 

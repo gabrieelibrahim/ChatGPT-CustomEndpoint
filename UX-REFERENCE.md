@@ -44,3 +44,19 @@ Reference: user-supplied `Screen Recording 2026-10-16 132750.mp4`, 1920 x 1008, 
 The Add menu is measured against the actual composer position rather than a fixed screen coordinate. Hover delays and animation easing are estimates. Chrome access, plugin execution and agent functions remain unavailable or clearly local preview behavior. The patch is not a claim of pixel-identical native behavior.
 
 Validation: TypeScript/production build and server-render smoke checks passed. Browser observation of the final patch was denied by the browser origin permission gate, so final browser screenshot/interaction QA remains outstanding.
+
+## Main navigation recording — 2026-10-16 17:51:47
+
+Reference: user-supplied `Screen Recording 2026-10-16 175147.mp4`, 1920 x 1008, 154 seconds. Reviewed in five-second overview samples, targeted full-resolution frames and denser samples around experience/mode switching. Frames and the video remain outside the repository.
+
+| Approximate time | Observed behavior | Local implementation |
+| --- | --- | --- |
+| 5–19 s, 65–88 s | ChatGPT/Codex selector changes navigation while retaining the chat | Preserve conversation, draft and last view per experience; selected checkmark and keyboard menu focus |
+| 23–35 s, 69–86 s | Sidebar closes and opens; collapsed header offers New chat | Preserve mounted sidebar, scroll and collapsed sections; hide from keyboard/accessibility tree while closed |
+| 39–52 s | New chat and repeated Chat/Work switching | Distinct existing composers, sliding selection pill, Work tooltip and tab arrow navigation |
+| 55–65 s, 90–108 s | Pinned visible in Codex and ChatGPT; sidebar headings/scroll | Pinned available and collapsible in both; existing Projects/Recents behaviors retained |
+| 110–149 s | Search palette contains chats, actions, settings and navigation | Centered scrollable palette, local title/content filter, keyboard selection, local navigation and preview dialogs |
+
+Back/Forward also restores local screens and conversation views. New chat clears the composer and focuses it; switching an experience does not silently start a new chat. The recording's changing greeting text and intermediate loading/reflow frames are not reproduced as random visual glitches. Existing static home suggestions and unrelated composer menus are preserved for a separate UI pass.
+
+Validation: production build and DOM interaction checks passed for experience/draft restoration, separate homes, Chat/Work keyboard focus, sidebar node/scroll/collapse preservation, search filtering/Enter/Escape/empty results, local Back/Forward, palette navigation and temporary-chat shortcut. The DOM checks use a temporary test-only runtime outside the project and do not establish browser layout or exact native animation timing.

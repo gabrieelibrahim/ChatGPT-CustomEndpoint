@@ -13,6 +13,7 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
   showPinned = true, projects = [], onCreateProject, onProject }: HistoryListProps) {
   const [hover, setHover] = useState<{ title: string; top: number } | null>(null);
   const [collapsed, setCollapsed] = useState(false), [projectsCollapsed, setProjectsCollapsed] = useState(false);
+  const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
   const [options, setOptions] = useState<'Projects' | 'Recents' | null>(null), [alphabetical, setAlphabetical] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null), optionsRef = useRef<HTMLDivElement>(null);
   function cancel() { if (timer.current) clearTimeout(timer.current); timer.current = null; }
@@ -47,7 +48,7 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
   return <div className="d-history-list">
     <B icon="edit" label="New chat" className="d-navrow" onClick={onNew}>New chat</B>
     <div className="d-history-scroll" onScroll={() => { cancel(); setHover(null); }}>
-      {showPinned && pinned.some(title => !archived.includes(title)) && <><h3>Pinned</h3>{pinned.filter(title => !archived.includes(title)).map(row)}</>}
+      {showPinned && pinned.some(title => !archived.includes(title)) && <><div className="d-history-section"><button className="d-section-toggle" aria-expanded={!pinnedCollapsed} onClick={()=>{setPinnedCollapsed(!pinnedCollapsed);setHover(null)}}><span>Pinned</span><I name="down" size={15}/></button></div>{!pinnedCollapsed&&pinned.filter(title => !archived.includes(title)).map(row)}</>}
       <div className="d-history-section"><button aria-expanded={!projectsCollapsed} className="d-section-toggle" onClick={() => { setProjectsCollapsed(!projectsCollapsed); setHover(null); }}><span>Projects</span><I name="down" size={15}/></button>
         <div className="d-section-tools"><B icon="dots" label="Project options" onClick={() => setOptions(options === 'Projects' ? null : 'Projects')}/><B icon="plus" label="New project" onClick={onCreateProject}/></div>
       </div>

@@ -9,4 +9,5 @@ import './typography.css';
 import './desktop/video-ux.css';
 import './desktop/shapes.css';
 import './desktop/chat-mode.css';
+import './desktop/navigation.css';
 createRoot(document.getElementById('root')!).render(<Shell/>);
