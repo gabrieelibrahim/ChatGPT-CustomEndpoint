@@ -4,6 +4,7 @@ import { officialIcons } from './openai-icons/index';
 // Official Apps SDK UI icons where a matching symbol exists.
 // Reference-specific controls and third-party logos remain local fallbacks.
 const icons: Record<string, ReactNode> = {
+  trash: <><path d="M3.5 6h17M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5.5 6l1 14a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1l1-14M10 10v7M14 10v7"/></>,
   stop: <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>,
   lightning: <path d="m13.5 2-9 12h7l-1 8 9-12h-7l1-8Z"/>,
   grid: <><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></>,

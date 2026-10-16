@@ -34,8 +34,14 @@
 .d-history-options{position:absolute;z-index:12;left:18px;top:220px;background:#2c2c2c;border:1px solid #414141;border-radius:16px;padding:6px;width:290px;box-shadow:0 8px 22px #0003}
 .d-history-options>button{display:flex;align-items:center;justify-content:space-between;gap:15px;width:100%;border-radius:10px;padding:9px 12px;font-size:18px}
 .d-history-options>button:hover{background:#ffffff0a}
-.d-history-chat-options{z-index:14;width:284px;padding:6px;background:#2c2c2c;border:1px solid #414141;border-radius:18px;box-shadow:0 12px 28px #0005}
-.d-history-chat-options>button{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:11px;font-size:17px;line-height:24px;text-align:left}
+.d-history-chat-options{z-index:14;width:300px;padding:6px;background:#292929f7;border:1px solid #3b3b3b;border-radius:23px;box-shadow:0 12px 28px #0005}
+.d-history-chat-options>button{display:flex;align-items:center;gap:12px;width:100%;height:44px;padding:10px 12px;border-radius:11px;font-size:18px;line-height:24px;text-align:left}
+.d-history-chat-options>button>span{flex:1;white-space:nowrap}
+.d-history-chat-options>button>small{margin-left:auto;font-size:14px;color:#999;white-space:nowrap}
+.d-history-chat-options>button>svg{flex-shrink:0}
+.d-history-chat-options>button>span+svg{margin-left:auto;transform:rotate(-90deg);color:#999}
+.d-history-chat-options>button.d-history-delete{color:#ff5d5d}
+.d-history-chat-options>button:disabled{cursor:not-allowed}
 .d-history-chat-options>button:hover,.d-history-chat-options>button:focus-visible{background:#ffffff0a;outline:none}
 .d-history-chat-options>hr{height:1px;margin:5px 8px;background:#454545;border:0}
 .d-history-preview{pointer-events:auto}

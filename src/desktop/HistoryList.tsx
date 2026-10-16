@@ -29,9 +29,11 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
   }
   function toggleChatOptions(title: string, anchor: HTMLElement) {
     const root = document.querySelector<HTMLElement>('.d-root'); if (!root) return;
-    const bounds = root.getBoundingClientRect(), rect = anchor.closest<HTMLElement>('.d-history-row')?.getBoundingClientRect() || anchor.getBoundingClientRect(), scale = bounds.width / root.offsetWidth || 1;
+    const bounds = root.getBoundingClientRect(), rect = anchor.getBoundingClientRect(), scale = bounds.width / root.offsetWidth || 1;
     chatOptionsAnchor.current = anchor; preview.close(); setOptions(null);
-    setChatOptions(previous => previous?.title === title ? null : { title, left: Math.min((rect.right - bounds.left) / scale + 8, root.offsetWidth - 292), top: Math.min((rect.top - bounds.top) / scale, root.offsetHeight - 230) });
+    const height = experience === 'ChatGPT' ? 410 : 204;
+    const anchorTop = (rect.top - bounds.top) / scale;
+    setChatOptions(previous => previous?.title === title ? null : { title, left: Math.max(8, Math.min((rect.left - bounds.left) / scale - 16, root.offsetWidth - 308)), top: Math.max(8, Math.min(anchorTop >= height + 8 ? anchorTop - height - 8 : (rect.bottom - bounds.top) / scale + 8, root.offsetHeight - height - 8)) });
   }
   useEffect(() => {
     if (!options && !chatOptions) return;
@@ -39,7 +41,7 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
       if (options && !optionsRef.current?.contains(event.target as Node) && !optionsAnchor.current?.contains(event.target as Node)) setOptions(null);
       if (chatOptions && !chatOptionsRef.current?.contains(event.target as Node) && !chatOptionsAnchor.current?.contains(event.target as Node)) setChatOptions(null);
     };
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setOptions(null); setChatOptions(null); } };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setOptions(null); setChatOptions(null); chatOptionsAnchor.current?.focus(); } };
     document.addEventListener('pointerdown', close); document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', escape); };
   }, [options, chatOptions]);
@@ -64,7 +66,7 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
   const root = typeof document === 'undefined' ? null : document.querySelector('.d-root');
   return <div className="d-history-list">
     <B icon="edit" label="New chat" className="d-navrow" onClick={onNew}>New chat</B>
-    <div className="d-history-scroll" onScroll={() => { preview.close(); setOptions(null); }}>
+    <div className="d-history-scroll" onScroll={() => { preview.close(); setOptions(null); setChatOptions(null); }}>
       {showPinned && pinned.some(title => !archived.includes(title)) && <><div className="d-history-section"><button className="d-section-toggle" aria-expanded={!pinnedCollapsed} onClick={()=>{setPinnedCollapsed(!pinnedCollapsed);preview.close()}}><span>Pinned</span><I name="down" size={15}/></button></div><Disclosure open={!pinnedCollapsed}>{pinned.filter(title => !archived.includes(title)).map(row)}</Disclosure></>}
       <div className="d-history-section"><button aria-expanded={!projectsCollapsed} className="d-section-toggle" onClick={() => { setProjectsCollapsed(!projectsCollapsed); preview.close(); }}><span>Projects</span><I name="down" size={15}/></button>
         <div className="d-section-tools"><B icon="dots" label="Project options" onClick={event => toggleOptions('Projects', event.currentTarget)}/><B icon="plus" label="New project" onClick={onCreateProject}/></div>
@@ -77,11 +79,14 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
     </div>
     {options && root && createPortal(<div className="d-history-options" style={{ ...optionsPosition, position: 'fixed' }} ref={optionsRef} role="menu" aria-label={options + ' options'}>{options === 'Projects' ? <button role="menuitem" onClick={() => { onCreateProject?.(); setOptions(null); }}>New project</button> : <><button role="menuitemradio" aria-checked={!alphabetical} onClick={() => { setAlphabetical(false); setOptions(null); }}>Recent first{!alphabetical && <I name="check" size={18}/>}</button><button role="menuitemradio" aria-checked={alphabetical} onClick={() => { setAlphabetical(true); setOptions(null); }}>Alphabetical{alphabetical && <I name="check" size={18}/>}</button></>}</div>, root)}
     {chatOptions && root && createPortal(<div className="d-history-chat-options" style={{ left: chatOptions.left, top: chatOptions.top, position: 'fixed' }} ref={chatOptionsRef} role="menu" aria-label={'Options for ' + chatOptions.title}>
-      <button role="menuitem" onClick={() => { onOptions?.(chatOptions.title, 'Rename'); setChatOptions(null); }}><I name="edit" size={19}/>Rename</button>
-      <button role="menuitem" onClick={() => { onPin(chatOptions.title); setChatOptions(null); }}><I name="pin" size={19}/>{pinned.includes(chatOptions.title) ? 'Unpin' : 'Pin'}</button>
+      <button role="menuitem" onClick={() => { onOptions?.(chatOptions.title, 'Rename'); setChatOptions(null); }}><I name="edit" size={22}/><span>Rename</span><small>Ctrl+Alt+R</small></button>
+      <button role="menuitem" onClick={() => { onPin(chatOptions.title); setChatOptions(null); }}><I name="pin" size={22}/><span>{pinned.includes(chatOptions.title) ? 'Unpin' : 'Pin'}</span><small>Ctrl+Alt+P</small></button>
+      {experience === 'ChatGPT' && <button role="menuitem" onClick={() => { onOptions?.(chatOptions.title, 'Section'); setChatOptions(null); }}><I name="list" size={22}/><span>Section</span><I name="down" size={16}/></button>}
       <hr/>
       <button role="menuitem" onClick={() => { onOptions?.(chatOptions.title, 'Share'); setChatOptions(null); }}><I name="upload" size={19}/>Share</button>
-      <button role="menuitem" onClick={() => { onArchive(chatOptions.title); setChatOptions(null); }}><I name="archive" size={19}/>Archive</button>
+      {experience === 'ChatGPT' && <><hr/><button role="menuitem" aria-disabled="true" title="Chat lokal belum tersinkron dengan chatgpt.com" disabled><I name="globe" size={22}/><span>Open on chatgpt.com</span></button><hr/></>}
+      <button role="menuitem" onClick={() => { onArchive(chatOptions.title); setChatOptions(null); }}><I name="archive" size={22}/><span>Archive</span><small>Ctrl+Shift+A</small></button>
+      {experience === 'ChatGPT' && <><button className="d-history-delete" role="menuitem" onClick={() => { onOptions?.(chatOptions.title, 'Delete'); setChatOptions(null); }}><I name="trash" size={22}/><span>Delete</span></button><hr/><button role="menuitem" onClick={() => { onOptions?.(chatOptions.title, 'Move to project'); setChatOptions(null); }}><I name="folder" size={22}/><span>Move to project</span><I name="down" size={16}/></button></>}
     </div>, root)}
     {preview.data && root && createPortal(<div className="d-history-preview" data-open={preview.open} aria-hidden={!preview.open} style={{ top: preview.data.top }} onMouseEnter={preview.keep} onMouseLeave={preview.leave}>
       <div><b>{preview.data.title}</b><I name="computer" size={18}/><time>Local</time></div><p><I name="comment" size={20}/>Chat</p>
