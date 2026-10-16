@@ -13,8 +13,9 @@ export function localProviderRelay() {
         const timer = setTimeout(() => controller.abort(), 120000);
         res.on('close', () => { if (!res.writableEnded) controller.abort(); });
         try {
-          let raw = '';
-          for await (const chunk of req) { raw += chunk.toString(); if (Buffer.byteLength(raw) > 1024 * 1024) { fail(413); return; } }
+          const chunks = []; let size = 0;
+          for await (const chunk of req) { size += chunk.length; if (size > 8 * 1024 * 1024) { fail(413); return; } chunks.push(chunk); }
+          const raw = Buffer.concat(chunks).toString('utf8');
           let payload, url;
           try { payload = JSON.parse(raw); url = new URL(payload.url); } catch { fail(400); return; }
           const local = url.hostname === 'localhost' || /^127\.\d+\.\d+\.\d+$/.test(url.hostname) || url.hostname === '[::1]';

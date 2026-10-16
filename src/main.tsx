@@ -14,4 +14,5 @@ import './desktop/motion.css';
 import './desktop/endpoints.css';
 import './desktop/onboarding.css';
 import './desktop/providers.css';
+try { document.documentElement.dataset.reduceMotion = String(localStorage.getItem('client-reduce-motion') === 'true'); } catch { /* Preferences are optional. */ }
 createRoot(document.getElementById('root')!).render(<Shell/>);

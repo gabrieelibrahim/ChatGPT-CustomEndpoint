@@ -15,23 +15,29 @@ The rail's **More** menu opens on hover and remains open while moving into it; c
 
 Open **Profile → Custom Endpoint** (or Settings), **More → Custom Endpoint**, or search for Custom Endpoint with Ctrl+K. Add a provider name, Base URL, API key and model ID. Multiple profiles can be saved, edited, selected and deleted. Only the OpenAI-compatible protocol is supported here. HTTPS and local HTTP loopback URLs are accepted; no provider is required or hardcoded.
 
-Profile metadata is stored in localStorage; API keys stay in sessionStorage for the current tab session. Keys are masked and excluded from profile serialization. **Tes & ambil model** explicitly requests the configured provider's `/models` endpoint; discovered models can be searched and selected, and IDs can also be entered manually. The composer model menu uses saved provider models. Effort is sent only if **Kirim reasoning_effort** is explicitly enabled for a compatible model; supported values depend on the provider. Attachments and agent tools are not sent by this text-only client.
+Profile metadata is stored in localStorage; API keys stay in sessionStorage for the current tab session. Keys are masked and excluded from profile serialization. **Tes & ambil model** explicitly requests the configured provider's `/models` endpoint; discovered models can be searched and selected, and IDs can also be entered manually. The composer model menu uses saved provider models. Effort is sent only if **Kirim reasoning_effort** is explicitly enabled for a compatible model; supported values depend on the provider. Text attachments and PNG/JPEG/WebP/GIF images can be sent explicitly with Send. Images require a vision-capable model. Files persist in the local IndexedDB library; unsupported formats fail clearly. See [FEATURE-STATUS.md](FEATURE-STATUS.md) for bounds and feature status.
 
 During `npm run dev` on localhost, a development-only same-origin relay in the Vite process forwards requests from this computer to the configured provider. This handles providers that reject browser CORS preflight, without routing through Sakelar or another hosted proxy. It accepts only same-origin JSON POST requests from loopback, allows only `/models` and `/chat/completions`, refuses redirects and never logs or saves payloads/credentials. **Production web builds call providers directly and still require provider CORS support.** The relay is not a production backend or native packaging solution.
 
 ## Local Codex agent (development)
 
-The Codex experience can use an installed **Codex CLI/app-server** through a local bridge, alongside the existing text client. No Codex binary is bundled. On Windows the bridge discovers the installed OpenAI/Codex runtime, then falls back to PATH. Set `CODEX_RUNTIME_PATH` on the development server for another installation.
+The Codex experience can use an installed **Codex CLI/app-server** through a local bridge, alongside the existing provider chat client. No Codex binary is bundled. On Windows the bridge discovers the installed OpenAI/Codex runtime, then falls back to PATH. Set `CODEX_RUNTIME_PATH` on the development server for another installation.
 
 1. Run `npm run dev` and select the **Codex** experience.
-2. Open **Agent workspace** in the conversation header, or **This computer** on its home screen.
-3. Enter an absolute project-folder path and choose read-only or workspace editing.
+2. Use **Choose project** for a native folder picker or validated absolute path. **This computer** shows the actual execution host; **Agent settings** configures runtime access.
+3. Choose read-only or workspace editing in Agent settings.
 4. Select an endpoint/model in the usual provider menu. Confirm that this provider supports **Responses API with tool calling**; Chat Completions compatibility alone is insufficient.
 5. Enable the local agent and send a request. Command output, file-change items, turn diffs, plan updates and permission requests appear below the answer. Stop interrupts the native turn. Plan mode uses a read-only turn policy and disables permission escalation.
 
 Keys are passed to the private runtime process via its environment, never CLI arguments or persistent config. A temporary isolated CODEX_HOME prevents importing the user's main Codex account, plugins or settings. Sessions are ephemeral, closed when starting/opening another chat, and idle sessions expire after 15 minutes. Local text history remains in this client; reopening a conversation starts a fresh native thread with that text as context, without reconstructing old tool state. Only the workspace path/access preference is persisted; enabling agent execution and confirming Responses support must be repeated after reload.
 
-This bridge runs only in localhost development. Production static hosting cannot execute local tools. Native packaging, browser/desktop computer-use adapters, hosted Codex services, additional MCP configuration and full native thread restoration are not implemented. Unknown native interaction requests fail explicitly instead of being approved. It is not full feature parity with the official application. See [AGENT-RUNTIME.md](AGENT-RUNTIME.md) for evidence and verification.
+This bridge runs only in localhost development. Production static hosting cannot execute local tools. Native packaging, browser/desktop computer-use adapters, hosted Codex services, OAuth-authenticated MCP configuration and full native thread restoration are not implemented. Plugins now stores independent HTTP/stdio MCP profiles that are passed to the next private runtime session. Unknown native interaction requests fail explicitly instead of being approved. It is not full feature parity with the official application. See [AGENT-RUNTIME.md](AGENT-RUNTIME.md) for evidence and verification.
+
+## Local client features
+
+The desktop now uses real local data for project selection, file browsing/library, conversation rename/pin/archive/restore/delete/fork, project membership, Markdown/JSON export and chat-backup import. Pages, instructions, saved sites and reminders support local CRUD; reminders only fire while the application is open and require user-triggered Run. Plugins configures actual MCP servers rather than displaying a fictional installed catalog. New installs have no seeded demonstration conversations. Existing saved conversations are preserved.
+
+See [FEATURE-STATUS.md](FEATURE-STATUS.md) for implemented behavior, provider requirements and remaining external integrations.
 
 ## Stack
 React 19, TypeScript, Vite 6, Tailwind CSS 4. All icons are inline SVG; no CDN or runtime asset dependency.
@@ -41,7 +47,12 @@ React 19, TypeScript, Vite 6, Tailwind CSS 4. All icons are inline SVG; no CDN o
 npm install
 npm run dev
 npm run test:providers
+npm run test:agent
+npm run test:workspace
+npm run test:files
 ```
+
+`npm test` runs all 24 transport/workspace/file tests. Optional `npm run test:runtime` requires an installed Codex runtime and executes a harmless local command and MCP echo against a fake-key local gateway; it uses no external inference.
 
 ## Production
 ```sh

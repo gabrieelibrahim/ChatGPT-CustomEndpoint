@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
 import { usesLocalProviderRelay } from '../lib/providerTransport';
 import type { EndpointProfile } from '../lib/endpointProfiles';
+import type { McpProfile } from './ClientCollections';
 
 type AgentConfig = { enabled: boolean; cwd: string; sandbox: 'read-only' | 'workspace-write'; responsesConfirmed: boolean };
 type AgentItem = { id: string; type: string; status?: string; command?: string; aggregatedOutput?: string; changes?: { path: string; diff?: string; kind?: { type: string } }[]; server?: string; tool?: string };
@@ -34,23 +35,24 @@ export function useCodexAgent() {
     catch (error) { setNotice((error as Error).message); }
     finally { setPendingDecision(''); }
   }
-  async function run(endpoint: EndpointProfile, key: string, model: string, history: { role: string; text: string }[], conversation: string, forceNew: boolean, signal: AbortSignal, onText: (text: string) => void, effort?: string, planOnly = false) {
+  async function run(endpoint: EndpointProfile, key: string, model: string, history: { role: string; text: string; images?: string[] }[], conversation: string, forceNew: boolean, signal: AbortSignal, onText: (text: string) => void, effort?: string, planOnly = false, mcp: McpProfile[] = []) {
     if (busy.current) throw Error('Agent masih bekerja.');
     if (!config.cwd || !config.responsesConfirmed) { setDialog(true); throw Error('Pilih folder dan konfirmasikan dukungan Responses API.'); }
     busy.current = true; setItems([]); setApprovals([]); setDiff(''); setPlan([]); setNotice('');
-    const fingerprint = JSON.stringify([endpoint.id, endpoint.baseUrl, model, key, config.cwd, config.sandbox]);
+    const fingerprint = JSON.stringify([endpoint.id, endpoint.baseUrl, model, key, config.cwd, config.sandbox, mcp]);
     const stop = () => { if (session.current) void agentRequest({ action: 'stop', sessionId: session.current.id }).catch(() => {}); };
     signal.addEventListener('abort', stop, { once: true });
     try {
       if (forceNew || session.current?.fingerprint !== fingerprint || session.current?.conversation !== conversation) await disconnect();
       let first = false;
       if (!session.current) {
-        const response = await agentRequest({ action: 'connect', cwd: config.cwd, sandbox: config.sandbox, responsesConfirmed: true, baseUrl: endpoint.baseUrl, key, model });
+        const response = await agentRequest({ action: 'connect', cwd: config.cwd, sandbox: config.sandbox, responsesConfirmed: true, baseUrl: endpoint.baseUrl, key, model, mcp });
         const result = await response.json(); session.current = { id: result.sessionId, fingerprint, conversation }; first = true;
       }
       signal.throwIfAborted();
       const text = first && history.length > 1 ? 'Previous conversation (context only):\n' + history.slice(0, -1).map(item => item.role + ': ' + item.text).join('\n\n') + '\n\nCurrent request:\n' + history.at(-1)!.text : history.at(-1)!.text;
-      const response = await agentRequest({ action: 'turn', sessionId: session.current.id, text, effort: endpoint.sendReasoning ? effort : undefined, planOnly }, signal);
+      const images = first ? history.flatMap(message => message.images || []) : history.at(-1)?.images || [];
+      const response = await agentRequest({ action: 'turn', sessionId: session.current.id, text, images, effort: endpoint.sendReasoning ? effort : undefined, planOnly }, signal);
       if (!response.body) throw Error('Stream agent tidak tersedia.');
       const reader = response.body.getReader(), decoder = new TextDecoder(); let buffer = '', ended = false, failure = '';
       const messages = new Map<string, string>();
@@ -86,12 +88,15 @@ export function useCodexAgent() {
 
 export function AgentWorkspaceDialog({ agent, providerName, onClose }: { agent: ReturnType<typeof useCodexAgent>; providerName: string; onClose: () => void }) {
   const [draft, setDraft] = useState(agent.config);
+  const [browsing, setBrowsing] = useState(false), [folderError, setFolderError] = useState('');
   const first = useRef<HTMLInputElement>(null);
   useEffect(() => { first.current?.focus(); }, []);
   return <div className="d-modal-backdrop" onClick={onClose}><form className="d-modal d-agent-dialog" role="dialog" aria-modal="true" aria-label="Codex local agent" onClick={event => event.stopPropagation()} onKeyDown={event => { event.stopPropagation(); if (event.key === 'Escape') { event.preventDefault(); onClose(); } if (event.key === 'Tab') { const elements = [...event.currentTarget.querySelectorAll<HTMLElement>('input,select,button:not(:disabled)')]; const first = elements[0], last = elements.at(-1); if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); } } }} onSubmit={event => { event.preventDefault(); agent.save(draft); }}>
     <header><div><h2>Codex local agent</h2><p>{agent.available === null ? 'Mencari runtime…' : agent.available ? 'Codex runtime tersedia' : 'Runtime lokal belum tersedia'}</p></div><button type="button" aria-label="Close agent settings" onClick={onClose}><I name="close" size={22}/></button></header>
     <p>Agent memakai endpoint dan model pilihanmu untuk membaca project, menjalankan terminal, dan mengedit file.</p>
     <label>Folder project<input ref={first} required value={draft.cwd} placeholder="D:\\Projects\\my-app" onChange={event => setDraft({ ...draft, cwd: event.target.value })}/></label>
+    <button type="button" className="d-local-primary" disabled={browsing} onClick={async () => { setBrowsing(true); setFolderError(''); try { const { project } = await (await agentRequest({ action: 'pickFolder' })).json(); if (project) setDraft(previous => ({ ...previous, cwd: project.path })); } catch (failure) { setFolderError((failure as Error).message); } finally { setBrowsing(false); } }}>{browsing ? 'Menunggu pilihan folder…' : 'Browse folders'}</button>
+    {folderError && <p role="alert">{folderError}</p>}
     <label>Akses project<select value={draft.sandbox} onChange={event => setDraft({ ...draft, sandbox: event.target.value as AgentConfig['sandbox'] })}><option value="read-only">Baca saja</option><option value="workspace-write">Baca & edit di folder project</option></select></label>
     <label className="d-agent-check"><input type="checkbox" checked={draft.responsesConfirmed} onChange={event => setDraft({ ...draft, responsesConfirmed: event.target.checked })}/><span>{providerName || 'Endpoint pilihan'} mendukung Responses API dan tool calling.</span></label>
     <label className="d-agent-check"><input type="checkbox" checked={draft.enabled} onChange={event => setDraft({ ...draft, enabled: event.target.checked })}/><span>Gunakan agent untuk pesan di mode Codex.</span></label>

@@ -1,11 +1,11 @@
 import { normalizeBaseUrl, type EndpointProfile } from './endpointProfiles';
 import { providerFetch, providerStatusError } from './providerTransport';
-export type ProviderMessage = { role: 'user' | 'assistant'; text: string };
+export type ProviderMessage = { role: 'user' | 'assistant'; text: string; images?: string[] };
 
 export async function streamEndpointChat(profile: EndpointProfile, key: string, model: string, messages: ProviderMessage[], signal: AbortSignal, onText: (text: string) => void, reasoningEffort?: string): Promise<void> {
   if (profile.auth === 'bearer' && !key.trim()) throw Error('API key sesi ini belum tersedia. Masukkan ulang di Custom Endpoint.');
   const response = await providerFetch(normalizeBaseUrl(profile.baseUrl) + '/chat/completions', profile.auth === 'bearer' ? key : '', signal, {
-    model, stream: true, messages: messages.filter(message => message.text).map(message => ({ role: message.role, content: message.text })),
+    model, stream: true, messages: messages.filter(message => message.text || message.images?.length).map(message => ({ role: message.role, content: message.images?.length ? [{ type: 'text', text: message.text }, ...message.images.map(url => ({ type: 'image_url', image_url: { url } }))] : message.text })),
     ...(profile.sendReasoning && reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
   });
   if (!response.ok) throw providerStatusError(response.status);

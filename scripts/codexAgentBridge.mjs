@@ -5,6 +5,7 @@ import { constants } from 'node:fs';
 import { delimiter, isAbsolute, join, resolve, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
+import { chooseLocalDirectory, localComputerInfo, workspaceInfo, workspaceFiles, workspaceFile, workspaceGit } from './localWorkspace.mjs';
 
 export async function findCodexRuntime(env = process.env) {
   const executable = process.platform === 'win32' ? 'codex.exe' : 'codex';
@@ -37,7 +38,15 @@ export async function validateAgentConnection(payload) {
   if (!payload.responsesConfirmed) throw Error('Konfirmasikan dukungan Responses API terlebih dahulu.');
   if (typeof payload.key !== 'string' || payload.key.length > 4096 || /[\r\n]/.test(payload.key)) throw Error('API key tidak valid.');
   if (typeof payload.model !== 'string' || !payload.model.trim() || payload.model.length > 160) throw Error('Pilih model terlebih dahulu.');
-  return { cwd, baseUrl: url.toString().replace(/\/$/, ''), key: payload.key, model: payload.model.trim(), sandbox: payload.sandbox === 'workspace-write' ? 'workspace-write' : 'read-only' };
+  const mcp = [];
+  if (Array.isArray(payload.mcp)) for (const item of payload.mcp.slice(0, 10)) {
+    if (!item?.enabled) continue;
+    if (!/^mcp_[a-zA-Z0-9_]{1,80}$/.test(item.id)) throw Error('ID MCP tidak valid.');
+    if (item.kind === 'http') { const target = new URL(item.url); if ((target.protocol !== 'https:' && !(target.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname))) || target.username || target.password || target.search || target.hash) throw Error('URL MCP tidak valid.'); mcp.push({ id: item.id, url: target.toString() }); }
+    else if (item.kind === 'stdio' && typeof item.command === 'string' && item.command.trim() && item.command.length <= 2048 && !/[\r\n\0]/.test(item.command) && Array.isArray(item.args) && item.args.length <= 50 && item.args.every(arg => typeof arg === 'string' && arg.length <= 4000 && !arg.includes('\0'))) mcp.push({ id: item.id, command: item.command, args: item.args });
+    else throw Error('Konfigurasi MCP tidak valid.');
+  }
+  return { cwd, baseUrl: url.toString().replace(/\/$/, ''), key: payload.key, model: payload.model.trim(), sandbox: payload.sandbox === 'workspace-write' ? 'workspace-write' : 'read-only', mcp };
 }
 
 // A private app-server instance per browser session. No existing Codex accounts,
@@ -113,12 +122,12 @@ export class CodexAgentSession {
     const result = await this.rpc('thread/start', { model: this.options.model, modelProvider: 'custom_gateway', cwd: this.options.cwd, sandbox: this.options.sandbox, approvalPolicy: 'on-request', ephemeral: true });
     this.threadId = result.thread.id;
   }
-  async turn(text, sink, effort, planOnly = false) {
+  async turn(text, sink, effort, planOnly = false, images = []) {
     if (this.busy) throw Error('Agent masih bekerja. Hentikan atau tunggu jawaban selesai.');
     this.busy = true; this.stopRequested = false; this.sink = sink; this.touched = Date.now();
     try {
       const sandboxPolicy = planOnly || this.options.sandbox !== 'workspace-write' ? { type: 'readOnly', networkAccess: false } : { type: 'workspaceWrite', writableRoots: [this.options.cwd], networkAccess: false };
-      const result = await this.rpc('turn/start', { threadId: this.threadId, input: [{ type: 'text', text: planOnly ? 'Plan only. Explain your proposed steps; do not make changes.\n\n' + text : text }], sandboxPolicy, approvalPolicy: planOnly ? 'never' : 'on-request', ...(effort ? { effort } : {}) });
+      const result = await this.rpc('turn/start', { threadId: this.threadId, input: [{ type: 'text', text: planOnly ? 'Plan only. Explain your proposed steps; do not make changes.\n\n' + text : text }, ...images.map(url => ({ type: 'image', url }))], sandboxPolicy, approvalPolicy: planOnly ? 'never' : 'on-request', ...(effort ? { effort } : {}) });
       if (this.busy) this.turnId = result.turn.id;
       if (this.stopRequested && this.turnId) await this.rpc('turn/interrupt', { threadId: this.threadId, turnId: this.turnId }, 5000);
     } catch (error) { this.busy = false; this.sink = null; throw error; }
@@ -171,6 +180,9 @@ export async function createCodexAgent(options, executable) {
     'sandbox_workspace_write.network_access': false, web_search: 'disabled',
   };
   const args = Object.entries(config).flatMap(([name, value]) => ['-c', name + '=' + JSON.stringify(value)]);
+  for (const server of options.mcp || []) {
+    for (const [name, value] of Object.entries({ ...server, enabled: true, required: true })) if (name !== 'id') args.push('-c', 'mcp_servers.' + server.id + '.' + name + '=' + JSON.stringify(value));
+  }
   args.push('app-server', '--listen', 'stdio://');
   const child = spawn(executable, args, { cwd: options.cwd, env, windowsHide: true, shell: false, detached: process.platform !== 'win32', stdio: ['pipe', 'pipe', 'pipe'] });
   const session = new CodexAgentSession(child, options, home);
@@ -189,11 +201,19 @@ export function codexAgentBridge({ findRuntime = findCodexRuntime, createSession
         const json = (status, value) => { if (!res.headersSent) { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(value)); } };
         res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');
         if (!allowedAgentRequest(req)) { json(403, { error: 'Local origin required.' }); return; }
-        let session;
+        let session, requestKey = '';
         try {
-          let raw = ''; for await (const chunk of req) { raw += chunk.toString(); if (Buffer.byteLength(raw) > 512 * 1024) { json(413, { error: 'Permintaan terlalu besar.' }); return; } }
-          const payload = JSON.parse(raw);
+          const chunks = []; let size = 0;
+          for await (const chunk of req) { size += chunk.length; if (size > 8 * 1024 * 1024) { json(413, { error: 'Permintaan terlalu besar.' }); return; } chunks.push(chunk); }
+          const payload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          if (typeof payload.key === 'string') requestKey = payload.key;
           if (payload.action === 'status') { json(200, { available: !!(await findRuntime()), platform: process.platform }); return; }
+          if (payload.action === 'computerInfo') { json(200, { ...localComputerInfo(), runtimeAvailable: !!(await findRuntime()) }); return; }
+          if (payload.action === 'pickFolder') { json(200, { project: await chooseLocalDirectory() }); return; }
+          if (payload.action === 'projectInfo') { json(200, await workspaceInfo(payload.cwd)); return; }
+          if (payload.action === 'projectFiles') { const project = await workspaceInfo(payload.cwd); json(200, await workspaceFiles(project.path, payload.query)); return; }
+          if (payload.action === 'projectFile') { const project = await workspaceInfo(payload.cwd); json(200, await workspaceFile(project.path, payload.name)); return; }
+          if (payload.action === 'projectGit') { json(200, await workspaceGit(payload.cwd)); return; }
           if (payload.action === 'connect') {
             if (sessions.size + opening >= 4) { json(429, { error: 'Tutup sesi agent lain terlebih dahulu.' }); return; }
             opening++;
@@ -216,12 +236,15 @@ export function codexAgentBridge({ findRuntime = findCodexRuntime, createSession
           }
           if (payload.action !== 'turn' || typeof payload.text !== 'string' || !payload.text.trim() || payload.text.length > 100000) throw Error('Pesan agent tidak valid.');
           if (session.busy) { json(409, { error: 'Agent masih bekerja.' }); return; }
+          const images = payload.images || [];
+          if (!Array.isArray(images) || images.length > 4 || images.some(url => typeof url !== 'string' || url.length > 1500000 || !/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(url))) throw Error('Input gambar tidak valid.');
           res.setHeader('Content-Type', 'application/x-ndjson'); res.flushHeaders();
           const sink = event => { if (!res.destroyed) res.write(JSON.stringify(event) + '\n'); if (event.type === 'done') res.end(); };
           res.once('close', () => { if (!res.writableEnded) { session.sink = null; void session.interrupt().catch(() => session.close()); } });
-          await session.turn(payload.text, sink, ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'].includes(payload.effort) ? payload.effort : undefined, payload.planOnly === true);
+          await session.turn(payload.text, sink, ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'].includes(payload.effort) ? payload.effort : undefined, payload.planOnly === true, images);
         } catch (error) {
-          const text = session ? session.clean(String(error.message || 'Agent gagal.')) : 'Koneksi agent gagal. Periksa folder, runtime, dan konfigurasi Responses API.';
+          const message = error instanceof SyntaxError ? 'Format JSON tidak valid.' : String(error.message || 'Operasi lokal gagal.');
+          const text = session ? session.clean(message) : requestKey ? message.split(requestKey).join('[REDACTED]') : message;
           if (res.headersSent) { if (!res.destroyed) { res.write(JSON.stringify({ type: 'error', text }) + '\n'); res.write('{"type":"done","status":"failed"}\n'); res.end(); } }
           else json(400, { error: text });
         }

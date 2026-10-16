@@ -110,3 +110,12 @@ test('Plan mode is read-only without escalation and the next turn restores proje
   reply({ id: sent[1].id, result: { turn: { id: 'implementation-turn' } } }); await next;
   session.fail('closed'); session.lines.close(); child.stdout.end();
 });
+
+test('native vision input uses image items alongside text without treating paths as images', async () => {
+  const { child, sent, reply } = fakeProcess(); const session = new CodexAgentSession(child, { key: '' }, 'unused'); session.threadId = 'vision';
+  const image = 'data:image/png;base64,aGVsbG8=';
+  const starting = session.turn('Describe', () => {}, undefined, false, [image]);
+  assert.deepEqual(sent[0].params.input, [{ type: 'text', text: 'Describe' }, { type: 'image', url: image }]);
+  reply({ id: sent[0].id, result: { turn: { id: 'turn' } } }); await starting;
+  session.fail('closed'); session.lines.close(); child.stdout.end();
+});

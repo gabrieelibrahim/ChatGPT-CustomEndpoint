@@ -38,6 +38,14 @@ test('supports JSON responses and sends effort only when explicitly enabled', as
   await streamEndpointChat({ ...profile, sendReasoning: true }, 'fake', profile.model, [], new AbortController().signal, value => { answer = value; }, 'high');
   assert.equal(answer, 'Ready'); assert.equal(body.reasoning_effort, 'high');
 });
+
+test('vision attachments produce OpenAI-compatible image content and preserve plain text history', async () => {
+  let body;
+  global.fetch = async (_, options) => { body = JSON.parse(options.body); return Response.json({ choices: [{ message: { content: 'Image received' } }] }); };
+  const image = 'data:image/png;base64,aGVsbG8=';
+  await streamEndpointChat(profile, 'fake', profile.model, [{ role: 'assistant', text: 'Earlier' }, { role: 'user', text: 'Describe', images: [image] }], new AbortController().signal, () => {});
+  assert.deepEqual(body.messages, [{ role: 'assistant', content: 'Earlier' }, { role: 'user', content: [{ type: 'text', text: 'Describe' }, { type: 'image_url', image_url: { url: image } }] }]);
+});
 test('does not call network without required session credential', async () => {
   global.fetch = () => { throw Error('Unexpected network'); };
   await assert.rejects(streamEndpointChat(profile, '', profile.model, [], new AbortController().signal, () => {}), /API key sesi/);

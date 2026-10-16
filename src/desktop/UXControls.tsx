@@ -88,21 +88,21 @@ export function ComposerAddMenu({ anchor, plan, onFiles, onSelect, onUnavailable
     </button>)}
     <p>Plugins</p>
     {[
-      ['remotion', 'Remotion', 'Make videos agentically'],
-      ['github', 'GitHub', 'Triage PRs, issues, CI, and publish flows'],
-      ['document', 'Documents', 'Create and edit documents'],
-      ['pdf', 'PDF', 'Read, create, and verify PDFs'],
+      ['plugin', 'MCP servers', 'Configure connected tools'],
+      ['book', 'Local instructions', 'Use saved skills and instructions'],
+      ['document', 'Documents', 'Create and edit local notes'],
     ].map(([icon, label, hint]) => <button role="menuitem" key={label} onClick={() => onSelect(label)}><I name={icon}/><span>{label}</span><small>{hint}</small></button>)}
   </div>;
 }
 
-export type PreviewMessage = { role: 'user' | 'assistant'; text: string; timestamp?: number };
+export type PreviewMessage = { role: 'user' | 'assistant'; text: string; timestamp?: number; attachments?: { id: string; name: string; type: string }[] };
 export function ChatMessage({ message, onEdit, onNotice, streaming = false }: {
   message: PreviewMessage; onEdit: (text: string) => void; onNotice: (text: string) => void; streaming?: boolean;
 }) {
   const [editing, setEditing] = useState(false), [draft, setDraft] = useState(message.text);
   const [time] = useState(() => message.timestamp || Date.now());
   return <section className={'d-chat-message d-chat-message-' + message.role}>
+    {!!message.attachments?.length && <div className="d-message-files">{message.attachments.map(file => <span key={file.id}><I name="paperclip" size={17}/>{file.name}</span>)}</div>}
     {editing ? <div className="d-message-editor"><textarea aria-label="Edit message" autoFocus value={draft} onChange={e => setDraft(e.target.value)}
       onKeyDown={event => { if (event.key === 'Escape') setEditing(false); }}/><div><button onClick={() => setEditing(false)}>Cancel</button><button disabled={!draft.trim()} onClick={() => { onEdit(draft.trim()); setEditing(false); }}>Save</button></div></div>
       : <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !message.text ? 'status' : undefined} aria-label={message.role === 'assistant' && !message.text ? 'Menunggu jawaban' : undefined}>{message.text}</div>}
@@ -134,7 +134,7 @@ export function MessageActions({ text, user = false, timestamp, onEdit, onNotice
     <B icon={copied ? 'check' : 'copy'} label={copied ? 'Copied' : user ? 'Copy message' : 'Copy response'} onClick={() => void copy()}/>
     {user ? <B icon="edit" label="Edit message" onClick={onEdit}/> : <>
       <B icon="sound" label="Read aloud" onClick={speak}/>
-      <B icon="feedback" label={feedback || 'Give feedback'} onClick={() => setFeedback(feedback ? '' : 'Feedback saved locally')} className={feedback ? 'd-selected' : ''}/>
+      <B icon="feedback" label={feedback || 'Mark helpful'} onClick={() => setFeedback(feedback ? '' : 'Marked helpful in this view')} className={feedback ? 'd-selected' : ''}/>
       <B icon="dots" label="More response actions" onClick={() => setMore(!more)}/>
       {timestamp && <time>{new Date(timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</time>}
     </>}
