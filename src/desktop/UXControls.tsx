@@ -4,6 +4,7 @@ import { parseThinking } from '../lib/endpointChat';
 
 export { parseThinking };
 import { speakText } from '../lib/clientSettings';
+import { RichText } from '../components/RichText';
 
 export const navigationItems = [
   { icon: 'folder', label: 'Projects', screen: 'projects' },
@@ -132,7 +133,7 @@ export function ThinkingBlock({ reasoning, streaming = false }: { reasoning: str
       </button>
       {open && (
         <div className="d-thinking-body">
-          <div className="d-thinking-text">{reasoning || (streaming ? 'Analyzing request...' : '')}</div>
+          <div className="d-thinking-text">{reasoning ? <RichText text={reasoning}/> : (streaming ? 'Analyzing request...' : '')}</div>
         </div>
       )}
     </div>
@@ -153,7 +154,7 @@ export function ChatMessage({ message, onEdit, onNotice, streaming = false }: {
     {showThinking && <ThinkingBlock reasoning={parsed.reasoning} streaming={streaming && !parsed.content} />}
     {editing ? <div className="d-message-editor"><textarea aria-label="Edit message" autoFocus value={draft} onChange={e => setDraft(e.target.value)}
       onKeyDown={event => { if (event.key === 'Escape') setEditing(false); }}/><div><button onClick={() => setEditing(false)}>Cancel</button><button disabled={!draft.trim()} onClick={() => { onEdit(draft.trim()); setEditing(false); }}>Save</button></div></div>
-      : (parsed.content || (streaming && !showThinking)) ? <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !parsed.content ? 'status' : undefined} aria-label={message.role === 'assistant' && !parsed.content ? 'Menunggu jawaban' : undefined}>{parsed.content}</div> : null}
+      : (parsed.content || (streaming && !showThinking)) ? <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !parsed.content ? 'status' : undefined} aria-label={message.role === 'assistant' && !parsed.content ? 'Menunggu jawaban' : undefined}>{message.role === 'assistant' && parsed.content ? <RichText text={parsed.content}/> : parsed.content}</div> : null}
     {!editing && !streaming && parsed.content && <MessageActions text={parsed.content} user={message.role === 'user'} timestamp={time} onNotice={onNotice} onEdit={() => { setDraft(message.text); setEditing(true); }}/ >}
   </section>;
 }

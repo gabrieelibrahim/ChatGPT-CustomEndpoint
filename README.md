@@ -98,3 +98,5 @@ The top-right menu follows the supplied reference: share, pin/unpin, add to proj
 `ConversationMenu.tsx` handles the popover, click-away dismissal, Escape, and menu keyboard focus. The sidebar uses a scrollable content area and separate footer; pinned rows explicitly use flex to prevent the CSS reset from wrapping their icon above the title.
 
 The uploaded-file menu accurately shows that server uploads are not yet implemented. Adding to the home screen shows browser-specific instructions. No server-side account or cross-device sync is included.
+
+Assistant messages, thinking panels and mini chat now use the official OpenAI Apps SDK UI Markdown/CodeBlock renderer, with its UI/monospace font stacks, formatted tables/lists, syntax highlighting, copyable code and asynchronous math. See [RICH-TEXT.md](RICH-TEXT.md) for sources and rendering/privacy behavior.

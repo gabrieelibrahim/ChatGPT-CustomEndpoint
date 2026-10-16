@@ -1,18 +1,7 @@
-/* Windows reference typography. Uses installed fonts, without redistributing them.
-   Reported ChatGPT Windows CSS (version 1.2024.315):
-   https://community.openai.com/t/copy-from-chatgpt-windows-app-adds-undesired-extra-css-formatting/1018557
-   Current reference runtime typography has not yet been independently verified.
-*/
+/* Font families from @openai/apps-sdk-ui 0.2.2 variables-semantic.css.
+   The SDK ships a system-font stack, not a proprietary ChatGPT font file. */
 :root {
-  --client-ui-font: "Segoe UI Variable Text", ui-sans-serif, -apple-system,
-    system-ui, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif,
-    "Segoe UI Emoji", "Segoe UI Symbol";
+  --client-ui-font: var(--font-sans, ui-sans-serif, -apple-system, system-ui, "Segoe UI", "Noto Sans", "Helvetica", "Arial", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif);
+  --client-code-font: var(--font-mono, ui-monospace, "SFMono-Regular", "SF Mono", "Menlo", "Monaco", "Consolas", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace);
 }
-
-body,
-.d-root {
-  font-family: var(--client-ui-font);
-}
-
-/* Existing control rules inherit this family; code keeps its monospace font.
-   Keep existing sizes, line heights, weights and spacing unchanged. */
+body,.d-root { font-family:var(--client-ui-font); }

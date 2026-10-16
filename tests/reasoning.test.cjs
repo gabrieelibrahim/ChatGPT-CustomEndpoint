@@ -54,6 +54,6 @@ test('active reasoning remains collapsible while final text and response actions
   assert.ok(active.includes('data-streaming="true"')); assert.ok(active.includes('aria-expanded="true"'));
   assert.ok(!active.includes('class="d-assistant-message"'));
   const complete = render({ role: 'assistant', text: 'Answer', reasoning: 'Working' });
-  assert.ok(complete.includes('data-streaming="false"')); assert.ok(complete.includes('class="d-assistant-message">Answer'));
+  assert.ok(complete.includes('data-streaming="false"')); assert.ok(complete.includes('class="d-assistant-message"')); assert.ok(complete.includes('Answer'));
   assert.ok(complete.includes('Copy response'));
 });

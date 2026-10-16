@@ -54,7 +54,7 @@ Custom Endpoint uses a centered single-column desktop layout with compact saved 
 
 ## Fonts
 
-The active UI uses the installed `Segoe UI Variable Text` font first, followed by platform UI fallbacks. This matches a reported ChatGPT Windows CSS stack, not verified current runtime typography. No system font files are bundled. See `src/typography.css` for provenance. Exact appearance depends on platform fonts, DPI and browser rendering.
+The default UI and code fonts use the actual OpenAI Apps SDK UI `--font-sans` and `--font-mono` stacks. The SDK supplies platform font fallbacks rather than a proprietary ChatGPT font file. User font preferences remain supported. Assistant text uses the official SDK Markdown/CodeBlock renderer. See [RICH-TEXT.md](RICH-TEXT.md) for sources, integration and verification. Exact appearance depends on platform fonts, DPI and browser rendering.
 
 ## Icon and corner geometry
 
