@@ -59,7 +59,7 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
     </div>
     {options && <div className="d-history-options" ref={optionsRef} role="menu" aria-label={options + ' options'}>{options === 'Projects' ? <button role="menuitem" onClick={() => { onCreateProject?.(); setOptions(null); }}>New project</button> : <><button role="menuitemradio" aria-checked={!alphabetical} onClick={() => { setAlphabetical(false); setOptions(null); }}>Recent first{!alphabetical && <I name="check" size={18}/>}</button><button role="menuitemradio" aria-checked={alphabetical} onClick={() => { setAlphabetical(true); setOptions(null); }}>Alphabetical{alphabetical && <I name="check" size={18}/>}</button></>}</div>}
     {hover && root && createPortal(<div className="d-history-preview" style={{ top: hover.top }} onMouseEnter={cancel} onMouseLeave={leave}>
-      <div><b>{hover.title}</b><I name="panel" size={16}/><time>Local</time></div><p><I name="comment" size={20}/>Chat</p>
+      <div><b>{hover.title}</b><I name="computer" size={18}/><time>Local</time></div><p><I name="comment" size={20}/>Chat</p>
     </div>, root)}
   </div>;
 }

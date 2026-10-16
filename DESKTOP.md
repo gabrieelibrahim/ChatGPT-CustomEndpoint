@@ -33,6 +33,10 @@ Ctrl+Shift+S toggles the sidebar, Ctrl+Shift+O starts a new local conversation, 
 
 The active UI uses the installed `Segoe UI Variable Text` font first, followed by platform UI fallbacks. This matches a reported ChatGPT Windows CSS stack, not verified current runtime typography. No system font files are bundled. See `src/typography.css` for provenance. Exact appearance depends on platform fonts, DPI and browser rendering.
 
+## Icon and corner geometry
+
+`src/components/UIIcon.tsx` supplies the shared smooth SVG paths. Active desktop icons no longer use pixel-grid traces, Unicode window-control glyphs, or a four-square fallback for unknown names. `src/desktop/shapes.css` keeps icon strokes, rounded corners and toolbar hover shapes consistent without replacing the existing page layout. All 66 registered icons render at 27px and 54px; rectangle shapes use explicit corner radii. These are independent reference-based drawings, not an official icon package.
+
 ## Functional limits and verification
 
 Desktop chat replies remain local demo replies. The legacy mobile API client has not been connected to the newer UI. Model names, approval controls, Plan/Goal chips and plugin selections do not grant permissions or invoke agent capabilities. Chrome attachment explicitly reports unavailable. Local file selection does not upload files to a provider.

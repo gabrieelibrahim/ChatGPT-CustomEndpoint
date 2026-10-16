@@ -7,4 +7,5 @@ import './personal/personal.css';
 import './personal/video-ux.css';
 import './typography.css';
 import './desktop/video-ux.css';
+import './desktop/shapes.css';
 createRoot(document.getElementById('root')!).render(<Shell/>);
