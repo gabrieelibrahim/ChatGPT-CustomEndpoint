@@ -1,5 +1,8 @@
 export type LocalProfile = { version: 1; name: string };
 export const localProfileKey = 'client-local-profile-v1';
+export function clearLocalProfile(): void {
+  localStorage.removeItem(localProfileKey);
+}
 export function loadLocalProfile(): LocalProfile | null {
   try {
     const value = JSON.parse(localStorage.getItem(localProfileKey) || 'null');

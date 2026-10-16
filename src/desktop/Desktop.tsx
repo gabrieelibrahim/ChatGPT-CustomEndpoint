@@ -7,7 +7,7 @@ import { UIIcon as I } from '../components/UIIcon';
 import { NavigationPalette } from './NavigationPalette';
 import { Disclosure, useComposerMotion } from './Motion';
 import { EndpointSettings } from './EndpointSettings';
-import { loadLocalProfile, profileInitials } from '../lib/localProfile';
+import { clearLocalProfile, loadLocalProfile, profileInitials } from '../lib/localProfile';
 import { Onboarding, ProfileNameDialog } from './Onboarding';
 import { ProfileMenu } from './ProfileMenu';
 export { I };
@@ -123,7 +123,7 @@ export function Desktop(){
  {popup&&popup!=='more'&&<button className="d-clickaway" aria-label="Close menu" onClick={()=>setPopup('')}/>}
  {popup==='more'&&<MoreNavigation onEnter={keepMore} onLeave={leaveMore} onClose={()=>{keepMore();setPopup('');document.querySelector<HTMLButtonElement>('[aria-label=More]')?.focus()}} pinned={navPins} onPin={label=>setNavPins(p=>p.includes(label)?p.filter(v=>v!==label):[...p,label])} onOpen={item=>{setPopup('');if(item.screen)navigate(item.screen as Screen);else setModal(item.label)}}/>}
 
- {popup==='profile'&&profile&&<ProfileMenu name={profile.name} onEdit={()=>{setPopup('');setModal('Edit profile')}} onAction={action=>{setPopup('');if(action==='Settings'||action==='Custom Endpoint')navigate('endpoints');else setModal(action)}} onClose={()=>setPopup('')}/>}
+ {popup==='profile'&&profile&&<ProfileMenu name={profile.name} onEdit={()=>{setPopup('');setModal('Edit profile')}} onAction={action=>{setPopup('');if(action==='Log out'){try{clearLocalProfile();setModal('');setProfile(null)}catch{setToast('Profil belum bisa dikeluarkan. Periksa izin penyimpanan browser.')}return}if(action==='Settings'||action==='Custom Endpoint')navigate('endpoints');else setModal(action)}} onClose={()=>setPopup('')}/>}
  {popup==='effort'&&<div className="d-popover d-effort" style={{...effortPosition,right:'auto',bottom:'auto'}}><button className="d-effort-value" onClick={()=>setPopup('models')}>{effortLabel}<small>{model} ›</small></button><B icon="refresh" label="Reset effort" className="d-effort-reset" onClick={()=>setEffort(1)}/><EffortRange value={effort} onChange={setEffort}/></div>}
  {popup==='models'&&<div className="d-popover d-models" style={{...modelsPosition,right:'auto',bottom:'auto',overflowY:'auto'}}><p>Select model</p>{models.map(m=><button key={m} onClick={()=>{setModel(m);setPopup('')}}>{m}{model===m&&<I name="check" size={20}/ >}{m==='Default'&&<small>Recommended set of models</small>}</button>)}</div>}
  {popup==='approval'&&<div className="d-popover d-approval-menu"><p>How should ChatGPT actions be approved? <u>Learn more</u></p>{[['hand','Ask for approval','Always ask to edit external files and use the internet'],['shield','Approve for me','Only ask for actions detected as potentially unsafe'],['shield','Full access','Unrestricted access to the internet and any file on your computer']].map(([i,l,d])=><button key={l} className={l==='Full access'?'d-orange':''} onClick={()=>{setApproval(l);setPopup('')}}><I name={i}/><div>{l}<small>{d}</small></div>{approval===l&&<I name="check"/>}</button>)}</div>}
