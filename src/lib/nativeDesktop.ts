@@ -6,9 +6,9 @@ export function isNativeDesktop(): boolean {
 
 export async function nativeProviderFetch(url: string, options: RequestInit): Promise<Response> {
   const target = new URL(url);
-  const loopback = target.hostname === 'localhost' || /^127\.\d+\.\d+\.\d+$/.test(target.hostname) || target.hostname === '[::1]';
-  if ((target.protocol !== 'https:' && !(target.protocol === 'http:' && loopback)) || target.username || target.password || target.search || target.hash) {
-    throw Error('Gunakan endpoint HTTPS atau HTTP localhost tanpa login, query, atau fragmen.');
+  const httpAllowedHost = target.hostname === 'localhost' || /^127\.\d+\.\d+\.\d+$/.test(target.hostname) || target.hostname === '[::1]' || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+$/.test(target.hostname);
+  if ((target.protocol !== 'https:' && !(target.protocol === 'http:' && httpAllowedHost)) || target.username || target.password || target.search || target.hash) {
+    throw Error('Gunakan endpoint HTTPS atau HTTP localhost/Tailscale tanpa login, query, atau fragmen.');
   }
   const { fetch } = await import('@tauri-apps/plugin-http');
   // Never forward credentials through a provider redirect.

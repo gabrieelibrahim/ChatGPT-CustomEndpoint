@@ -18,8 +18,8 @@ export function localProviderRelay() {
           const raw = Buffer.concat(chunks).toString('utf8');
           let payload, url;
           try { payload = JSON.parse(raw); url = new URL(payload.url); } catch { fail(400); return; }
-          const local = url.hostname === 'localhost' || /^127\.\d+\.\d+\.\d+$/.test(url.hostname) || url.hostname === '[::1]';
-          if ((url.protocol !== 'https:' && !(local && url.protocol === 'http:')) || url.username || url.password || url.search || url.hash || typeof payload.key !== 'string' || payload.key.length > 4096 || /[\r\n]/.test(payload.key)) { fail(400); return; }
+          const httpAllowedHost = url.hostname === 'localhost' || /^127\.\d+\.\d+\.\d+$/.test(url.hostname) || url.hostname === '[::1]' || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+$/.test(url.hostname);
+          if ((url.protocol !== 'https:' && !(httpAllowedHost && url.protocol === 'http:')) || url.username || url.password || url.search || url.hash || typeof payload.key !== 'string' || payload.key.length > 4096 || /[\r\n]/.test(payload.key)) { fail(400); return; }
           const chat = url.pathname.endsWith('/chat/completions');
           if ((!chat && !url.pathname.endsWith('/models')) || (chat && (!payload.body || typeof payload.body !== 'object')) || (!chat && payload.body)) { fail(400); return; }
           const upstream = await fetch(url, { method: chat ? 'POST' : 'GET', signal: controller.signal, redirect: 'error', headers: {

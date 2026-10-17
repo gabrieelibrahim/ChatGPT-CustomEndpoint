@@ -11,14 +11,14 @@ mod._compile(built.outputFiles[0].text, mod.filename);
 const client = mod.exports;
 const originalWindow = global.window, originalFetch = global.fetch;
 
-test('every native HTTP scope parses and allows HTTPS plus loopback without allowing public HTTP', () => {
+test('every native HTTP scope parses and allows HTTPS plus loopback/Tailscale without allowing public HTTP', () => {
   const { URLPattern } = require('urlpattern-polyfill');
   const capability = require('../src-tauri/capabilities/default.json');
   const patterns = capability.permissions.find(permission => permission.identifier === 'http:default').allow.map(entry => new URLPattern(entry.url));
-  for (const url of ['https://api.provider.example/v1/models', 'https://api.provider.example:8443/v1/models', 'https://api.provider.example/v1/chat/completions', 'http://localhost:5174/v1/models', 'http://127.0.0.1:5174/v1/models', 'http://127.42.1.2:5174/v1/models', 'http://[::1]:5174/v1/models']) {
+  for (const url of ['https://api.provider.example/v1/models', 'https://api.provider.example:8443/v1/models', 'https://api.provider.example/v1/chat/completions', 'http://localhost:5174/v1/models', 'http://100.64.0.0:20128/v1/models', 'http://100.127.255.255:20128/v1/models', 'http://100.90.1.2:20128/v1/models', 'http://127.0.0.1:5174/v1/models', 'http://127.42.1.2:5174/v1/models', 'http://[::1]:5174/v1/models']) {
     assert.ok(patterns.some(pattern => pattern.test(url)), url);
   }
-  for (const url of ['http://provider.example/v1/models', 'http://192.168.1.2/v1/models', 'http://127.0.0.1.evil.example/v1/models', 'file:///private']) assert.ok(!patterns.some(pattern => pattern.test(url)), url);
+  for (const url of ['http://provider.example/v1/models', 'http://100.63.255.255/v1/models', 'http://100.128.0.0/v1/models', 'http://100.90.1.2.evil.example/v1/models', 'http://192.168.1.2/v1/models', 'http://127.0.0.1.evil.example/v1/models', 'file:///private']) assert.ok(!patterns.some(pattern => pattern.test(url)), url);
 });
 
 test('native HTTP converts a plain-string permission rejection into an actionable Error', async () => {
@@ -80,7 +80,7 @@ test('cancelled native request does not create an IPC request', async () => {
 
 test('native transport rejects insecure or credential-bearing destinations before IPC', async () => {
   const calls = nativeTransport('{}');
-  for (const url of ['http://provider.example/v1/models', 'https://user:secret@provider.example/v1/models', 'https://provider.example/v1/models?key=secret', 'file:///private']) {
+  for (const url of ['http://provider.example/v1/models', 'http://100.63.255.255/v1/models', 'http://100.128.0.0/v1/models', 'http://100.90.1.2.evil.example/v1/models', 'https://user:secret@provider.example/v1/models', 'https://provider.example/v1/models?key=secret', 'file:///private']) {
     await assert.rejects(client.nativeProviderFetch(url, {}), /endpoint HTTPS/);
   }
   assert.equal(calls.length, 0);
@@ -110,4 +110,14 @@ test('native agent abort cancels the matching Rust request and errors its stream
   const body = response.text(); controller.abort(); await assert.rejects(body, /abort/i);
   assert.equal(calls[1].command, 'native_agent_cancel');
   assert.equal(calls[0].payload.requestId, calls[1].payload.requestId);
+});
+
+
+test('native transport accepts Tailscale HTTP with fake credential and rejects adjacent ranges before IPC', async () => {
+  const calls = nativeTransport('{}');
+  await client.nativeProviderFetch('http://100.90.1.2:20128/v1/models', { headers: { Authorization: 'Bearer fake-test-key' } });
+  assert.equal(calls[0].payload.clientConfig.url, 'http://100.90.1.2:20128/v1/models');
+  const count = calls.length;
+  for (const url of ['http://100.63.255.255/v1/models', 'http://100.128.0.0/v1/models', 'http://100.90.1.2.evil.example/v1/models']) await assert.rejects(client.nativeProviderFetch(url, {}));
+  assert.equal(calls.length, count);
 });

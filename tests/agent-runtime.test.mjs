@@ -151,3 +151,14 @@ test('app-server forwards exposed reasoning summaries with normal credential red
   assert.deepEqual(events, [{ type: 'summary', itemId: 'summary:0', delta: 'Checking [REDACTED] configuration' }]);
   session.lines.close(); child.stdout.end();
 });
+
+
+test('agent gateway accepts Tailscale HTTP without relaxing Responses confirmation or public HTTP checks', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'sakelar-tailnet-test-'));
+  const payload = { cwd, baseUrl: 'http://100.90.1.2:20128/v1', key: 'fake-test-key', model: 'test-model', responsesConfirmed: true };
+  try {
+    assert.equal((await validateAgentConnection(payload)).baseUrl, payload.baseUrl);
+    for (const host of ['100.63.255.255', '100.128.0.0', '100.90.1.2.evil.example']) await assert.rejects(validateAgentConnection({ ...payload, baseUrl: `http://${host}/v1` }), /tidak valid/);
+    await assert.rejects(validateAgentConnection({ ...payload, responsesConfirmed: false }), /Responses/);
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});
