@@ -1,4 +1,4 @@
-# Sakelar desktop v0.1.2
+# Sakelar desktop v0.1.3
 
 The first Tauri 2 desktop target reuses the existing React interface. It does not import Chrome history, provider profiles, API keys, or browser storage into the desktop app.
 
@@ -38,7 +38,9 @@ If Rust is installed outside the normal PATH, optional `CARGO_HOME` and `RUSTUP_
 
 ## Checks
 
-Pending the next native build: the HTTP capability source now escapes IPv6 URLPattern colons and uses an explicit IPv4 loopback regex. An invalid IPv6 pattern in the old v0.1.2 executable rejects every native HTTP request while deserializing scope. String transport failures now receive actionable UI errors. Existing installers retain the old embedded capability until rebuilt; no new native build is part of this source-only fix.
+The v0.1.3 release executable passed the isolated three-launch Windows smoke test: real native HTTP model discovery and chat streaming against a fake-key local gateway, saved profile/endpoint persistence, session-only API keys, frameless window controls, and dark/light themes. The bundled Node/Codex runtime also passed approval, terminal, file-write, MCP echo, streaming and shutdown checks against a local mock gateway. No real provider credentials or paid inference were used.
+
+Version 0.1.3 rebuilds the native HTTP capability with escaped IPv6 URLPattern colons and an explicit IPv4 loopback regex. The invalid IPv6 pattern in v0.1.2 rejected every native HTTP request while deserializing scope. String transport failures now receive actionable UI errors. This release also includes the reviewed Temporary Chat memory suppression and keyboard/touch accessible local image gallery with optional prompt templates.
 
 ```powershell
 npm test
@@ -52,6 +54,6 @@ npm run test:desktop-window
 
 `test:native` additionally exercises Rust channels, the Windows job object, bundled runtime discovery, project/file reads, and process cleanup with the actual staged executables.
 
-`test:desktop-window` is an opt-in Windows integration test using Playwright Core and the actual compiled executable. It enables WebView CDP only in its own child process, uses one isolated temporary data directory across three launches, and checks interrupted onboarding, endpoint persistence, session-only credentials, frameless controls, maximize/restore/minimize/close, and dark/light themes. Model discovery and chat streaming must reach a fake-key local HTTP gateway with no CORS headers, so an invalid native capability cannot pass through mocked IPC. This new network check is pending execution after the next authorized native build; the old v0.1.2 executable has the confirmed scope failure. It never attaches to an existing user window. `SAKELAR_TEST_EXE` selects another built or installed executable; `SAKELAR_TEST_SCREENSHOTS` optionally saves screenshots. The test closes its app and removes its temporary profile; leave test profiles out of shortcuts and normal launches.
+`test:desktop-window` is an opt-in Windows integration test using Playwright Core and the actual compiled executable. It enables WebView CDP only in its own child process, uses one isolated temporary data directory across three launches, and checks interrupted onboarding, endpoint persistence, session-only credentials, frameless controls, maximize/restore/minimize/close, and dark/light themes. Model discovery and chat streaming must reach a fake-key local HTTP gateway with no CORS headers, so an invalid native capability cannot pass through mocked IPC. The old v0.1.2 executable has the confirmed scope failure; use the rebuilt v0.1.3 executable for this network check. It never attaches to an existing user window. `SAKELAR_TEST_EXE` selects another built or installed executable; `SAKELAR_TEST_SCREENSHOTS` optionally saves screenshots. The test closes its app and removes its temporary profile; leave test profiles out of shortcuts and normal launches.
 
 For manual smoke testing, start with a fresh desktop profile, enter a test endpoint explicitly, discover a model, send a message, stop a stream, reopen saved history, restart the app, test dark/light themes, resize the window, select/export a file, and open a web link. Do not place real credentials in tracked source, fixtures or screenshots.
