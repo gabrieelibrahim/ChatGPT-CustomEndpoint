@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
-import App from './App';
+import { MobileApp } from './mobile/MobileApp';
+import { isNativeMobile } from './lib/nativeDesktop';
 import { Desktop } from './desktop/Desktop';
 import { MiniChat } from './desktop/MiniChat';
 
 export function Shell(){
  useEffect(()=>{document.title='SuperGPT'},[]);
- const mobileLegacy=new URLSearchParams(location.search).get('mobile')==='1';
- if(mobileLegacy)return <App/>;
  if(new URLSearchParams(location.search).get('mini')==='1')return <MiniChat/>;
+ if(isNativeMobile() || import.meta.env.MODE==='mobile' || new URLSearchParams(location.search).get('mobile')==='1')return <MobileApp/>;
  return <Desktop/>;
 }

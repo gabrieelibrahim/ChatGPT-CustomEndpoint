@@ -1,6 +1,16 @@
 # SuperGPT mobile — Android & iOS
 
-The mobile layout reuses the main `Desktop` React engine and provider/storage modules. It does not use the older `?mobile=1` prototype. At phone widths (768 px or less), or in a native mobile WebView, the shared shell uses an unscaled phone layout: Chat/Work tabs, a sidebar drawer, a bottom composer, temporary chat, settings and custom endpoints. The visual viewport resizes the shell when the keyboard opens; safe-area insets are respected.
+The native mobile app now renders **`src/mobile/MobileApp.tsx`** and **`src/mobile/mobile.css`**, independently of the desktop shell. Endpoint profiles, native HTTP, streaming, rich text, preferences, file storage and history formats remain shared. Conversation state is in `src/lib/useMobileConversation.ts`. The older `src/App.tsx` prototype is not used. The visual viewport resizes the shell when the keyboard opens; safe-area insets are respected.
+
+## Live preview before compiling
+
+```bash
+npm run dev:mobile
+```
+
+Open **http://127.0.0.1:1420/?mobile=1** in the browser. The mobile development mode renders the mobile interface even on a desktop browser. Use a phone-sized viewport (for example 390 × 844). Vite updates the preview when source files are saved; no APK build is needed. A normal `npm run dev` continues to show desktop, with `?mobile=1` available as an explicit override.
+
+This is the first separate mobile UI iteration: chat, streaming/stop/retry, file attachments, model selection, history search/pin/delete, temporary chat, endpoint setup and basic mobile settings. Desktop-only collections and the full desktop settings UI are not yet ported into the new mobile navigation. Work currently shares the same chat transport; it does not launch a local terminal. Browser previews do not verify Android keyboard, OS permissions or device back gestures; those still require a device build later. No new APK is produced by this UI revision.
 
 No provider credentials, profile or sample conversations are packaged. Onboarding and provider configuration run on the device. Native HTTP uses the existing validated provider transport. Codex switching remains disabled; Node/Codex Windows binaries and local process commands are excluded from mobile builds.
 

@@ -22,7 +22,7 @@
     "test:desktop-runtime": "npm run prepare:desktop && node tests/desktop-runtime-smoke.mjs",
     "test:native": "npm run prepare:desktop && node scripts/desktop.mjs --cargo test --manifest-path src-tauri/Cargo.toml --release --lib -- --nocapture",
     "test:desktop-window": "node tests/desktop-window-smoke.mjs",
-    "dev:mobile": "vite --host 0.0.0.0 --port 1420 --strictPort",
+    "dev:mobile": "vite --mode mobile --host 0.0.0.0 --port 1420 --strictPort",
     "android:init": "node scripts/mobile.mjs android init",
     "android:dev": "node scripts/mobile.mjs android dev",
     "android:build": "node scripts/mobile.mjs android build --apk --target aarch64 --debug",

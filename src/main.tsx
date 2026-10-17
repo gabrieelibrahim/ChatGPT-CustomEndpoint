@@ -26,3 +26,4 @@ createRoot(document.getElementById('root')!).render(<Shell/>);
 import './desktop/temporary-chat.css';
 
 import './desktop/mobile.css';
+import './mobile/mobile.css';
