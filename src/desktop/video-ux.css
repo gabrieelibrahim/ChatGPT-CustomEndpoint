@@ -54,7 +54,8 @@
 .d-chat-message-assistant{margin:0 0 40px}
 .d-chat-message-assistant>.d-assistant-message{margin:0}
 .d-root .d-live-actions{position:relative;gap:15px;margin:12px 0 0;color:#888;min-height:28px;font-size:17px}
-.d-live-actions>.d-button{width:25px;height:28px;min-width:25px;min-height:28px;border-radius:7px}
+.d-live-actions>.d-button{width:25px;height:28px;min-width:25px;min-height:28px;border-radius:7px;transition:background .12s ease}
+.d-live-actions>.d-button:hover{background:#ffffff0a}
 .d-live-actions>.d-button>svg{width:21px;height:21px}
 .d-chat-message-user .d-user-actions{position:absolute;right:0;top:100%;opacity:0;pointer-events:none;transition:opacity .12s ease}
 .d-chat-message-user:hover .d-user-actions,.d-chat-message-user:focus-within .d-user-actions{opacity:1;pointer-events:auto}
