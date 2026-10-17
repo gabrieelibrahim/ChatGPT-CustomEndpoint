@@ -178,16 +178,16 @@ export function PreviewCard({ onNotice }: { onNotice: (text: string) => void }) 
   </div>;
 }
 
-export function ScrollToLatest({ scrollRef }: { scrollRef: RefObject<HTMLDivElement | null> }) {
+export function ScrollToLatest({ scrollRef, showDisclaimer = false }: { scrollRef: RefObject<HTMLDivElement | null>; showDisclaimer?: boolean }) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const el = scrollRef.current; if (!el) return;
-    const update = () => setVisible(el.scrollHeight - el.scrollTop - el.clientHeight > 140);
+    const update = () => setVisible(el.scrollHeight - el.scrollTop - el.clientHeight > 2);
     update(); el.addEventListener('scroll', update, { passive: true });
     const observer = new ResizeObserver(update); observer.observe(el); if (el.firstElementChild) observer.observe(el.firstElementChild);
     return () => { observer.disconnect(); el.removeEventListener('scroll', update); };
   }, [scrollRef]);
-  return visible ? <B icon="arrow" label="Scroll to latest" className="d-scroll-latest" onClick={() => { const el = scrollRef.current; el?.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }}/> : null;
+  return visible || showDisclaimer ? <div className="d-composer-status">{visible ? <B icon="arrow" label="Scroll to latest" className="d-scroll-latest" onClick={() => { const el = scrollRef.current; el?.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }}/> : <p className="d-chat-disclaimer">AI can make mistakes. Check important information.</p>}</div> : null;
 }
 
 export function SketchDialog({ onClose, onAttach }: { onClose: () => void; onAttach: (file: File) => void }) {
