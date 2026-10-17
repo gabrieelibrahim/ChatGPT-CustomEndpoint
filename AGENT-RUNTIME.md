@@ -1,12 +1,12 @@
 # Local Codex agent integration
 
-This is a functional local-development integration, not a full reconstruction of the official Codex desktop application.
+The browser development integration uses a local bridge. The Tauri desktop release bundles its Node and Codex runtimes and carries the same bridge over private inherited pipes; see [TAURI.md](TAURI.md) for packaging and native tests. This client implements local agent workflows without claiming full parity with the official Codex desktop application.
 
 ## Evidence and choice
 
 The prior REA assessment examined exact packaged manifest/preload bytes from the installed Windows app. Retained REA Evidence: `ev_63f9287b99f3e155c8112a7783c4e4b65f54ceee99eb5cbc0e4ed19577783e2c`. The extracted preload SHA-256 is `a3e622f8d80a83e58fb3cfcc640fa7e14e6461cccdae9ef7d7b0c821dde256b7`. It observes Electron context bridges and IPC. Separate static reading of the main bundle observes node-pty terminal creation, app-server command construction and computer-use runtime paths. These are static observations, not proof of end-to-end execution. Full-ASAR analysis encountered an unrelated unpacked native-member integrity mismatch and was not completed; the successful REA subset does not cover native internals.
 
-The custom client integrates through the documented [Codex App Server protocol](https://learn.chatgpt.com/docs/app-server). It does not copy the official renderer, computer-use service, native binaries or private API routes. Installed-runtime `app-server --help` and `generate-json-schema` were checked before implementation. The installed schema identifies read-only/workspace-write sandbox values, turn input, command/file approval decisions, initialization and streaming methods.
+The custom client integrates through the documented [Codex App Server protocol](https://learn.chatgpt.com/docs/app-server). It does not copy the official renderer, computer-use service or private API routes. Desktop packaging stages the Codex CLI executables with license notices, without importing user configuration or authentication. Installed-runtime `app-server --help` and `generate-json-schema` were checked before implementation. The installed schema identifies read-only/workspace-write sandbox values, turn input, command/file approval decisions, initialization and streaming methods.
 
 ## Implemented
 

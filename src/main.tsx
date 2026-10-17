@@ -1,4 +1,5 @@
 import './sdk-ui.css';
+import { initializeNativeDesktop } from './lib/nativeDesktop';
 import { createRoot } from 'react-dom/client';
 import { Shell } from './Shell';
 import './styles.css';
@@ -19,4 +20,5 @@ import './desktop/settings.css';
 import './desktop/rich-text.css';
 import './desktop/sdk-controls.css';
 try { document.documentElement.dataset.reduceMotion = String(localStorage.getItem('client-reduce-motion') === 'true'); } catch { /* Preferences are optional. */ }
+initializeNativeDesktop();
 createRoot(document.getElementById('root')!).render(<Shell/>);

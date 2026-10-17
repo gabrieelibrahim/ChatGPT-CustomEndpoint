@@ -30,3 +30,5 @@
 .d-sdk-tooltip kbd{margin-left:14px;opacity:.65;font-family:inherit}
 .d-root :is(.d-local-dialog,.d-popover){background:var(--color-surface-elevated);color:var(--color-text);border-color:var(--color-border);box-shadow:var(--shadow-300)}
 html[data-reduce-motion=true] :is(.d-sdk-alert,.d-sdk-loading,.d-sdk-switch) *{animation:none!important;transition:none!important}
+/* Native Windows titlebar supplies the actual window buttons. */
+html[data-native-desktop=true] .d-window-controls{display:none}

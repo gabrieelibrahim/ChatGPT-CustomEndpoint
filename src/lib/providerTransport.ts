@@ -1,6 +1,7 @@
+import { isNativeDesktop, nativeProviderFetch } from './nativeDesktop';
 declare const __LOCAL_PROVIDER_RELAY__: boolean;
 export function usesLocalProviderRelay(): boolean {
-  return typeof __LOCAL_PROVIDER_RELAY__ !== 'undefined' && __LOCAL_PROVIDER_RELAY__ && typeof location !== 'undefined' && ['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname);
+  return !isNativeDesktop() && typeof __LOCAL_PROVIDER_RELAY__ !== 'undefined' && __LOCAL_PROVIDER_RELAY__ && typeof location !== 'undefined' && ['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname);
 }
 
 // The development relay runs only on this computer; deployed web builds call providers directly.
@@ -10,7 +11,7 @@ export function providerFetch(url: string, key: string, signal: AbortSignal, bod
     body: JSON.stringify({ url, key, ...(body ? { body } : {}) }), signal,
     credentials: 'omit', cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer',
   });
-  return fetch(url, {
+  return (isNativeDesktop() ? nativeProviderFetch : fetch)(url, {
     method: body ? 'POST' : 'GET', headers: { Accept: body ? 'text/event-stream, application/json' : 'application/json', ...(key ? { Authorization: 'Bearer ' + key } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}), signal, credentials: 'omit', cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer',
   });

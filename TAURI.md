@@ -1,0 +1,51 @@
+# Sakelar desktop v0.1.0
+
+The first Tauri 2 desktop target reuses the existing React interface. It does not import Chrome history, provider profiles, API keys, or browser storage into the desktop app.
+
+## Run on Windows
+
+Install Rust stable with the MSVC toolchain, Visual Studio C++ Build Tools **including a Windows SDK**, and Microsoft Edge WebView2 Runtime. Then run:
+
+```powershell
+npm ci
+npm run desktop:dev
+```
+
+The desktop development frontend uses loopback port 1420 with strict port selection. An existing web preview on port 5174 can stay open. For the standalone application and per-user NSIS installer:
+
+```powershell
+npm run desktop:build
+```
+
+Outputs: `src-tauri/target/release/sakelar.exe` and `src-tauri/target/release/bundle/nsis/`. The installer is not code-signed in this first version. No signing credentials or updater endpoint are included.
+
+If Rust is installed outside the normal PATH, optional `CARGO_HOME` and `RUSTUP_HOME` paths can be set in `.env.desktop.local`. `DESKTOP_WINDOWS_SDK` can select an extracted official Windows SDK, and `DESKTOP_NODE_PATH` can select the Node executable to bundle (its adjacent LICENSE is required). The desktop launcher loads this file locally; Git ignores it and the app does not bundle it. Standard Rust installations need no such file.
+
+## Version one behavior
+
+- The native window loads bundled frontend assets in release; Vite is not required to run the release app.
+- Initial window dimensions fit the current monitor's usable area and DPI scale.
+- Custom provider discovery, chat, reasoning and streaming use Tauri's Rust HTTP plugin. Browser builds keep their existing transport.
+- HTTPS and HTTP loopback providers are supported. Redirects are disabled so bearer credentials are not forwarded to another destination. Keys stay in sessionStorage, profiles/preferences in localStorage, and uploaded blobs in IndexedDB inside the app webview's private data directory. Closing the session requires re-entering keys; secure persistent credentials are not implemented.
+- Chat history, pin/archive, local collections, settings, HTML file selection and exports reuse the existing implementation. There are no seeded chats or built-in provider credentials.
+- External HTTP/HTTPS links open in the system browser. Native Windows decorations supply the real minimize/maximize/close controls; the web UI's decorative controls are hidden.
+- The native agent uses bundled Node and Codex executables through private inherited pipes and Tauri channels. There is no localhost agent server, Vite dependency, or end-user Node/Codex installation requirement. Project selection/indexing/previews, terminal output, file changes, approval decisions, stopping turns and configured MCP calls reuse the existing validated bridge. Only the configured project/access policy is persisted; enabling execution and confirming Responses support are explicit per-session actions. MCP servers may need their own external executables, and Git features need Git installed.
+- Production CSP blocks remote scripts and frames. The webview has no generic shell/process plugin; two restricted agent commands forward only supported bridge actions. On Windows a job object kills the bundled runtime and its descendants when the app exits or crashes. The host also closes agent sessions and removes isolated temporary Codex homes on normal shutdown.
+- Packaging stages executable files and public license notices only. Runtime binaries and local toolchain paths are Git-ignored. Provider keys never enter build configuration, resources, or logs. No existing Codex profile, account, API key or settings are copied into the installer.
+- Native computer/mouse control, official Codex cloud services and other service integrations remain outside this universal client version.
+- The update button stays absent until a real signed updater release feed is configured. Cloud sync, automatic background task execution and native packaging parity are not claimed.
+
+## Checks
+
+```powershell
+npm test
+npm run build
+npm run test:desktop-runtime
+npm run test:native
+```
+
+`tests/native-desktop.test.cjs` checks native HTTP and agent channels through mocked IPC; `tests/desktop-host.test.mjs` exercises the private host with concurrent approval and cancellation. `test:desktop-runtime` then uses the actual staged Node and Codex executables through the desktop pipe host to execute an explicitly approved command, write/preview a temporary file, call a real local MCP echo tool, stream an answer, and shut down. These tests use fake credentials and a local mock gateway, with no paid inference. Native-window rendering and installer behavior are checked separately after the Rust build.
+
+`test:native` additionally exercises Rust channels, the Windows job object, bundled runtime discovery, project/file reads, and process cleanup with the actual staged executables.
+
+For manual smoke testing, start with a fresh desktop profile, enter a test endpoint explicitly, discover a model, send a message, stop a stream, reopen saved history, restart the app, test dark/light themes, resize the window, select/export a file, and open a web link. Do not place real credentials in tracked source, fixtures or screenshots.

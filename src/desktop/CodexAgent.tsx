@@ -2,6 +2,7 @@ import { ClientAlert } from '../components/SDKPrimitives';
 import { useEffect, useRef, useState } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
 import { usesLocalProviderRelay } from '../lib/providerTransport';
+import { isNativeDesktop, nativeAgentRequest } from '../lib/nativeDesktop';
 import type { EndpointProfile } from '../lib/endpointProfiles';
 import type { McpProfile } from './ClientCollections';
 
@@ -11,8 +12,8 @@ type Approval = { id: string; kind: string; details: { command?: string; cwd?: s
 type AgentEvent = { type: string; delta?: string; text?: string; itemId?: string; item?: AgentItem; id?: string; kind?: string; details?: Approval['details']; diff?: string; status?: string; error?: string; input?: number; output?: number; plan?: { step: string; status: string }[] };
 
 export async function agentRequest(payload: object, signal?: AbortSignal) {
-  if (!usesLocalProviderRelay()) throw Error('Agent memerlukan runtime lokal. Jalankan project dengan npm run dev.');
-  const response = await fetch('/__client/agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal, credentials: 'omit', cache: 'no-store', redirect: 'error' });
+  if (!isNativeDesktop() && !usesLocalProviderRelay()) throw Error('Agent memerlukan runtime lokal. Jalankan project dengan npm run dev.');
+  const response = isNativeDesktop() ? await nativeAgentRequest(payload, signal) : await fetch('/__client/agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal, credentials: 'omit', cache: 'no-store', redirect: 'error' });
   if (!response.ok) { const data = await response.json().catch(() => ({})); throw Error(data.error || 'Koneksi agent gagal.'); }
   return response;
 }

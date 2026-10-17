@@ -198,12 +198,15 @@ export async function createCodexAgent(options, executable) {
 
 export function codexAgentBridge({ findRuntime = findCodexRuntime, createSession = createCodexAgent } = {}) {
   const sessions = new Map(); let opening = 0;
+  let cleanup;
+  async function close() { clearInterval(cleanup); const closing = [...sessions.values()]; sessions.clear(); await Promise.allSettled(closing.map(session => session.close())); }
   return {
     name: 'codex-local-agent',
+    close,
     configureServer(server) {
-      const cleanup = setInterval(() => { for (const [id, session] of sessions) if (!session.busy && Date.now() - session.touched > 15 * 60 * 1000) { sessions.delete(id); void session.close(); } }, 60000);
+      cleanup = setInterval(() => { for (const [id, session] of sessions) if (!session.busy && Date.now() - session.touched > 15 * 60 * 1000) { sessions.delete(id); void session.close(); } }, 60000);
       cleanup.unref();
-      server.httpServer?.once('close', () => { clearInterval(cleanup); for (const session of sessions.values()) void session.close(); sessions.clear(); });
+      server.httpServer?.once('close', () => { void close(); });
       server.middlewares.use('/__client/agent', async (req, res) => {
         const json = (status, value) => { if (!res.headersSent) { res.statusCode = status; res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(value)); } };
         res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Content-Type-Options', 'nosniff');

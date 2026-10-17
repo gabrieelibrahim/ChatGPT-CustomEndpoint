@@ -7,7 +7,9 @@ The default route uses the newer desktop ChatGPT/Codex presentation. The classic
 
 ## First launch and profile
 
-The desktop experience first asks for a local display name, then offers optional custom endpoint setup. **Lewati endpoint untuk sekarang** starts the UI without changing existing provider profiles or session keys. The name and initials appear in the profile menu; click the name there to edit it. This is a local profile, not an authenticated account. Setup is shared frontend behavior; APK/EXE packaging is not included.
+The first Tauri 2 desktop target is available as **Sakelar v0.1.0**. See [TAURI.md](TAURI.md) for Windows prerequisites, `npm run desktop:dev`, installer builds and this version's behavior. It integrates native provider HTTP and bundles Node/Codex for the local agent through private pipes, including terminal, file changes, approvals and MCP.
+
+The desktop experience first asks for a local display name, then offers optional custom endpoint setup. **Lewati endpoint untuk sekarang** starts the UI without changing existing provider profiles or session keys. The name and initials appear in the profile menu; click the name there to edit it. This is a local profile, not an authenticated account. APK packaging is not included; the first Windows Tauri build target is described above.
 
 The rail's **More** menu opens on hover and remains open while moving into it; click/touch and keyboard activation remain available. A token recommendation in setup and endpoint settings links to [Sakelar AI](https://sakelar.web.id). Other compatible providers remain available, and setup sends no automatic provider requests.
 
@@ -21,7 +23,7 @@ During `npm run dev` on localhost, a development-only same-origin relay in the V
 
 ## Local Codex agent (development)
 
-The Codex experience can use an installed **Codex CLI/app-server** through a local bridge, alongside the existing provider chat client. No Codex binary is bundled. On Windows the bridge discovers the installed OpenAI/Codex runtime, then falls back to PATH. Set `CODEX_RUNTIME_PATH` on the development server for another installation.
+The browser development experience can use an installed **Codex CLI/app-server** through a local bridge, alongside the existing provider chat client. On Windows the bridge discovers the installed OpenAI/Codex runtime, then falls back to PATH. Set `CODEX_RUNTIME_PATH` on the development server for another installation. The Tauri desktop installer instead bundles Node and Codex and uses private pipes; see [TAURI.md](TAURI.md).
 
 1. Run `npm run dev` and select the **Codex** experience.
 2. Use **Choose project** for a native folder picker or validated absolute path. **This computer** shows the actual execution host; **Agent settings** configures runtime access.
@@ -31,7 +33,7 @@ The Codex experience can use an installed **Codex CLI/app-server** through a loc
 
 Keys are passed to the private runtime process via its environment, never CLI arguments or persistent config. A temporary isolated CODEX_HOME prevents importing the user's main Codex account, plugins or settings. Sessions are ephemeral, closed when starting/opening another chat, and idle sessions expire after 15 minutes. Local text history remains in this client; reopening a conversation starts a fresh native thread with that text as context, without reconstructing old tool state. Only the workspace path/access preference is persisted; enabling agent execution and confirming Responses support must be repeated after reload.
 
-This bridge runs only in localhost development. Production static hosting cannot execute local tools. Native packaging, browser/desktop computer-use adapters, hosted Codex services, OAuth-authenticated MCP configuration and full native thread restoration are not implemented. Plugins now stores independent HTTP/stdio MCP profiles that are passed to the next private runtime session. Unknown native interaction requests fail explicitly instead of being approved. It is not full feature parity with the official application. See [AGENT-RUNTIME.md](AGENT-RUNTIME.md) for evidence and verification.
+The web bridge runs only in localhost development; static hosting cannot execute local tools. The Tauri v0.1.0 app packages this bridge behind native IPC and private pipes, with bundled Node/Codex executables. Browser/desktop computer-use adapters, hosted Codex services, OAuth-authenticated MCP configuration and full native thread restoration are not implemented. Plugins stores independent HTTP/stdio MCP profiles passed to the next private runtime session. Unknown native interactions fail explicitly instead of being approved. See [AGENT-RUNTIME.md](AGENT-RUNTIME.md) and [TAURI.md](TAURI.md) for behavior and verification.
 
 ## Functional settings
 
@@ -56,7 +58,7 @@ npm run test:workspace
 npm run test:files
 ```
 
-`npm test` runs all 36 transport/workspace/file/history/settings tests. Optional `npm run test:runtime` requires an installed Codex runtime and executes a harmless local command and MCP echo against a fake-key local gateway; it uses no external inference.
+`npm test` runs 60 transport/workspace/file/history/settings/rendering/style and native HTTP/agent adapter tests. Optional `npm run test:runtime` requires an installed Codex runtime and executes a harmless local command and MCP echo against a fake-key local gateway; it uses no external inference.
 
 ## Production
 ```sh
