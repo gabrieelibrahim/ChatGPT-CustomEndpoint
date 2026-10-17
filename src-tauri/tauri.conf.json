@@ -34,6 +34,12 @@
     "active": true,
     "resources": { "runtime/": "runtime/" },
     "targets": ["nsis"],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico"
+      }
+    },
     "category": "Productivity",
     "shortDescription": "Universal AI client with configurable providers",
     "icon": [
