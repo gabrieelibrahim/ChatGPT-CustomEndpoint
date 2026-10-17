@@ -8,6 +8,7 @@ import { loadLocalProfile, profileInitials, saveLocalProfile } from '../lib/loca
 import { loadEndpointKeys, saveEndpointStore } from '../lib/endpointProfiles';
 import { saveLibraryFile, type FileRef } from '../lib/fileLibrary';
 import { useMobileConversation } from '../lib/useMobileConversation';
+import { initialComposerState, focusComposer, blurComposer, resizeComposer } from './composerState';
 
 function Button({ icon, label, onClick, children, ...props }: { icon?: string; label: string; onClick: () => void; children?: ReactNode; disabled?: boolean; className?: string; 'aria-pressed'?: boolean }) {
   return <button type="button" aria-label={label} onClick={onClick} {...props}>{icon && <Icon name={icon} size={22}/ >}{children}</button>;
@@ -22,10 +23,11 @@ export function MobileApp() {
   const [notice, setNotice] = useState(''), [mode, setMode] = useState<'Chat' | 'Work'>(() => localStorage.getItem('desktop-chat-mode') === 'Work' ? 'Work' : 'Chat');
   const preferences = useClientSettings(setNotice);
   const [height, setHeight] = useState(window.visualViewport?.height || window.innerHeight);
+  const [composerState, setComposerState] = useState(() => initialComposerState(window.visualViewport?.height || window.innerHeight, window.innerWidth));
   const [aboveBottom, setAboveBottom] = useState(false);
   const scroll = useRef<HTMLDivElement>(null), textarea = useRef<HTMLTextAreaElement>(null), picker = useRef<HTMLInputElement>(null), closeDrawer = useRef<HTMLButtonElement>(null), closeSheet = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    const resize = () => setHeight(window.visualViewport?.height || window.innerHeight);
+    const resize = () => { const nextHeight = window.visualViewport?.height || window.innerHeight; setHeight(nextHeight); setComposerState(state => resizeComposer(state, nextHeight, window.innerWidth, document.activeElement === textarea.current)); };
     window.visualViewport?.addEventListener('resize', resize); window.addEventListener('resize', resize);
     return () => { window.visualViewport?.removeEventListener('resize', resize); window.removeEventListener('resize', resize); };
   }, []);
@@ -84,13 +86,13 @@ export function MobileApp() {
           </article>)}
           {chat.busy && (!chat.messages.at(-1) || chat.messages.at(-1)?.role === 'user' || !chat.answerText(chat.messages.at(-1)!)) && <div className="m-waiting" role="status" aria-label="Menunggu jawaban"><span/></div>}
         </div>
-        <footer className="m-footer">
+        <footer className={`m-footer${home ? ' m-footer-home' : ''}${composerState.focused || composerState.keyboardOpen ? ' m-composer-engaged' : ''}${composerState.phase === 'first-focus' ? ' m-composer-expanded' : ''}`}>
           {aboveBottom && <Button icon="arrow" label="Scroll to latest" className="m-to-bottom" onClick={() => { setAboveBottom(false); scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' }); }}/ >}
-          {home && !chat.temporary && preferences.settings.suggestions && <div className="m-suggestions">{['Summarize the files in my project', 'Review my code for bugs', 'Help me plan the next feature'].map(value => <button key={value} onClick={() => { setDraft(value); textarea.current?.focus(); }}><Icon name="page" size={18}/><span>{value}</span></button>)}</div>}
+          {home && !chat.temporary && preferences.settings.suggestions && <div className="m-suggestions">{['Summarize the files in my project', 'Review my code for bugs', 'Help me plan the next feature'].map(value => <button key={value} onClick={() => { setDraft(value); textarea.current?.focus(); }}><Icon name="github" size={20}/><span>{value}</span></button>)}</div>}
           {chat.error && <div className="m-error" role="alert">{chat.error}<div><button onClick={() => navigate('endpoints')}>Pengaturan</button>{!chat.busy && chat.messages.at(-1)?.role === 'user' && <button onClick={() => void chat.send('', [], true)}>Coba lagi</button>}</div></div>}
           {files.length > 0 && <div className="m-attachments">{files.map(file => <button key={file.id} aria-label={'Remove ' + file.name} onClick={() => setFiles(previous => previous.filter(item => item.id !== file.id))}>{file.name} ×</button>)}</div>}
-          <div className="m-composer"><Button icon="plus" label="Attach files" onClick={() => picker.current?.click()} disabled={uploading || chat.busy}/><textarea ref={textarea} aria-label="Message" placeholder="Ask SuperGPT" rows={1} value={draft} onChange={event => { setDraft(event.target.value); event.target.style.height = 'auto'; event.target.style.height = Math.min(136, event.target.scrollHeight) + 'px'; }}/><Button icon="mic" label="Dictate" onClick={() => dictate(value => setDraft(previous => (previous + ' ' + value).trim()), setNotice)}/><Button icon={chat.busy ? 'stop' : draft.trim() || files.length ? 'arrow' : 'wave'} label={chat.busy ? 'Stop generation' : 'Send message'} className="m-send" disabled={uploading || (!chat.busy && !draft.trim() && !files.length)} onClick={() => chat.busy ? chat.stop() : void send()}/></div>
-          <button className="m-model-label" onClick={() => setSheet('models')}>{chat.endpoint?.model || 'Pilih model'} <Icon name="down" size={12}/></button>
+          <div className="m-composer"><Button icon="plus" label="Attach files" onClick={() => picker.current?.click()} disabled={uploading || chat.busy}/><textarea ref={textarea} aria-label="Message" placeholder="Ask SuperGPT" rows={1} onFocus={() => setComposerState(focusComposer)} onBlur={() => setComposerState(blurComposer)} value={draft} onChange={event => { setDraft(event.target.value); event.target.style.height = 'auto'; event.target.style.height = Math.min(136, event.target.scrollHeight) + 'px'; }}/><Button icon="mic" label="Dictate" onClick={() => dictate(value => setDraft(previous => (previous + ' ' + value).trim()), setNotice)}/><Button icon={chat.busy ? 'stop' : draft.trim() || files.length ? 'arrow' : 'wave'} label={chat.busy ? 'Stop generation' : draft.trim() || files.length ? 'Send message' : 'Voice mode'} className="m-send" disabled={uploading} onClick={() => chat.busy ? chat.stop() : draft.trim() || files.length ? void send() : setNotice('Percakapan suara belum tersedia. Gunakan tombol mikrofon untuk dikte.')}/></div>
+
         </footer>
       </>}
     </div>

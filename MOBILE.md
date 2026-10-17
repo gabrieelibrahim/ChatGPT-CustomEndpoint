@@ -12,6 +12,12 @@ Open **http://127.0.0.1:1420/?mobile=1** in the browser. The mobile development 
 
 This is the first separate mobile UI iteration: chat, streaming/stop/retry, file attachments, model selection, history search/pin/delete, temporary chat, endpoint setup and basic mobile settings. Desktop-only collections and the full desktop settings UI are not yet ported into the new mobile navigation. Work currently shares the same chat transport; it does not launch a local terminal. Browser previews do not verify Android keyboard, OS permissions or device back gestures; those still require a device build later. No new APK is produced by this UI revision.
 
+### Composer reference states
+
+The three supplied 614 × 1280 screenshots are compared at a proportional 390 × 813 viewport. The resting home composer is 322 × 49 CSS px with a 34 px bottom gap. With the keyboard viewport reduced to 390 × 476, the composer is 366 px wide and sits 12 px above the viewport bottom. The first focus in each app mount is 96 px tall; subsequent focuses are 49 px tall. Closing a soft keyboard via a viewport resize consumes the first-focus state even when Android retains DOM focus. Ordinary typing still grows the input for multiline text.
+
+The header uses 44 px round buttons and a 176 × 44 px Chat/Work switch. Suggestion rows are 49 px high with 17.5 px text and 20 px icons. Model selection stays available in Settings rather than adding an extra line beneath the reference composer. The Android keyboard itself is supplied by the OS; it is not drawn or simulated by the app. Browser screenshots verify app geometry, while native keyboard timing and inset behavior remain device checks.
+
 No provider credentials, profile or sample conversations are packaged. Onboarding and provider configuration run on the device. Native HTTP uses the existing validated provider transport. Codex switching remains disabled; Node/Codex Windows binaries and local process commands are excluded from mobile builds.
 
 ## Android APK on Windows
