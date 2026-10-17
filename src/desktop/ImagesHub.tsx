@@ -281,9 +281,9 @@ export function ImagesHub({
         <section className="d-images-section">
           <div className="d-section-header">
             <div>
-              <h2>Explore Visual Styles</h2>
+              <h2>Explore Visual Styles &amp; Prompt Templates</h2>
               <p className="d-section-subtitle">
-                Pilih gaya visual untuk langsung menyusun prompt generasi gambar ke chat.
+                Pilih template prompt visual lokal untuk merangkai instruksi pembuatan gambar ke model chat Anda.
               </p>
             </div>
             <div className="d-category-filters" role="radiogroup" aria-label="Filter visual style categories">

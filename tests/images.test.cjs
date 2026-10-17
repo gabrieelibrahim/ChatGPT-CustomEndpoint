@@ -150,3 +150,10 @@ test('CollectionScreen integrates ImagesHub when screen is images', () => {
   assert.ok(markup.includes('d-images-hub'), 'Renders ImagesHub component inside CollectionScreen');
   assert.ok(markup.includes('Explore Visual Styles'), 'Renders ImagesHub section heading');
 });
+
+test('images.css includes :focus-within reveal and touch fallback for gallery overlay', () => {
+  const css = fs.readFileSync(path.join(root, 'src/desktop/images.css'), 'utf8');
+  assert.ok(css.includes('.d-gallery-thumb-wrap:focus-within .d-gallery-overlay'), 'Focus within on thumbnail wrap reveals overlay');
+  assert.ok(css.includes('.d-gallery-overlay:focus-within'), 'Focus within on overlay directly keeps overlay visible');
+  assert.ok(css.includes('@media (hover: none)'), 'Touch fallback provides persistent visible controls on touch devices');
+});

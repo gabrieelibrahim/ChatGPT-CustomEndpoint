@@ -298,8 +298,17 @@
   transition: opacity 0.18s ease;
 }
 
-.d-gallery-thumb-wrap:hover .d-gallery-overlay {
+.d-gallery-thumb-wrap:hover .d-gallery-overlay,
+.d-gallery-thumb-wrap:focus-within .d-gallery-overlay,
+.d-gallery-overlay:focus-within {
   opacity: 1;
+}
+
+@media (hover: none) {
+  .d-gallery-overlay {
+    opacity: 1;
+    background: linear-gradient(180deg, transparent 40%, #000000d0 100%);
+  }
 }
 
 .d-gallery-btn-attach {
