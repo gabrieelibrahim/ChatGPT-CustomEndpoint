@@ -5,6 +5,7 @@ import { resolve, join, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:net';
+import { createServer as createHttpServer } from 'node:http';
 import { chromium } from 'playwright-core';
 
 // Opt-in integration test against our compiled app, never an existing user window.
@@ -17,6 +18,24 @@ const screenshots = process.env.SAKELAR_TEST_SCREENSHOTS;
 if (screenshots) await mkdir(screenshots, { recursive: true });
 let app, browser, page, exited;
 const errors = [];
+const gatewayRequests = { models: 0, chat: 0 };
+const gateway = createHttpServer(async (request, response) => {
+  if (request.headers.authorization !== 'Bearer fake-window-smoke-key') { response.writeHead(401); response.end(); return; }
+  if (request.url === '/v1/models' && request.method === 'GET') {
+    gatewayRequests.models++;
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({ data: [{ id: 'window-smoke-model' }] }));
+  } else if (request.url === '/v1/chat/completions' && request.method === 'POST') {
+    for await (const _chunk of request) { /* Consume the synthetic test request. */ }
+    gatewayRequests.chat++;
+    // No CORS headers: this flow must use the native HTTP plugin.
+    response.writeHead(200, { 'content-type': 'text/event-stream' });
+    response.write('data: ' + JSON.stringify({ choices: [{ delta: { content: 'Native HTTP streaming OK' } }] }) + '\n\n');
+    response.end('data: [DONE]\n\n');
+  } else { response.writeHead(404); response.end(); }
+});
+await new Promise(resolve => gateway.listen(0, '127.0.0.1', resolve));
+const gatewayUrl = `http://127.0.0.1:${gateway.address().port}/v1`;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function waitFor(check, label, timeout = 20000) {
   const deadline = Date.now() + timeout;
@@ -79,13 +98,19 @@ try {
   await page.getByRole('button', { name: 'Profile', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Custom Endpoint', exact: true }).click();
   await page.locator('#endpoint-name').fill('Window smoke provider');
-  await page.locator('#endpoint-base-url').fill('https://provider.example/v1');
+  await page.locator('#endpoint-base-url').fill(gatewayUrl);
   await page.locator('#endpoint-api-key').fill('fake-window-smoke-key');
-  await page.locator('#endpoint-model').fill('window-smoke-model');
+  await page.getByRole('button', { name: 'Tes & ambil model', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('#endpoint-model')?.value === 'window-smoke-model');
+  assert.equal(gatewayRequests.models, 1, 'Model discovery must reach the mock gateway through real native HTTP');
   await page.getByRole('button', { name: 'Simpan endpoint', exact: true }).click();
   await page.waitForFunction(() => JSON.parse(localStorage.getItem('client-endpoint-profiles-v1'))?.profiles?.length === 1);
   assert.ok(!(await page.evaluate(() => localStorage.getItem('client-endpoint-profiles-v1'))).includes('fake-window-smoke-key'));
   await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Message', exact: true }).fill('Native HTTP streaming test');
+  await page.getByRole('button', { name: 'Send message', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('.d-assistant-message')?.textContent.includes('Native HTTP streaming OK'));
+  assert.equal(gatewayRequests.chat, 1, 'Chat streaming must reach the mock gateway through real native HTTP');
   assert.equal(await page.evaluate(() => window.__TAURI_INTERNALS__.invoke('plugin:window|is_decorated', { label: 'main' })), false);
   const header = await page.locator('.d-titlebar').boundingBox(); assert.ok(header.y < 1);
   await page.getByRole('button', { name: 'Maximize window', exact: true }).click();
@@ -109,7 +134,7 @@ try {
   assert.ok(lightContrast >= 3, 'Window icons must remain visible against the light titlebar');
   await screenshot('desktop-light');
   await close();
-  console.log('PASS saved endpoint through real UI, native frameless/maximize/restore controls, dark/light themes.');
+  console.log('PASS native HTTP model discovery + chat streaming without CORS, saved endpoint UI, frameless controls, dark/light themes.');
 
   await launch();
   assert.equal(await page.locator('.d-auth-page').count(), 0);
@@ -126,6 +151,8 @@ try {
 } finally {
   if (app?.exitCode === null) { app.kill(); await exited; }
   await browser?.close().catch(() => {});
+  gateway.closeAllConnections();
+  await new Promise(resolve => gateway.close(resolve));
   assert.ok(resolve(profile).startsWith(resolve(temporaryRoot) + sep) && profile.includes('sakelar-window-smoke-'));
   // WebView subprocesses may briefly keep LevelDB files open after the parent exits.
   await rm(profile, { recursive: true, force: true, maxRetries: 12, retryDelay: 250 });

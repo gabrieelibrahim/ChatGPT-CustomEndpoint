@@ -4,12 +4,37 @@ const path = require('node:path');
 const Module = require('node:module');
 const { buildSync } = require('esbuild');
 const root = path.resolve(__dirname, '..');
-const built = buildSync({ absWorkingDir: root, stdin: { contents: "export * from './src/lib/nativeDesktop'; export * from './src/lib/providerTransport'; export * from './src/lib/endpointChat';", resolveDir: root }, bundle: true, write: false, platform: 'node', format: 'cjs' });
+const built = buildSync({ absWorkingDir: root, stdin: { contents: "export * from './src/lib/nativeDesktop'; export * from './src/lib/providerTransport'; export * from './src/lib/endpointChat'; export * from './src/lib/providerErrors';", resolveDir: root }, bundle: true, write: false, platform: 'node', format: 'cjs' });
 const mod = new Module(__filename + '.fixture', module);
 mod.filename = __filename + '.fixture'; mod.paths = module.paths;
 mod._compile(built.outputFiles[0].text, mod.filename);
 const client = mod.exports;
 const originalWindow = global.window, originalFetch = global.fetch;
+
+test('every native HTTP scope parses and allows HTTPS plus loopback without allowing public HTTP', () => {
+  const { URLPattern } = require('urlpattern-polyfill');
+  const capability = require('../src-tauri/capabilities/default.json');
+  const patterns = capability.permissions.find(permission => permission.identifier === 'http:default').allow.map(entry => new URLPattern(entry.url));
+  for (const url of ['https://api.provider.example/v1/models', 'https://api.provider.example:8443/v1/models', 'https://api.provider.example/v1/chat/completions', 'http://localhost:5174/v1/models', 'http://127.0.0.1:5174/v1/models', 'http://127.42.1.2:5174/v1/models', 'http://[::1]:5174/v1/models']) {
+    assert.ok(patterns.some(pattern => pattern.test(url)), url);
+  }
+  for (const url of ['http://provider.example/v1/models', 'http://192.168.1.2/v1/models', 'http://127.0.0.1.evil.example/v1/models', 'file:///private']) assert.ok(!patterns.some(pattern => pattern.test(url)), url);
+});
+
+test('native HTTP converts a plain-string permission rejection into an actionable Error', async () => {
+  global.window = { __TAURI_INTERNALS__: { invoke: async () => { throw 'error deserializing scope: not a valid URL pattern'; } } };
+  await assert.rejects(client.nativeProviderFetch('https://provider.example/v1/models', {}), failure => failure instanceof Error && /Izin koneksi aplikasi desktop/.test(failure.message));
+});
+
+test('provider errors distinguish native TLS/timeouts from browser CORS and handle stream string failures', () => {
+  assert.match(client.providerErrorMessage('error deserializing scope: invalid name', true), /Izin koneksi/);
+  assert.match(client.providerErrorMessage('TLS certificate verify failed', true), /Sertifikat HTTPS/);
+  assert.match(client.providerErrorMessage('operation timed out', true), /batas waktu/);
+  assert.match(client.providerErrorMessage(new TypeError('fetch failed'), true), /tidak memerlukan izin CORS/);
+  assert.match(client.providerErrorMessage(new TypeError('fetch failed'), false), /CORS untuk aplikasi web/);
+  assert.equal(client.providerErrorMessage(new Error('Akses ditolak.'), true), 'Akses ditolak.');
+  assert.equal(client.providerErrorMessage(new Error('HTTP 403 Forbidden'), true), 'HTTP 403 Forbidden');
+});
 test.afterEach(() => { global.fetch = originalFetch; if (originalWindow === undefined) delete global.window; else global.window = originalWindow; });
 
 function nativeTransport(body, contentType = 'application/json') {

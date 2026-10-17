@@ -4,6 +4,8 @@ import { UIIcon as I } from '../components/UIIcon';
 import { discoverEndpointModels, loadEndpointKeys, loadEndpointStore, normalizeBaseUrl, saveEndpointStore, type EndpointProfile, type EndpointStore } from '../lib/endpointProfiles';
 import { SakelarRecommendation } from './SakelarRecommendation';
 import { usesLocalProviderRelay } from '../lib/providerTransport';
+import { isNativeDesktop } from '../lib/nativeDesktop';
+import { providerErrorMessage } from '../lib/providerErrors';
 
 type Draft = { id: string; name: string; baseUrl: string; model: string; key: string; auth: boolean; models: string[]; sendReasoning?: boolean };
 const emptyDraft = (): Draft => ({ id: '', name: '', baseUrl: '', model: '', key: '', auth: true, models: [] });
@@ -68,7 +70,7 @@ export function EndpointSettings({ setup = false, onSaved, onBack, onNotice }: {
       notify(message);
     } catch (failure) {
       if (request.current !== controller) return;
-      const message = controller.signal.aborted ? 'Tes melewati batas 15 detik. Periksa koneksi dan alamat penyedia.' : failure instanceof TypeError ? 'Koneksi terblokir atau gagal. Untuk web, penyedia harus mengizinkan CORS; preview localhost menyediakan koneksi lokal.' : failure instanceof Error ? failure.message : 'Koneksi belum berhasil.';
+      const message = controller.signal.aborted ? 'Tes melewati batas 15 detik. Periksa koneksi dan alamat penyedia.' : providerErrorMessage(failure, isNativeDesktop(), 'Koneksi belum berhasil.');
       setError(message); notify(message);
     } finally { if (request.current === controller) { request.current = null; if (timeout.current) clearTimeout(timeout.current); timeout.current = null; setTesting(false); } }
   }
@@ -93,7 +95,7 @@ export function EndpointSettings({ setup = false, onSaved, onBack, onNotice }: {
       <div className="d-endpoint-model-heading"><label htmlFor="endpoint-model">Model ID</label><ClientButton type="button" className="d-endpoint-test" loading={testing} disabled={testing || !draft.baseUrl.trim()} onClick={() => void test()}><I name="refresh" size={17}/>{testing ? 'Menguji koneksi…' : 'Tes & ambil model'}</ClientButton></div>
       <ClientInput id="endpoint-model" list="endpoint-models" maxLength={160} spellCheck={false} placeholder="Masukkan ID model dari penyedia" value={draft.model} onChange={event => update({ model: event.target.value })} required/><datalist id="endpoint-models">{draft.models.map(model => <option key={model} value={model}/>)}</datalist>
       {draft.models.length > 0 && <div className="d-discovered-models"><div><b>{draft.models.length} model tersedia</b><input aria-label="Cari model endpoint" placeholder="Cari model…" value={modelQuery} onChange={event => { setModelQuery(event.target.value); setModelLimit(100); }}/></div><div role="listbox" aria-label="Model terdeteksi">{matchingModels.slice(0, modelLimit).map(model => <ClientButton type="button" role="option" aria-selected={draft.model === model} key={model} onClick={() => update({ model })}><span>{model}</span>{draft.model === model && <I name="check" size={16}/>}</ClientButton>)}{!matchingModels.length && <p>Model tidak ditemukan.</p>}{matchingModels.length > modelLimit && <ClientButton type="button" onClick={() => setModelLimit(value => value + 100)}>Tampilkan lebih banyak ({matchingModels.length - modelLimit})</ClientButton>}</div></div>}
-      <p className="d-endpoint-hint">{usesLocalProviderRelay() ? 'Koneksi preview berjalan lewat proses lokal di komputer ini, lalu ke penyedia pilihanmu. Tidak lewat server Sakelar.' : 'Koneksi langsung ke penyedia. Penyedia harus mengizinkan CORS untuk aplikasi web.'} Model juga bisa diisi manual.</p>
+      <p className="d-endpoint-hint">{isNativeDesktop() ? 'Koneksi desktop langsung ke penyedia melalui HTTP native. Tidak memerlukan izin CORS dari penyedia.' : usesLocalProviderRelay() ? 'Koneksi preview berjalan lewat proses lokal di komputer ini, lalu ke penyedia pilihanmu. Tidak lewat server Sakelar.' : 'Koneksi langsung ke penyedia. Penyedia harus mengizinkan CORS untuk aplikasi web.'} Model juga bisa diisi manual.</p>
       <label className="d-endpoint-auth"><ClientSwitch label="Kirim reasoning_effort" value={!!draft.sendReasoning} change={checked => update({ sendReasoning: checked })}/><span>Kirim reasoning_effort (jika model mendukung)</span></label>
       {error && <ClientAlert className="d-endpoint-status d-error">{error}</ClientAlert>}{(notice || testResult) && <ClientAlert tone="success" className="d-endpoint-status">{notice || testResult}</ClientAlert>}
       <footer><ClientButton type="button" className="d-endpoint-secondary" onClick={setup ? onBack : () => edit(editing)}>{setup ? 'Kembali' : 'Reset'}</ClientButton><ClientButton color="primary" variant="solid" className="d-endpoint-primary" type="submit">{setup ? 'Simpan & mulai' : 'Simpan endpoint'}</ClientButton></footer>

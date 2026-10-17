@@ -1,3 +1,4 @@
+import { providerErrorMessage } from './providerErrors';
 // Browser builds never load native plugins or request native permissions.
 export function isNativeDesktop(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -11,7 +12,11 @@ export async function nativeProviderFetch(url: string, options: RequestInit): Pr
   }
   const { fetch } = await import('@tauri-apps/plugin-http');
   // Never forward credentials through a provider redirect.
-  return fetch(target.toString(), { ...options, maxRedirections: 0, connectTimeout: 30000 });
+  try { return await fetch(target.toString(), { ...options, maxRedirections: 0, connectTimeout: 30000 }); }
+  catch (failure) {
+    if (options.signal?.aborted) throw options.signal.reason || new DOMException('Aborted', 'AbortError');
+    throw new Error(providerErrorMessage(failure, true), { cause: failure });
+  }
 }
 
 type AgentWireEvent = { type: 'headers' | 'chunk' | 'end' | 'error'; status?: number; headers?: [string, string][]; data?: string; error?: string };
