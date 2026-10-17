@@ -48,3 +48,9 @@ html[data-client-theme=light] .d-root .d-native-window-controls>button:last-of-t
 html[data-native-desktop=true] .d-setup{top:var(--native-titlebar-height,66px)}
 
 .d-root .d-experience-menu button:disabled{opacity:.45;cursor:not-allowed}
+.d-brand-logo{display:inline-block;width:28px;height:28px;object-fit:contain;flex-shrink:0;filter:brightness(0) invert(1);vertical-align:middle}
+html[data-client-theme=light] .d-root .d-brand-logo{filter:brightness(0)}
+.d-auth-wordmark{display:flex;align-items:center;gap:8px}
+.d-auth-wordmark .d-brand-logo{width:30px;height:30px}
+.d-root .d-about-logo{display:block;width:64px;height:64px;margin-bottom:16px}
+.d-mini-chat header>strong{display:flex;align-items:center;gap:8px}

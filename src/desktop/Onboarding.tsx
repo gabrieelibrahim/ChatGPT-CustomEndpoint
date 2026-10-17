@@ -14,7 +14,7 @@ function ProfileOverlay({ children, label, close, fullPage = false }: { children
     return () => { if (previous?.isConnected && !previous.closest('[inert]')) previous.focus(); };
   }, []);
   const content = <div className={'d-setup' + (fullPage ? ' d-auth-page' : '')} onMouseDown={event => { if (close && event.target === event.currentTarget) close(); }}>
-    {fullPage && <div className="d-auth-wordmark">SuperGPT <span>by Sakelar</span></div>}
+    {fullPage && <div className="d-auth-wordmark"><img className="d-brand-logo" src="/supergpt-logo.png" alt=""/>SuperGPT <span>by Sakelar</span></div>}
     <div className="d-setup-dialog" ref={dialog} role="dialog" aria-modal="true" aria-label={label}
       onKeyDown={event => {
         if (event.key === 'Escape') { event.stopPropagation(); if (close) close(); }
