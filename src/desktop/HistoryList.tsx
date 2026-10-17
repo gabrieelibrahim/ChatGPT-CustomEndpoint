@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { B, I } from './Desktop';
 import { Disclosure, useHoverPreview } from './Motion';
@@ -10,27 +10,35 @@ export type HistoryListProps = {
   onArchive: (title: string) => void; onOptions?: (title: string, action: string) => void; onCreateProject?: () => void; onProject?: (title: string) => void;
 };
 
-function getTitleTimestamp(title: string): number {
-  if (typeof localStorage === 'undefined') return 0;
+export function loadChatTimestamps(): Record<string, number> {
+  const map: Record<string, number> = {};
+  if (typeof localStorage === 'undefined') return map;
   try {
     const raw = localStorage.getItem('desktop-chat-content');
-    if (raw) {
-      const data = JSON.parse(raw);
-      const msgs = data[title];
-      if (Array.isArray(msgs) && msgs.length > 0) {
-        for (let i = msgs.length - 1; i >= 0; i--) {
-          if (typeof msgs[i]?.timestamp === 'number') return msgs[i].timestamp;
+    if (!raw) return map;
+    const data = JSON.parse(raw);
+    if (data && typeof data === 'object') {
+      for (const [title, msgs] of Object.entries(data)) {
+        if (Array.isArray(msgs) && msgs.length > 0) {
+          for (let i = msgs.length - 1; i >= 0; i--) {
+            const ts = (msgs[i] as { timestamp?: unknown })?.timestamp;
+            if (typeof ts === 'number') {
+              map[title] = ts;
+              break;
+            }
+          }
         }
       }
     }
   } catch {
     // ignore
   }
-  return 0;
+  return map;
 }
 
-function groupTitlesByDate(titles: string[]) {
-  const now = new Date();
+export function groupTitlesByDate(titles: string[], timestamps?: Record<string, number>, referenceDate?: Date) {
+  const tsMap = timestamps ?? loadChatTimestamps();
+  const now = referenceDate ?? new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const startOfYesterday = startOfToday - 86400000;
   const startOf7Days = startOfToday - 6 * 86400000;
@@ -41,18 +49,21 @@ function groupTitlesByDate(titles: string[]) {
     { label: 'Yesterday', items: [] },
     { label: 'Previous 7 Days', items: [] },
     { label: 'Previous 30 Days', items: [] },
+    { label: 'Older', items: [] },
   ];
 
   for (const title of titles) {
-    const ts = getTitleTimestamp(title);
+    const ts = tsMap[title] ?? 0;
     if (!ts || ts >= startOfToday) {
       groups[0].items.push(title);
     } else if (ts >= startOfYesterday) {
       groups[1].items.push(title);
     } else if (ts >= startOf7Days) {
       groups[2].items.push(title);
-    } else {
+    } else if (ts >= startOf30Days) {
       groups[3].items.push(title);
+    } else {
+      groups[4].items.push(title);
     }
   }
 
@@ -114,6 +125,8 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
   }
   const visibleTitles = titles.filter(title => (!showPinned || !pinned.includes(title)) && !archived.includes(title));
   const sortedTitles = alphabetical ? [...visibleTitles].sort((a, b) => a.localeCompare(b)) : visibleTitles;
+  const timestamps = useMemo(() => loadChatTimestamps(), [titles]);
+  const dateGroups = useMemo(() => groupTitlesByDate(sortedTitles, timestamps), [sortedTitles, timestamps]);
   const root = typeof document === 'undefined' ? null : document.querySelector('.d-root');
   return <div className="d-history-list">
     <B icon="edit" label="New chat" className="d-navrow" onClick={onNew}>New chat</B>
@@ -128,7 +141,7 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
       </div>
       <Disclosure open={!collapsed}>
         {experience === 'ChatGPT' && !alphabetical
-          ? groupTitlesByDate(sortedTitles).map(group => (
+          ? dateGroups.map(group => (
               <div key={group.label} className="d-history-group">
                 <div className="d-history-group-header">{group.label}</div>
                 {group.items.map(row)}
