@@ -11,6 +11,23 @@ mod._compile(built.outputFiles[0].text, mod.filename);
 const client = mod.exports;
 const originalWindow = global.window, originalFetch = global.fetch;
 
+test('native mobile detection requires both the native bridge and a mobile user agent', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(global, 'navigator');
+  try {
+    Object.defineProperty(global, 'navigator', {value:{userAgent:'Mozilla/5.0 (Linux; Android 14)'},configurable:true});
+    global.window = {};
+    assert.equal(client.isNativeMobile(), false);
+    global.window = {__TAURI_INTERNALS__:{}};
+    assert.equal(client.isNativeMobile(), true);
+    Object.defineProperty(global, 'navigator', {value:{userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)'},configurable:true});
+    assert.equal(client.isNativeMobile(), true);
+    Object.defineProperty(global, 'navigator', {value:{userAgent:'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'},configurable:true});
+    assert.equal(client.isNativeMobile(), false);
+  } finally {
+    if (descriptor) Object.defineProperty(global, 'navigator', descriptor); else delete global.navigator;
+  }
+});
+
 test('every native HTTP scope parses and allows HTTPS plus loopback/Tailscale without allowing public HTTP', () => {
   const { URLPattern } = require('urlpattern-polyfill');
   const capability = require('../src-tauri/capabilities/default.json');

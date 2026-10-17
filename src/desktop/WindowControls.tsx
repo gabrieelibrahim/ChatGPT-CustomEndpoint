@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
-import { isNativeDesktop } from '../lib/nativeDesktop';
+import { isNativeDesktop, isNativeMobile } from '../lib/nativeDesktop';
 
 export function WindowControls() {
-  const native = isNativeDesktop();
+  const native = isNativeDesktop() && !isNativeMobile();
   const [maximized, setMaximized] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {

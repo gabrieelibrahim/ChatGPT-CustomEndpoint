@@ -4,6 +4,10 @@ export function isNativeDesktop(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 }
 
+export function isNativeMobile(): boolean {
+  return isNativeDesktop() && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 export async function nativeProviderFetch(url: string, options: RequestInit): Promise<Response> {
   const target = new URL(url);
   const httpAllowedHost = target.hostname === 'localhost' || /^127\.\d+\.\d+\.\d+$/.test(target.hostname) || target.hostname === '[::1]' || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+$/.test(target.hostname);
@@ -54,6 +58,7 @@ export async function nativeAgentRequest(payload: object, signal?: AbortSignal):
 export function initializeNativeDesktop() {
   if (!isNativeDesktop()) return;
   document.documentElement.dataset.nativeDesktop = 'true';
+  document.documentElement.dataset.nativeMobile = String(isNativeMobile());
   document.title = 'SuperGPT';
   // External links belong in the system browser, outside the privileged webview.
   document.addEventListener('click', event => {

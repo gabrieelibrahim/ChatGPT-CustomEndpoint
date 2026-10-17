@@ -1,15 +1,19 @@
+#[cfg(desktop)]
 mod agent;
+#[cfg(desktop)]
 use tauri::Manager;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_opener::init());
+    #[cfg(desktop)]
+    let builder = builder
         .manage(agent::AgentState::default())
         .invoke_handler(tauri::generate_handler![
             agent::native_agent_request,
             agent::native_agent_cancel
         ])
-        .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
                 if let Some(monitor) = window.current_monitor()? {
@@ -33,12 +37,15 @@ pub fn run() {
                 window.show()?;
             }
             Ok(())
-        })
-        .build(tauri::generate_context!())
+        });
+    builder.build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
+            #[cfg(desktop)]
             if matches!(event, tauri::RunEvent::Exit) {
                 app.state::<agent::AgentState>().shutdown();
             }
+            #[cfg(mobile)]
+            let _ = (app, event);
         });
 }

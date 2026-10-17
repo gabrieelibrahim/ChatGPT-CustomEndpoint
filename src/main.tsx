@@ -24,3 +24,5 @@ try { document.documentElement.dataset.reduceMotion = String(localStorage.getIte
 initializeNativeDesktop();
 createRoot(document.getElementById('root')!).render(<Shell/>);
 import './desktop/temporary-chat.css';
+
+import './desktop/mobile.css';

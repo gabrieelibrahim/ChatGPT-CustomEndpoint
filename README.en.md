@@ -63,6 +63,14 @@ Available models, image input, and `reasoning_effort` depend on the provider. Th
 
 Endpoint validation accepts HTTPS, HTTP loopback, and Tailscale IPv4 addresses in `100.64.0.0/10`. A reachable server, correct port, and network permissions are still required.
 
+## Android & iOS
+
+The mobile layout shares the conversation engine and provider configuration. The Android target builds an **ARM64 testing APK**; iOS builds require a Mac and Xcode. See [MOBILE.md](MOBILE.md) for setup, build commands, and verification boundaries.
+
+```bash
+npm run android:build
+```
+
 ## Desktop app
 
 The desktop target uses **Tauri 2**. Windows builds require Rust MSVC, Visual Studio C++ Build Tools with a Windows SDK, and WebView2 Runtime.

@@ -63,6 +63,14 @@ Model, akses gambar, dan dukungan `reasoning_effort` mengikuti kemampuan provide
 
 Validasi endpoint mengizinkan HTTPS, HTTP loopback, dan alamat IPv4 Tailscale `100.64.0.0/10`. Ini tetap memerlukan server, port, dan izin jaringan yang benar; bukan jaminan bahwa setiap alamat dapat dijangkau.
 
+## Android & iOS
+
+Layout mobile menggunakan engine percakapan dan endpoint yang sama. Target Android menghasilkan **APK ARM64 untuk testing**; build iOS memerlukan Mac dan Xcode. Lihat [MOBILE.md](MOBILE.md) untuk setup, perintah build, dan batas verifikasi.
+
+```bash
+npm run android:build
+```
+
 ## Aplikasi desktop
 
 Target desktop saat ini menggunakan **Tauri 2**. Untuk membangun di Windows, siapkan Rust MSVC, Visual Studio C++ Build Tools beserta Windows SDK, serta WebView2 Runtime.
