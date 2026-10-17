@@ -6,7 +6,7 @@
 .d-root.d-collapsed .d-main{grid-column:3}
 .d-collapsed .d-history-preview{display:none}
 .d-root .d-chat-heading{display:flex;align-items:center;gap:12px;min-width:0;color:inherit}
-.d-chat-heading>strong,.d-chat-heading>.d-chat-title{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:18px;font-weight:600;max-width:380px}
+.d-chat-heading>strong,.d-chat-heading>.d-chat-title{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:20px;font-weight:600;max-width:380px}
 .d-root .d-chat-heading>.d-button{color:#999;min-width:28px}
 .d-chat-header-actions{display:flex;align-items:center;gap:8px}
 

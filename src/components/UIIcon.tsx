@@ -4,6 +4,8 @@ import { officialIcons } from './openai-icons/index';
 // Official Apps SDK UI icons where a matching symbol exists.
 // Reference-specific controls and third-party logos remain local fallbacks.
 const icons: Record<string, ReactNode> = {
+  // Filled active Home silhouette from the supplied desktop reference.
+  'home-selected': <path fill="currentColor" stroke="none" d="M10.4 2.7a2.5 2.5 0 0 1 3.2 0l8 6.6a1 1 0 0 1-.64 1.77H20v8.18A1.75 1.75 0 0 1 18.25 21H15v-6a3 3 0 0 0-6 0v6H5.75A1.75 1.75 0 0 1 4 19.25v-8.18h-.96a1 1 0 0 1-.64-1.77l8-6.6Z"/>,
   trash: <><path d="M3.5 6h17M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5.5 6l1 14a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1l1-14M10 10v7M14 10v7"/></>,
   stop: <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>,
   lightning: <path d="m13.5 2-9 12h7l-1 8 9-12h-7l1-8Z"/>,
