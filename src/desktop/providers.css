@@ -85,7 +85,7 @@ html[data-reduce-motion=true] .d-root *,html[data-reduce-motion=true] .d-root *:
 .d-root .d-chat-error>button{font-size:14px;line-height:22px;padding:5px 10px;border-radius:999px;background:#ffffff0b;white-space:nowrap}
 .d-assistant-message:empty::before{content:'Sedang menjawab…';color:#999;font-size:18px}
 .d-root:not(.d-codex) .d-assistant-message:empty{min-height:30px;display:flex;align-items:center}
-.d-root:not(.d-codex) .d-assistant-message:empty::before{content:'';display:block;width:12px;height:12px;border-radius:50%;background:#2b6bca}
+.d-root:not(.d-codex) .d-assistant-message:empty::before{content:'';display:block;width:20px;height:20px;border-radius:50%;background:#2b6bca}
 .d-chat-disclaimer{position:absolute;bottom:98px;left:30px;right:30px;text-align:center;font-size:13px;line-height:20px;color:#888;pointer-events:none;z-index:3}
 @media(prefers-reduced-motion:no-preference){
  .d-root:not(.d-codex) .d-assistant-message:empty::before{animation:d-waiting 1s ease-in-out infinite}

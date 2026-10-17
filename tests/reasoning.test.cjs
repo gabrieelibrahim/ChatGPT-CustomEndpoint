@@ -20,8 +20,8 @@ function load(file) {
 }
 const { parseThinking, hasMessageContent } = load(path.join(root, 'src/lib/endpointChat.ts'));
 const { ChatMessage } = load(path.join(root, 'src/desktop/UXControls.tsx'));
-function render(message, streaming = false) {
-  return renderToStaticMarkup(React.createElement(ChatMessage, { message, streaming, onEdit() {}, onNotice() {} }));
+function render(message, streaming = false, experience = 'ChatGPT') {
+  return renderToStaticMarkup(React.createElement(ChatMessage, { message, streaming, experience, onEdit() {}, onNotice() {} }));
 }
 
 test('literal think tags in prose, fenced code and inline examples remain part of the answer', () => {
@@ -56,4 +56,39 @@ test('active reasoning remains collapsible while final text and response actions
   const complete = render({ role: 'assistant', text: 'Answer', reasoning: 'Working' });
   assert.ok(complete.includes('data-streaming="false"')); assert.ok(complete.includes('class="d-assistant-message"')); assert.ok(complete.includes('Answer'));
   assert.ok(complete.includes('Copy response'));
+});
+
+
+test('waiting without provider reasoning shows only the answer indicator until real content arrives', () => {
+  const waiting = render({ role: 'assistant', text: '' }, true);
+  assert.ok(waiting.includes('class="d-assistant-message"'));
+  assert.ok(waiting.includes('role="status"'));
+  assert.ok(waiting.includes('aria-label="Menunggu jawaban"'));
+  assert.ok(!waiting.includes('d-thinking-block'));
+  assert.ok(!waiting.includes('Thinking...'));
+  assert.ok(!waiting.includes('Analyzing request'));
+  const answering = render({ role: 'assistant', text: 'Hello' }, true);
+  assert.ok(answering.includes('Hello'));
+  assert.ok(!answering.includes('d-thinking-block'));
+  assert.ok(!answering.includes('role="status"'));
+  const stopped = render({ role: 'assistant', text: '' });
+  assert.ok(!stopped.includes('role="status"'));
+  assert.ok(!stopped.includes('d-thinking-block'));
+});
+
+
+test('Codex transitions from plain Thinking to elapsed Working above streamed text', () => {
+  const waiting = render({ role: 'assistant', text: '' }, true, 'Codex');
+  assert.ok(waiting.includes('d-codex-response-thinking'));
+  assert.ok(waiting.includes('Thinking</span>'));
+  assert.ok(!waiting.includes('d-thinking-block'));
+  assert.ok(!waiting.includes('d-assistant-message'));
+  const answering = render({ role: 'assistant', text: 'Streaming answer', timestamp: Date.now() - 37000 }, true, 'Codex');
+  assert.ok(answering.includes('d-codex-response-working'));
+  assert.match(answering, /Working for 3[78]s/);
+  assert.ok(answering.indexOf('Working for') < answering.indexOf('Streaming answer'));
+  assert.ok(!answering.includes('d-thinking-block'));
+  const complete = render({ role: 'assistant', text: 'Final answer' }, false, 'Codex');
+  assert.ok(complete.includes('Final answer'));
+  assert.ok(!complete.includes('d-codex-response-status'));
 });

@@ -58,7 +58,7 @@ npm run test:workspace
 npm run test:files
 ```
 
-`npm test` runs 71 transport/workspace/file/history/settings/rendering/style and native HTTP/agent adapter tests. Optional `npm run test:runtime` requires an installed Codex runtime and executes a harmless local command and MCP echo against a fake-key local gateway; it uses no external inference.
+`npm test` runs 73 transport/workspace/file/history/settings/rendering/style and native HTTP/agent adapter tests. Optional `npm run test:runtime` requires an installed Codex runtime and executes a harmless local command and MCP echo against a fake-key local gateway; it uses no external inference.
 
 ## Production
 ```sh

@@ -119,3 +119,11 @@
 .d-thinking-body{padding:10px 16px 14px;border-top:1px solid #2e2e2e;background:#1e1e1e}
 .d-thinking-text{font-size:15px;line-height:1.6;color:#a8a8a8;white-space:pre-wrap;word-break:break-word;font-style:italic;max-height:360px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#444 transparent}
 @media(prefers-reduced-motion:reduce){.d-root *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+.d-codex-response-status{color:#888;font-size:20px;line-height:30px}
+.d-codex-response-working{padding-bottom:12px;margin-bottom:26px;border-bottom:1px solid #2c2c2c}
+@media(prefers-reduced-motion:no-preference){
+ .d-codex-response-thinking>span{display:inline-block;background:linear-gradient(110deg,#777 20%,#d5d5d5 45%,#777 70%);background-size:250% 100%;background-clip:text;-webkit-background-clip:text;color:transparent;animation:d-codex-thinking-shimmer 2s linear infinite}
+ @keyframes d-codex-thinking-shimmer{from{background-position:150% 0}to{background-position:-150% 0}}
+}
+html[data-reduce-motion=true] .d-codex-response-thinking>span{animation:none;background:none;color:#888}
