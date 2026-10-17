@@ -55,9 +55,19 @@ async function screenshot(name) {
 }
 try {
   await launch();
+  assert.equal(await page.locator('.d-titlebar button').count(), 3, 'Name onboarding shows only native window controls');
+  assert.equal((await page.locator('.d-titlebar').innerText()).trim(), '');
+  await page.getByRole('button', { name: 'Maximize window', exact: true }).click();
+  await page.getByRole('button', { name: 'Restore window', exact: true }).waitFor();
+  await screenshot('onboarding-name');
   await page.locator('#setup-name').fill('Desktop persistence test');
   await page.getByRole('button', { name: 'Lanjut', exact: true }).click();
   await page.getByRole('heading', { name: 'Hubungkan AI pilihanmu' }).waitFor();
+  await page.locator('.d-auth-connect-toggle').click();
+  await page.locator('.d-setup #endpoint-name').waitFor();
+  assert.equal(await page.locator('.d-titlebar button').count(), 3, 'Custom endpoint onboarding shows only native window controls');
+  assert.equal((await page.locator('.d-titlebar').innerText()).trim(), '');
+  await screenshot('onboarding-endpoint');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('client-local-profile-v1')));
   assert.equal(saved?.name, 'Desktop persistence test', 'Continue must persist the name before optional endpoint setup');
   await close();
@@ -65,6 +75,7 @@ try {
 
   await launch();
   assert.equal(await page.locator('.d-auth-page').count(), 0);
+  assert.equal(await page.locator('.d-titlebar .d-back').count(), 1, 'Main app restores navigation after onboarding');
   await page.getByRole('button', { name: 'Profile', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Custom Endpoint', exact: true }).click();
   await page.locator('#endpoint-name').fill('Window smoke provider');

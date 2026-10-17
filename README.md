@@ -7,7 +7,7 @@ The default route uses the newer desktop ChatGPT/Codex presentation. The classic
 
 ## First launch and profile
 
-The Tauri 2 desktop target is available as **Sakelar v0.1.1**. See [TAURI.md](TAURI.md) for Windows prerequisites, `npm run desktop:dev`, installer builds and this version's behavior. It integrates native provider HTTP and bundles Node/Codex for the local agent through private pipes, including terminal, file changes, approvals and MCP. A single frameless header contains the working window controls. The local name is saved before optional endpoint setup so interrupted onboarding does not repeat on restart.
+The Tauri 2 desktop target is available as **Sakelar v0.1.2**. See [TAURI.md](TAURI.md) for Windows prerequisites, `npm run desktop:dev`, installer builds and this version's behavior. It integrates native provider HTTP and bundles Node/Codex for the local agent through private pipes, including terminal, file changes, approvals and MCP. A single frameless header contains the working window controls; onboarding shows only those three controls. The local name is saved before optional endpoint setup so interrupted onboarding does not repeat on restart.
 
 The desktop experience first asks for a local display name, then offers optional custom endpoint setup. **Lewati endpoint untuk sekarang** starts the UI without changing existing provider profiles or session keys. The name and initials appear in the profile menu; click the name there to edit it. This is a local profile, not an authenticated account. APK packaging is not included; the first Windows Tauri build target is described above.
 
