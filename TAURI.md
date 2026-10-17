@@ -1,4 +1,4 @@
-# Sakelar desktop v0.1.3
+# SuperGPT by Sakelar desktop
 
 The first Tauri 2 desktop target reuses the existing React interface. It does not import Chrome history, provider profiles, API keys, or browser storage into the desktop app.
 

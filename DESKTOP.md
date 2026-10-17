@@ -1,4 +1,4 @@
-# ChatGPT-CustomEndpoint desktop UI
+# SuperGPT desktop UI
 
 ## Active experience
 

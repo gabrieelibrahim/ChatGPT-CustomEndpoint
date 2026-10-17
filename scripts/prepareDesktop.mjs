@@ -39,7 +39,7 @@ export async function prepareDesktop() {
     if (!name) throw Error('Apache 2.0 license text is needed for Codex runtime redistribution.');
     await copy(join(root, 'node_modules', '@tauri-apps', 'cli', name), 'CODEX-LICENSE-APACHE-2.0.txt');
   }
-  await writeFile(join(destination, 'NOTICE.txt'), 'Sakelar bundles Node.js (https://nodejs.org/) and the OpenAI Codex CLI runtime (https://github.com/openai/codex). Node includes its complete license notices. Codex CLI is licensed under Apache-2.0. No OpenAI account, token, cloud entitlement, or provider credential is bundled.\n');
+  await writeFile(join(destination, 'NOTICE.txt'), 'SuperGPT by Sakelar bundles Node.js (https://nodejs.org/) and the OpenAI Codex CLI runtime (https://github.com/openai/codex). Node includes its complete license notices. Codex CLI is licensed under Apache-2.0. No OpenAI account, token, cloud entitlement, or provider credential is bundled.\n');
   await writeFile(join(destination, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
   console.log(`Prepared ${manifest.node} and ${manifest.codex}; ${manifest.files.length} runtime files, no user configuration.`);
   return destination;

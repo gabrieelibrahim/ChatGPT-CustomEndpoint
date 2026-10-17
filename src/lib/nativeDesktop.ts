@@ -54,7 +54,7 @@ export async function nativeAgentRequest(payload: object, signal?: AbortSignal):
 export function initializeNativeDesktop() {
   if (!isNativeDesktop()) return;
   document.documentElement.dataset.nativeDesktop = 'true';
-  document.title = 'Sakelar';
+  document.title = 'SuperGPT';
   // External links belong in the system browser, outside the privileged webview.
   document.addEventListener('click', event => {
     const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('a[href]');

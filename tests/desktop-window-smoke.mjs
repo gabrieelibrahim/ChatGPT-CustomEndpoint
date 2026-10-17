@@ -11,7 +11,7 @@ import { chromium } from 'playwright-core';
 // Opt-in integration test against our compiled app, never an existing user window.
 // CDP is enabled only in this child process and its isolated temporary WebView profile.
 const root = fileURLToPath(new URL('../', import.meta.url));
-const executable = resolve(process.env.SAKELAR_TEST_EXE || join(root, 'src-tauri/target/release/sakelar.exe'));
+const executable = resolve(process.env.SAKELAR_TEST_EXE || join(root, 'src-tauri/target/release/SuperGPT.exe'));
 const temporaryRoot = await realpath(tmpdir());
 const profile = await mkdtemp(join(temporaryRoot, 'sakelar-window-smoke-'));
 const screenshots = process.env.SAKELAR_TEST_SCREENSHOTS;

@@ -124,7 +124,7 @@ export class CodexAgentSession {
     }
   }
   async initialize() {
-    await this.rpc('initialize', { clientInfo: { name: 'sakelar_custom_client', title: 'Sakelar Custom Client', version: '0.3.0' } });
+    await this.rpc('initialize', { clientInfo: { name: 'sakelar_custom_client', title: 'SuperGPT by Sakelar', version: '0.3.0' } });
     this.write({ method: 'initialized', params: {} });
     const result = await this.rpc('thread/start', { model: this.options.model, modelProvider: 'custom_gateway', cwd: this.options.cwd, sandbox: this.options.sandbox, approvalPolicy: 'on-request', ephemeral: true });
     this.threadId = result.thread.id;

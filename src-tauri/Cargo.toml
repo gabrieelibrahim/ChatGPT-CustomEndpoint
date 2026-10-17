@@ -1,9 +1,9 @@
 [package]
 name = "sakelar"
 version = "0.1.4"
-description = "Sakelar Universal AI Client"
+description = "SuperGPT by Sakelar - Universal AI Client"
 authors = ["Sakelar contributors"]
-repository = "https://github.com/gabrieelibrahim/ChatGPT-CustomEndpoint"
+repository = "https://github.com/gabrieelibrahim/SuperGPT"
 edition = "2024"
 rust-version = "1.90"
 

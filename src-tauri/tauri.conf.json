@@ -1,6 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Sakelar",
+  "productName": "SuperGPT",
+  "mainBinaryName": "SuperGPT",
   "version": "0.1.4",
   "identifier": "id.sakelar.client",
   "build": {
@@ -12,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "Sakelar",
+        "title": "SuperGPT",
         "label": "main",
         "decorations": false,
         "visible": false,

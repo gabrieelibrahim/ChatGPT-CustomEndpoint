@@ -14,6 +14,7 @@ export function ProfileMenu({ name, onEdit, onAction, onClose }: { name: string;
     { icon: 'share', label: 'Invite a coworker', disabled: true },
     { icon: 'settings', label: 'Settings', shortcut: 'Ctrl+,' },
     { icon: 'globe', label: 'Custom Endpoint' },
+    { icon: 'page', label: 'About' },
   ];
   return <div ref={menu} className="d-popover d-profile-menu" role="menu" aria-label="Profile menu" onKeyDown={event => {
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }

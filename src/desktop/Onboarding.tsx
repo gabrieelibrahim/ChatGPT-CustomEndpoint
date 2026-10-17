@@ -14,7 +14,7 @@ function ProfileOverlay({ children, label, close, fullPage = false }: { children
     return () => { if (previous?.isConnected && !previous.closest('[inert]')) previous.focus(); };
   }, []);
   const content = <div className={'d-setup' + (fullPage ? ' d-auth-page' : '')} onMouseDown={event => { if (close && event.target === event.currentTarget) close(); }}>
-    {fullPage && <div className="d-auth-wordmark">Sakelar <span>AI</span></div>}
+    {fullPage && <div className="d-auth-wordmark">SuperGPT <span>by Sakelar</span></div>}
     <div className="d-setup-dialog" ref={dialog} role="dialog" aria-modal="true" aria-label={label}
       onKeyDown={event => {
         if (event.key === 'Escape') { event.stopPropagation(); if (close) close(); }
@@ -45,13 +45,13 @@ export function Onboarding({ onComplete }: { onComplete: (profile: LocalProfile)
   return <ProfileOverlay label="Pengaturan awal" fullPage>
     <div className="d-auth-step" role="status">Langkah {step} dari 2</div>
     <div className="d-auth-name-step" hidden={step !== 1} inert={step !== 1}>
-      <h1>Selamat datang</h1><p className="d-setup-intro">Masukkan namamu untuk mulai menggunakan Sakelar.</p>
+      <h1>Selamat datang</h1><p className="d-setup-intro">Masukkan namamu untuk mulai menggunakan SuperGPT by Sakelar.</p>
       <form className="d-name-form" onSubmit={event => { event.preventDefault(); try { saveLocalProfile(name); setError(''); setStep(2); } catch (failure) { setError((failure as Error).message); } }}>
         <label htmlFor="setup-name">Nama kamu</label><ClientInput pill ref={nameInput} id="setup-name" maxLength={80} autoComplete="name" placeholder="Masukkan nama" value={name} onChange={event => { setName(event.target.value); setError(''); }} required/>
         {error && step === 1 && <ClientAlert className="d-setup-error">{error}</ClientAlert>}
         <ClientButton color="primary" variant="solid" className="d-setup-primary" type="submit">Lanjut</ClientButton>
       </form>
-      <p className="d-auth-footnote">Nama disimpan di perangkat ini dan bisa diubah dari profil.<br/>Sakelar Universal AI Client adalah aplikasi independen.</p>
+      <p className="d-auth-footnote">Nama disimpan di perangkat ini dan bisa diubah dari profil.<br/>SuperGPT by Sakelar adalah aplikasi independen.</p>
     </div>
     <div className="d-auth-endpoint-step" hidden={step !== 2} inert={step !== 2}>
       <div className="d-auth-identity"><span>{profileInitials(name)}</span><b>{name.trim()}</b><button aria-label="Ubah nama" onClick={() => { setError(''); setStep(1); }}><I name="edit" size={17}/></button></div>
