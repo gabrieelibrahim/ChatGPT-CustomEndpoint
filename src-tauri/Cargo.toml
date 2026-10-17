@@ -1,6 +1,6 @@
 [package]
 name = "sakelar"
-version = "0.1.3"
+version = "0.1.4"
 description = "Sakelar Universal AI Client"
 authors = ["Sakelar contributors"]
 repository = "https://github.com/gabrieelibrahim/ChatGPT-CustomEndpoint"

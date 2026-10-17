@@ -23,6 +23,17 @@ function load(file) {
 const { ProviderModelMenu } = load(path.join(root, 'src/desktop/ProviderModelMenu.tsx'));
 const { prepareChatMessages } = load(path.join(root, 'src/lib/clientSettings.ts'));
 
+test('temporary release gate keeps saved Codex mode in ChatGPT and removes the switch action', () => {
+  const { CODEX_MODE_ENABLED, availableExperience } = load(path.join(root, 'src/lib/clientFeatures.ts'));
+  const { NavigationPalette } = load(path.join(root, 'src/desktop/NavigationPalette.tsx'));
+  assert.equal(CODEX_MODE_ENABLED, false);
+  assert.equal(availableExperience('Codex'), 'ChatGPT');
+  assert.equal(availableExperience('ChatGPT'), 'ChatGPT');
+  const markup = renderToStaticMarkup(React.createElement(NavigationPalette, { titles: [], snippets: {}, onClose() {}, onOpen() {}, onAction() {} }));
+  assert.ok(!markup.includes('Switch to Codex'));
+  assert.ok(markup.includes('Switch to Chat'));
+});
+
 test('ProviderModelMenu renders accessible options without speculative heuristic badges', () => {
   const profiles = [
     {

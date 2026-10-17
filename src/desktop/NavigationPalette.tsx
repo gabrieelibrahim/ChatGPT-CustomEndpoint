@@ -1,3 +1,4 @@
+import { CODEX_MODE_ENABLED } from '../lib/clientFeatures';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
 
@@ -43,7 +44,7 @@ export function NavigationPalette({ titles, snippets, onClose, onOpen, onAction 
     const chats: PaletteAction[] = titles.map((title, index) => ({ id: 'chat:' + title, label: title,
       detail: snippets[title], shortcut: index < 9 ? 'Alt+' + (index + 1) : undefined }));
     return [{ label: 'Chats', actions: (term ? chats.filter(matches) : chats.slice(0, 9)) },
-      ...actionGroups.map(group => ({ ...group, actions: group.actions.filter(matches) }))].filter(group => group.actions.length);
+      ...actionGroups.map(group => ({ ...group, actions: group.actions.filter(item => (item.id !== 'codex' || CODEX_MODE_ENABLED) && matches(item)) }))].filter(group => group.actions.length);
   }, [query, snippets, titles]);
   const items = groups.flatMap(group => group.actions);
   const activeIndex = Math.min(active, Math.max(0, items.length - 1));
