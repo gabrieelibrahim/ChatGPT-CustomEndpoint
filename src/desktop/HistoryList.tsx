@@ -1,3 +1,4 @@
+import { HistoryTitle } from './HistoryTitle';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { B, I } from './Desktop';
@@ -56,7 +57,7 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
       onMouseEnter={event => enter(title, event.currentTarget)} onMouseLeave={preview.leave}
       onFocus={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) enter(title, event.currentTarget, true); }}
       onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) preview.leave(); }}>
-      <button className="d-history-open" onClick={() => { preview.close(); onOpen(title); }}>{title}</button>
+      <HistoryTitle title={title} onOpen={() => { preview.close(); onOpen(title); }}/>
       <div className="d-history-actions">
         {experience === 'ChatGPT' && <B icon="dots" label="Conversation options" expanded={chatOptions?.title === title} onClick={event => toggleChatOptions(title, event.currentTarget)}/>}
         <B icon="pin" label={pinned.includes(title) ? 'Unpin chat' : 'Pin chat'} onClick={() => onPin(title)}/>

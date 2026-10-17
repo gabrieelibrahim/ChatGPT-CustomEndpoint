@@ -44,3 +44,17 @@
 @media(prefers-reduced-motion:reduce){
   .d-root .d-composer,.d-home-mode::before,.d-disclosure,.d-root .d-section-toggle>svg,.d-root .d-history-preview,.d-root .d-turn-preview,.d-turn-position>button>span,.d-root .d-history-actions,.d-root .d-home-suggestions{transition:none}
 }
+
+/* Clip only the title, never the action buttons. Short titles stay still. */
+.d-history-title-clip{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.d-history-title-text{display:inline-block;min-width:100%;white-space:nowrap;transform:translateX(0)}
+.d-root .d-history-row:is(:hover,:focus-within) .d-history-open{padding-right:84px}
+.d-history-row:is(:hover,:focus-within) .d-history-title-clip[data-overflow=true]{text-overflow:clip}
+@media(prefers-reduced-motion:no-preference){
+ html:not([data-reduce-motion=true]) .d-history-row:is(:hover,:focus-within) .d-history-title-clip[data-overflow=true] .d-history-title-text{animation:d-history-title-travel var(--history-duration) linear .65s infinite alternate}
+ @keyframes d-history-title-travel{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(var(--history-travel))}}
+}
+/* An opaque composer footer with a short fade above it, including multi-line input. */
+.d-chat-active .d-composer-wrap{isolation:isolate}
+.d-chat-active .d-composer-wrap::before{content:'';position:absolute;z-index:-1;left:-100vw;right:-100vw;top:-48px;bottom:-32px;background:linear-gradient(to bottom,transparent 0,var(--d-bg) 32px,var(--d-bg) 100%);pointer-events:none}
+.d-root.d-chat-active .d-chat-disclaimer{position:absolute;top:-24px;bottom:auto;left:0;right:0;margin:0;font-size:13px;line-height:20px;text-align:center;color:#888;pointer-events:none;z-index:1}
