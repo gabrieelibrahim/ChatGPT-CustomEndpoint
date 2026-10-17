@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Sakelar",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "id.sakelar.client",
   "build": {
     "frontendDist": "../dist",
@@ -14,6 +14,7 @@
       {
         "title": "Sakelar",
         "label": "main",
+        "decorations": false,
         "visible": false,
         "backgroundColor": "#181818",
         "width": 1280,

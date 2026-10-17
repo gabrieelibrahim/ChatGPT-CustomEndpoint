@@ -30,5 +30,18 @@
 .d-sdk-tooltip kbd{margin-left:14px;opacity:.65;font-family:inherit}
 .d-root :is(.d-local-dialog,.d-popover){background:var(--color-surface-elevated);color:var(--color-text);border-color:var(--color-border);box-shadow:var(--shadow-300)}
 html[data-reduce-motion=true] :is(.d-sdk-alert,.d-sdk-loading,.d-sdk-switch) *{animation:none!important;transition:none!important}
-/* Native Windows titlebar supplies the actual window buttons. */
-html[data-native-desktop=true] .d-window-controls{display:none}
+/* One app-drawn titlebar, with working native controls in the existing header. */
+html[data-native-desktop=true] .d-titlebar{padding:0 12px 12px;user-select:none}
+html[data-native-desktop=true] .d-titlebar :is(.d-back,.d-forward){margin-right:-16px}
+html[data-native-desktop=true] .d-titlebar>.d-button:nth-child(3){margin-right:0}
+html[data-native-desktop=true] .d-native-window-controls{gap:0;height:100%;margin-right:-12px;align-self:stretch}
+.d-root .d-native-window-controls>button{display:grid;place-items:center;width:70px;height:100%;border-radius:0;flex-shrink:0}
+.d-root .d-native-window-controls>button:last-of-type{width:62px}
+.d-root .d-native-window-controls>button:hover{background:#ffffff12}
+.d-root .d-native-window-controls>button:last-of-type:hover{background:#c42b1c;color:white}
+html[data-client-theme=light] .d-native-window-controls{color:#222}
+html[data-client-theme=light] .d-root .d-native-window-controls>button:hover{background:#0000000d}
+html[data-client-theme=light] .d-root .d-native-window-controls>button:last-of-type:hover{background:#c42b1c;color:white}
+.d-root .d-native-window-controls svg{width:20px;height:20px;pointer-events:none}
+.d-window-error{position:fixed;right:12px;top:68px;max-width:360px;padding:12px;background:#4b2020;color:#fff;border-radius:8px;font-size:14px;z-index:110}
+html[data-native-desktop=true] .d-setup{top:var(--native-titlebar-height,66px)}

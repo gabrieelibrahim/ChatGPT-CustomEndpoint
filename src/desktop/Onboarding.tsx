@@ -46,7 +46,7 @@ export function Onboarding({ onComplete }: { onComplete: (profile: LocalProfile)
     <div className="d-auth-step" role="status">Langkah {step} dari 2</div>
     <div className="d-auth-name-step" hidden={step !== 1} inert={step !== 1}>
       <h1>Selamat datang</h1><p className="d-setup-intro">Masukkan namamu untuk mulai menggunakan Sakelar.</p>
-      <form className="d-name-form" onSubmit={event => { event.preventDefault(); if (!name.trim()) { setError('Isi namamu terlebih dahulu.'); return; } setError(''); setStep(2); }}>
+      <form className="d-name-form" onSubmit={event => { event.preventDefault(); try { saveLocalProfile(name); setError(''); setStep(2); } catch (failure) { setError((failure as Error).message); } }}>
         <label htmlFor="setup-name">Nama kamu</label><ClientInput pill ref={nameInput} id="setup-name" maxLength={80} autoComplete="name" placeholder="Masukkan nama" value={name} onChange={event => { setName(event.target.value); setError(''); }} required/>
         {error && step === 1 && <ClientAlert className="d-setup-error">{error}</ClientAlert>}
         <ClientButton color="primary" variant="solid" className="d-setup-primary" type="submit">Lanjut</ClientButton>
