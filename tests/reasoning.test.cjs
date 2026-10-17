@@ -92,3 +92,13 @@ test('Codex transitions from plain Thinking to elapsed Working above streamed te
   assert.ok(complete.includes('Final answer'));
   assert.ok(!complete.includes('d-codex-response-status'));
 });
+
+
+test('saved reasoning duration renders on reopened history without a live timer', () => {
+  const message = JSON.parse(JSON.stringify({ role:'assistant', text:'Saved answer', reasoning:'Saved reasoning', reasoningDurationMs:3600 }));
+  const markup = render(message);
+  assert.ok(markup.includes('Thought for 3 seconds'));
+  assert.ok(!markup.includes('Thinking...'));
+  assert.ok(render({...message, reasoningDurationMs:200}).includes('Thought</span>'));
+  assert.ok(render({...message, reasoningDurationMs:undefined}).includes('Thought</span>'));
+});
