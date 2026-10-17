@@ -105,6 +105,7 @@ export type PreviewMessage = { role: 'user' | 'assistant'; text: string; reasoni
 export function ThinkingBlock({ reasoning, streaming = false }: { reasoning: string; streaming?: boolean }) {
   const [open, setOpen] = useState<boolean>(true);
   const [seconds, setSeconds] = useState(0);
+  const [finalDuration, setFinalDuration] = useState<number | null>(null);
 
   useEffect(() => {
     if (!streaming) return;
@@ -112,10 +113,20 @@ export function ThinkingBlock({ reasoning, streaming = false }: { reasoning: str
     const timer = setInterval(() => {
       setSeconds(Math.max(1, Math.floor((Date.now() - start) / 1000)));
     }, 1000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      const elapsed = Math.max(1, Math.floor((Date.now() - start) / 1000));
+      setFinalDuration(elapsed);
+    };
   }, [streaming]);
 
   if (!reasoning && !streaming) return null;
+
+  const thinkingLabel = streaming
+    ? `Thinking... (${seconds > 0 ? seconds + 's' : ''})`
+    : finalDuration
+      ? `Thought for ${finalDuration} second${finalDuration > 1 ? 's' : ''}`
+      : 'Thought';
 
   return (
     <div className="d-thinking-block" data-streaming={streaming}>
@@ -127,7 +138,7 @@ export function ThinkingBlock({ reasoning, streaming = false }: { reasoning: str
       >
         <span className="d-thinking-badge">
           {streaming ? <span className="d-thinking-pulse" aria-hidden="true" /> : <I name="lightning" size={14} />}
-          <span>{streaming ? `Thinking... (${seconds > 0 ? seconds + 's' : ''})` : 'Reasoning process'}</span>
+          <span>{thinkingLabel}</span>
         </span>
         <I name="down" size={14} />
       </button>
