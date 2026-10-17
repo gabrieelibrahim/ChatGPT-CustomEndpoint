@@ -71,3 +71,26 @@ test('starting a new mobile chat aborts the previous request and rejects its lat
     assert.equal(JSON.parse(localStorage.getItem('desktop-chat-content'))['Old request'].length, 1);
   } finally { app.restore(); }
 });
+
+test('temporary personalization applies only the selected local context and never persists the chat', async () => {
+  const app = fixture();
+  try {
+    localStorage.setItem('client-settings-v1', JSON.stringify({ instructions: 'Use Indonesian', memoriesEnabled: true, memories: ['Local saved note'] }));
+    let payload;
+    global.fetch = async (_, init) => { payload = JSON.parse(init.body); return answer(); };
+    app.render().reset(true);
+    await app.render().send('Hello', [], false, { memories: false, instructions: false });
+    assert.equal(payload.messages[0].content, 'Hello');
+    app.render().reset(true);
+    await app.render().send('Hello', [], false, { memories: true, instructions: false });
+    assert.match(payload.messages[0].content, /Local saved note/);
+    assert.doesNotMatch(payload.messages[0].content, /Use Indonesian/);
+    app.render().reset(true);
+    await app.render().send('Hello');
+    assert.match(payload.messages[0].content, /Use Indonesian/);
+    assert.doesNotMatch(payload.messages[0].content, /Local saved note/);
+    assert.equal(localStorage.getItem('desktop-chat-content'), null);
+    assert.equal(localStorage.getItem('desktop-titles'), null);
+    assert.equal(JSON.parse(localStorage.getItem('client-settings-v1')).memoriesEnabled, true);
+  } finally { app.restore(); }
+});

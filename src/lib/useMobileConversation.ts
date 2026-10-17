@@ -33,7 +33,7 @@ export function useMobileConversation() {
     try { localStorage.setItem('desktop-chat-content', JSON.stringify(next)); localStorage.setItem('desktop-titles', JSON.stringify(names)); setContent(next); setTitles(names); if (title === name) reset(); }
     catch { setError('Percakapan belum dapat dihapus.'); }
   }
-  async function send(text: string, attachments: FileRef[] = [], retry = false) {
+  async function send(text: string, attachments: FileRef[] = [], retry = false, personalization = { memories: false, instructions: true }) {
     if (active.current || (!retry && !text.trim() && !attachments.length)) return false;
     if (!endpoint) { setError('Tambahkan endpoint dan pilih model di Pengaturan.'); return false; }
     const key = loadEndpointKeys(store.profiles)[endpoint.id] || '';
@@ -63,7 +63,7 @@ export function useMobileConversation() {
     publish(next);
     try {
       const hydrated = await resolveMessageFiles(next, controller.signal);
-      await streamEndpointChat(endpoint, key, endpoint.model, prepareChatMessages(hydrated, settings, { suppressMemories: temporary }), controller.signal, (value, thought) => {
+      await streamEndpointChat(endpoint, key, endpoint.model, prepareChatMessages(hydrated, settings, { suppressMemories: temporary && !personalization.memories, suppressInstructions: temporary && !personalization.instructions }), controller.signal, (value, thought) => {
         answer = value; reasoning = thought || ''; publish(current());
       }, ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'][settings.defaultEffort], value => { reported = value; });
     } catch (failure) {
