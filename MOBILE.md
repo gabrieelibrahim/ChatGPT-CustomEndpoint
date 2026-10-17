@@ -18,6 +18,12 @@ The three supplied 614 × 1280 screenshots are compared at a proportional 390 ×
 
 The header uses 44 px round buttons and a 176 × 44 px Chat/Work switch. Suggestion rows are 49 px high with 17.5 px text and 20 px icons. Model selection stays available in Settings rather than adding an extra line beneath the reference composer. The Android keyboard itself is supplied by the OS; it is not drawn or simulated by the app. Browser screenshots verify app geometry, while native keyboard timing and inset behavior remain device checks.
 
+### APK-derived send control
+
+The supplied ChatGPT Android `1.2026.279` APK (SHA-256 `a30ab9145da62893cd1c2a3ccee7d05764110908ff4819de0d7e9e8aa222055e`) was inspected locally with REA/JADX. Its `ndn.invoke` call passes `ect0.o` into `rjp0.a` as the visible send size, and `ect0.r` as the interaction extent. The initializer assigns 32 and 48 respectively. The `rjp0.c` rendering path distinguishes the visible `SendButtonSurface` from its larger interaction area. Our mobile control now has a 32 px visible circle and a 48 px transparent hit area, with 48 px reserved in the composer row. This is a correspondence for the inspected path; Android density and other runtime variants still require device verification.
+
+Evidence: token initialization `ev_e23b6b73b7d3bdacc109f367baa0ab6fc555773bfc56a3eae6d3ebf097352b60`; rendering `ev_60ea128bcea8083c6dfbdf818c71bf54d50db3169a479c8b69d9f6a65ac22711`; incoming invoke `ev_a3c8bcbdf6de654b37797f1774c8a3af007c3625744f73af6bbafbce41755480`. Android SDK DEX disassembly independently resolves the caller's argument registers. No proprietary APK code, fonts or other assets are included in the repository. First-focus behavior remains based on the supplied screenshots, not established by this static call chain.
+
 No provider credentials, profile or sample conversations are packaged. Onboarding and provider configuration run on the device. Native HTTP uses the existing validated provider transport. Codex switching remains disabled; Node/Codex Windows binaries and local process commands are excluded from mobile builds.
 
 ## Android APK on Windows

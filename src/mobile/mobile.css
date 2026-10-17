@@ -35,14 +35,17 @@ html[data-client-theme=light] .m-app{--m-bg:#fff;--m-panel:#f3f3f3;--m-text:#171
 .m-app .m-suggestions button{font-size:17.5px;font-weight:400;color:#c7c7c7;padding:0;min-height:49px;gap:14px}
 .m-suggestions svg{color:var(--m-text);width:20px!important;height:20px!important}
 .m-suggestions span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.m-composer{display:grid;grid-template-columns:36px minmax(0,1fr) 36px 36px;align-items:center;gap:0;min-height:49px;padding:6px 8px;border-radius:27px;background:var(--m-field);border:1px solid #484848;width:100%;margin:0 auto}
+.m-composer{display:grid;grid-template-columns:36px minmax(0,1fr) 36px 48px;align-items:center;gap:0;min-height:49px;padding:6px 8px;border-radius:27px;background:var(--m-field);border:1px solid #484848;width:100%;margin:0 auto}
 .m-footer-home:not(.m-composer-engaged) .m-composer{width:calc(100% - 44px)}
 .m-app .m-composer button{padding:4px;min-width:32px;min-height:32px;width:32px;height:32px;justify-content:center}
 .m-composer button>svg{width:26px!important;height:26px!important}
 .m-app .m-composer textarea{align-self:center;resize:none;background:none;border:0;outline:none;padding:3px 3px;font-size:18px;line-height:28px;height:34px;max-height:136px;min-width:0;width:100%;border-radius:0;caret-color:#4b87fa;scrollbar-width:none}
 .m-composer textarea::-webkit-scrollbar{display:none}
 .m-composer textarea::placeholder{color:#b2b2b2}
-.m-app .m-composer .m-send{background:#2861df;color:white;border-radius:50%;width:33px;height:33px;min-height:33px;min-width:33px;margin:0;justify-self:end}
+/* APK reference: ect0.o = 32 visual size; ect0.r = 48 interaction extent.
+   The transparent hit area must not enlarge the reference composer layout. */
+.m-app .m-composer .m-send{position:relative;background:#2861df;color:white;border-radius:50%;width:32px;height:32px;min-height:32px;min-width:32px;margin:0;justify-self:end}
+.m-composer .m-send::after{content:"";position:absolute;width:48px;height:48px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%}
 .m-composer .m-send>svg{width:23px!important;height:23px!important}
 .m-composer-expanded .m-composer{grid-template-rows:minmax(42px,auto) 34px;row-gap:4px;min-height:96px;padding:8px 8px 6px;border-radius:26px}
 .m-composer-expanded .m-composer textarea{grid-column:1/-1;grid-row:1;padding:4px 8px;height:36px;align-self:start;margin-top:2px}
