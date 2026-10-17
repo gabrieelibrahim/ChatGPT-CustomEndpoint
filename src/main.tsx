@@ -23,3 +23,4 @@ import './desktop/images.css';
 try { document.documentElement.dataset.reduceMotion = String(localStorage.getItem('client-reduce-motion') === 'true'); } catch { /* Preferences are optional. */ }
 initializeNativeDesktop();
 createRoot(document.getElementById('root')!).render(<Shell/>);
+import './desktop/temporary-chat.css';

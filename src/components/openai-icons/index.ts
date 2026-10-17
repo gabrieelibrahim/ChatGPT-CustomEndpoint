@@ -8,6 +8,7 @@ import Branch from "./Branch";
 import Chat from "./Chat";
 import ChatCompose from "./ChatCompose";
 import ChatDashedTemp from "./ChatDashedTemp";
+import ChatDashedCheckedTemp from "./ChatDashedCheckedTemp";
 import Check from "./Check";
 import ChevronDown from "./ChevronDown";
 import Clock from "./Clock";
@@ -84,6 +85,7 @@ export const officialIcons: Record<string, ComponentType<SVGProps<SVGSVGElement>
   archive: Archive,
   bubble: ChatCompose,
   temporary: ChatDashedTemp,
+  'temporary-checked': ChatDashedCheckedTemp,
   comment: Chat,
   upload: UploadDocuments,
   share: Share,

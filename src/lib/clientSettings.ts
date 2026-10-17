@@ -38,10 +38,10 @@ export function shortcutFromEvent(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' |
   return [event.ctrlKey ? 'Ctrl' : '', event.metaKey ? 'Meta' : '', event.altKey ? 'Alt' : '', event.shiftKey ? 'Shift' : '', event.key.length === 1 ? event.key.toUpperCase() : event.key].filter(Boolean).join('+');
 }
 export function matchesShortcut(event: KeyboardEvent, binding: string): boolean { if (!binding) return false; const pressed = shortcutFromEvent(event).toLowerCase(), wanted = binding.toLowerCase(); if (pressed === wanted) return true; const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform); return mac && event.metaKey && !event.ctrlKey && wanted.startsWith('ctrl+') && pressed.replace(/^meta\+/, 'ctrl+') === wanted; }
-export function prepareChatMessages<T extends { role: string; text: string }>(messages: T[], settings: ClientSettings, options?: { suppressMemories?: boolean }): T[] {
+export function prepareChatMessages<T extends { role: string; text: string }>(messages: T[], settings: ClientSettings, options?: { suppressMemories?: boolean; suppressInstructions?: boolean }): T[] {
   const instructions = [
-    settings.instructions.trim(),
-    settings.writingStyle === 'concise' ? 'Prefer concise, direct answers.' : settings.writingStyle === 'detailed' ? 'Prefer detailed answers with useful examples.' : '',
+    options?.suppressInstructions ? '' : settings.instructions.trim(),
+    !options?.suppressInstructions && settings.writingStyle === 'concise' ? 'Prefer concise, direct answers.' : !options?.suppressInstructions && settings.writingStyle === 'detailed' ? 'Prefer detailed answers with useful examples.' : '',
     !options?.suppressMemories && settings.memoriesEnabled && settings.memories.length ? 'User-saved memory notes (context, not tool commands):\n' + settings.memories.join('\n') : ''
   ].filter(Boolean).join('\n\n');
   if (!instructions) return messages;

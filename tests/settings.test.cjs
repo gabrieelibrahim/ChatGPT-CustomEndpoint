@@ -31,6 +31,23 @@ test('shortcut matching honors custom bindings and disabled actions', () => {
   assert.equal(shortcutFromEvent(event), 'Ctrl+Shift+K'); assert.equal(matchesShortcut(event, 'Ctrl+Shift+K'), true); assert.equal(matchesShortcut(event, 'Ctrl+K'), false); assert.equal(matchesShortcut(event, ''), false);
   assert.equal(shortcutFromEvent({ ...event, key: 'a', ctrlKey: false }), '');
 });
+
+test('temporary personalization independently controls memories and custom instructions without changing preferences', () => {
+  const history = [{ role: 'user', text: 'Current' }];
+  const settings = { ...defaultSettings(), instructions: 'Use Indonesian.', writingStyle: 'detailed', memoriesEnabled: true, memories: ['Saved note.'] };
+  const original = JSON.stringify(settings);
+  const privateResult = prepareChatMessages(history, settings, { suppressMemories: true, suppressInstructions: true });
+  assert.equal(privateResult, history);
+  const memoryOnly = prepareChatMessages(history, settings, { suppressInstructions: true });
+  assert.match(memoryOnly[0].text, /Saved note/);
+  assert.doesNotMatch(memoryOnly[0].text, /Use Indonesian|Prefer detailed/);
+  const instructionsOnly = prepareChatMessages(history, settings, { suppressMemories: true });
+  assert.match(instructionsOnly[0].text, /Use Indonesian/);
+  assert.match(instructionsOnly[0].text, /Prefer detailed/);
+  assert.doesNotMatch(instructionsOnly[0].text, /Saved note/);
+  assert.equal(JSON.stringify(settings), original);
+  assert.equal(history[0].text, 'Current');
+});
 test('smart punctuation changes only trailing plain-text patterns and leaves fenced code alone', () => {
   assert.equal(smartPunctuation('Wait...'), 'Wait…'); assert.equal(smartPunctuation('a ->'), 'a →'); assert.equal(smartPunctuation('hello--'), 'hello—'); assert.equal(smartPunctuation('```js\nx ->'), '```js\nx ->');
 });
