@@ -11,3 +11,12 @@ SDK foundation styles load before existing shell styles. `rich-text.css` restore
 Provider text is untrusted: raw HTML is skipped, active URL schemes are blocked, links open with `noopener noreferrer`, and remote message images load only after an explicit click, without a referrer. A rendering boundary preserves readable source text if a chunk or renderer fails. No model-provided JavaScript executes. The SDK's pinned lodash and KaTeX dependencies are overridden to patched **4.18.1** and **0.18.2** respectively; `npm audit` reports no vulnerabilities at verification time.
 
 Verification: production build, 53 unit/render tests (including the actual bundled SDK renderer), plus synthetic DOM checks for tables, syntax highlighting, asynchronous math, copy success/failure, explicit image loading and incomplete streamed Markdown. Synthetic tests do not establish pixel identity; direct live browser visual verification remains blocked by the saved origin-access permission.
+
+
+Reasoning duration is client-observed time from the first received reasoning chunk
+until the first answer text, Stop, or stream completion. It is saved as optional
+`reasoningDurationMs` message metadata, including stopped reasoning and JSON
+export/import. It is not a provider-reported server execution time. Durations
+below one second and older messages with unknown duration display `Thought`;
+known durations of one second or longer display `Thought for N second(s)`.
+The live display timer never writes completed duration from effect cleanup.

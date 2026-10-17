@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject, type ReactNode } from 'react';
 import { B, I } from './Desktop';
+import { completedThinkingLabel, reasoningSeconds } from '../lib/reasoningTiming';
 import { parseThinking } from '../lib/endpointChat';
 
 export { parseThinking };
@@ -100,22 +101,23 @@ export function ComposerAddMenu({ anchor, plan, onFiles, onSelect, onUnavailable
   </div>;
 }
 
-export type PreviewMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; timestamp?: number; attachments?: { id: string; name: string; type: string }[] };
+export type PreviewMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; reasoningDurationMs?: number; timestamp?: number; attachments?: { id: string; name: string; type: string }[] };
 
-export function ThinkingBlock({ reasoning, streaming = false }: { reasoning: string; streaming?: boolean }) {
+export function ThinkingBlock({ reasoning, streaming = false, durationMs }: { reasoning: string; streaming?: boolean; durationMs?: number }) {
   const [open, setOpen] = useState<boolean>(true);
-  const [seconds, setSeconds] = useState(0);
+  const [seconds, setSeconds] = useState(() => reasoningSeconds(durationMs) ?? 0);
 
   useEffect(() => {
     if (!streaming) return;
-    const start = Date.now();
-    const timer = setInterval(() => {
-      setSeconds(Math.max(1, Math.floor((Date.now() - start) / 1000)));
-    }, 1000);
+    const start = performance.now(), base = typeof durationMs === 'number' && Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : 0;
+    const update = () => setSeconds(Math.floor((base + Math.max(0, performance.now() - start)) / 1000));
+    update();
+    const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
-  }, [streaming]);
+  }, [streaming, durationMs]);
 
   if (!reasoning && !streaming) return null;
+  const thinkingLabel = streaming ? `Thinking...${seconds > 0 ? ` (${seconds}s)` : ''}` : completedThinkingLabel(durationMs);
 
   return (
     <div className="d-thinking-block" data-streaming={streaming}>
@@ -127,7 +129,7 @@ export function ThinkingBlock({ reasoning, streaming = false }: { reasoning: str
       >
         <span className="d-thinking-badge">
           {streaming ? <span className="d-thinking-pulse" aria-hidden="true" /> : <I name="lightning" size={14} />}
-          <span>{streaming ? `Thinking... (${seconds > 0 ? seconds + 's' : ''})` : 'Reasoning process'}</span>
+          <span>{thinkingLabel}</span>
         </span>
         <I name="down" size={14} />
       </button>
@@ -164,7 +166,7 @@ export function ChatMessage({ message, onEdit, onNotice, streaming = false, expe
     {codex && streaming && message.role === 'assistant' && <div className={'d-codex-response-status' + (parsed.content || streamContent ? ' d-codex-response-working' : ' d-codex-response-thinking')}>
       {parsed.content || streamContent ? `Working for ${elapsed}s` : <span role="status">Thinking</span>}
     </div>}
-    {showThinking && <ThinkingBlock reasoning={parsed.reasoning} streaming={streaming && !parsed.content} />}
+    {showThinking && <ThinkingBlock reasoning={parsed.reasoning} durationMs={message.reasoningDurationMs} streaming={streaming && !parsed.content} />}
     {editing ? <div className="d-message-editor"><textarea aria-label="Edit message" autoFocus value={draft} onChange={e => setDraft(e.target.value)}
       onKeyDown={event => { if (event.key === 'Escape') setEditing(false); }}/><div><button onClick={() => setEditing(false)}>Cancel</button><button disabled={!draft.trim()} onClick={() => { onEdit(draft.trim()); setEditing(false); }}>Save</button></div></div>
       : streamContent ? streamContent : (parsed.content || (streaming && !showThinking && !codex)) ? <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !parsed.content ? 'status' : undefined} aria-label={message.role === 'assistant' && !parsed.content ? 'Menunggu jawaban' : undefined}>{message.role === 'assistant' && parsed.content ? <RichText text={parsed.content}/> : parsed.content}</div> : null}
