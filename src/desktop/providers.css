@@ -159,3 +159,19 @@ html[data-reduce-motion=true] .d-root *,html[data-reduce-motion=true] .d-root *:
 .d-work-in-menu>button>span{flex:1}.d-work-in-menu>button>svg{flex-shrink:0;color:#bcbcbc}
 .d-work-in-menu>button:not(:disabled):hover{background:#383838}.d-work-in-menu>button:disabled{opacity:.5;cursor:not-allowed}
 .d-root .d-codex-context>button.d-context-open{background:#383838;border-radius:999px}
+
+.d-agent-stream{display:grid;gap:22px}
+.d-agent-stream .d-assistant-message{margin:0}
+.d-agent-stream-tool{min-width:0;color:#999;font-size:20px;line-height:30px}
+.d-agent-stream-tool summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none}
+.d-agent-stream-tool summary::-webkit-details-marker{display:none}
+.d-agent-stream-tool summary>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-agent-stream-tool summary>svg{flex-shrink:0}
+.d-agent-stream-tool[open] summary>svg:last-child{transform:rotate(180deg)}
+.d-agent-stream-output{margin-top:12px;padding:18px;border:1px solid #393939;border-radius:12px;background:#252525;font-size:14px;line-height:22px}
+.d-agent-stream-output pre{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;color:#aaa;font-family:var(--client-code-font,Consolas,monospace)}
+.d-agent-stream-summary{color:#888;overflow:hidden;white-space:nowrap;font-size:16px;line-height:26px;mask-image:linear-gradient(to right,#000 90%,transparent);margin:0}
+@media(prefers-reduced-motion:no-preference){
+ .d-agent-stream-summary>span{background:linear-gradient(110deg,#777 20%,#c5c5c5 45%,#777 70%);background-size:250% 100%;background-clip:text;-webkit-background-clip:text;color:transparent;animation:d-codex-thinking-shimmer 2s linear infinite}
+}
+html[data-reduce-motion=true] .d-agent-stream-summary>span{animation:none;background:none;color:#888}

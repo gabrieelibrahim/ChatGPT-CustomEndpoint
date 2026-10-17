@@ -1,3 +1,4 @@
+import { updateAgentStream, type StreamEntry } from './AgentStream';
 import { ClientAlert } from '../components/SDKPrimitives';
 import { useEffect, useRef, useState } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
@@ -25,11 +26,12 @@ export function useCodexAgent() {
   const [plan, setPlan] = useState<{ step: string; status: string }[]>([]), [pendingDecision, setPendingDecision] = useState('');
   const session = useRef<{ id: string; fingerprint: string; conversation: string } | null>(null);
   const busy = useRef(false);
+  const [timeline, setTimeline] = useState<StreamEntry[]>([]), [conversation, setConversation] = useState('');
   async function disconnect() { const previous = session.current; session.current = null; if (previous) await agentRequest({ action: 'close', sessionId: previous.id }).catch(() => {}); }
-  function reset() { void disconnect(); setItems([]); setApprovals([]); setDiff(''); setPlan([]); setNotice(''); }
+  function reset() { setTimeline([]); setConversation(''); void disconnect(); setItems([]); setApprovals([]); setDiff(''); setPlan([]); setNotice(''); }
   useEffect(() => () => { void disconnect(); }, []);
   useEffect(() => { if (!dialog) return; const controller = new AbortController(); setAvailable(null); setNotice(''); void agentRequest({ action: 'status' }, controller.signal).then(response => response.json()).then(data => setAvailable(data.available)).catch(error => { if (!controller.signal.aborted) { setAvailable(false); setNotice(error.message); } }); return () => controller.abort(); }, [dialog]);
-  function save(next: AgentConfig) { void disconnect(); setConfig(next); localStorage.setItem('client-agent-config-v1', JSON.stringify({ cwd: next.cwd, sandbox: next.sandbox })); setDialog(false); setItems([]); setApprovals([]); setDiff(''); setPlan([]); }
+  function save(next: AgentConfig) { setTimeline([]); setConversation(''); void disconnect(); setConfig(next); localStorage.setItem('client-agent-config-v1', JSON.stringify({ cwd: next.cwd, sandbox: next.sandbox })); setDialog(false); setItems([]); setApprovals([]); setDiff(''); setPlan([]); }
   async function decide(id: string, accept: boolean) {
     if (!session.current) return;
     setPendingDecision(id);
@@ -40,7 +42,7 @@ export function useCodexAgent() {
   async function run(endpoint: EndpointProfile, key: string, model: string, history: { role: string; text: string; images?: string[] }[], conversation: string, forceNew: boolean, signal: AbortSignal, onText: (text: string) => void, effort?: string, planOnly = false, mcp: McpProfile[] = [], runtimeOptions: { networkAccess?: boolean; onUsage?: (usage: { input?: number; output?: number }) => void } = {}) {
     if (busy.current) throw Error('Agent masih bekerja.');
     if (!config.cwd || !config.responsesConfirmed) { setDialog(true); throw Error('Pilih folder dan konfirmasikan dukungan Responses API.'); }
-    busy.current = true; setItems([]); setApprovals([]); setDiff(''); setPlan([]); setNotice('');
+    busy.current = true; setTimeline([]); setConversation(conversation); setItems([]); setApprovals([]); setDiff(''); setPlan([]); setNotice('');
     const fingerprint = JSON.stringify([endpoint.id, endpoint.baseUrl, model, key, config.cwd, config.sandbox, mcp, runtimeOptions.networkAccess === true]);
     const stop = () => { if (session.current) void agentRequest({ action: 'stop', sessionId: session.current.id }).catch(() => {}); };
     signal.addEventListener('abort', stop, { once: true });
@@ -60,6 +62,7 @@ export function useCodexAgent() {
       const messages = new Map<string, string>();
       const publish = () => { const text = [...messages.values()].join('\n\n'); if (text.length > 1024 * 1024) throw Error('Jawaban agent terlalu besar.'); onText(text); };
       function consume(event: AgentEvent) {
+        setTimeline(previous => updateAgentStream(previous, event));
         if (event.type === 'text') { const id = event.itemId || 'answer'; messages.set(id, (messages.get(id) || '') + (event.delta || '')); publish(); }
         if (event.type === 'message') { messages.set(event.itemId || 'answer', event.text || ''); publish(); }
         if (event.type === 'item' && event.item) { const item = event.item; setItems(previous => { const old = previous.find(value => value.id === item.id); const next = { ...old, ...item }; return [...previous.filter(value => value.id !== item.id), next].slice(-100); }); }
@@ -86,7 +89,7 @@ export function useCodexAgent() {
       } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
     } finally { signal.removeEventListener('abort', stop); if (signal.aborted) stop(); busy.current = false; setApprovals([]); }
   }
-  return { config, dialog, setDialog, available, notice, items, approvals, diff, plan, pendingDecision, save, decide, run, reset };
+  return { timeline, conversation, config, dialog, setDialog, available, notice, items, approvals, diff, plan, pendingDecision, save, decide, run, reset };
 }
 
 export function AgentWorkspaceDialog({ agent, providerName, onClose }: { agent: ReturnType<typeof useCodexAgent>; providerName: string; onClose: () => void }) {
@@ -109,10 +112,10 @@ export function AgentWorkspaceDialog({ agent, providerName, onClose }: { agent: 
   </form></div>;
 }
 
-export function AgentActivity({ agent }: { agent: ReturnType<typeof useCodexAgent> }) {
+export function AgentActivity({ agent, showItems = true }: { agent: ReturnType<typeof useCodexAgent>; showItems?: boolean }) {
   return <div className="d-agent-activity">
     {!!agent.plan.length && <details open><summary>Plan</summary><ol>{agent.plan.map((item, index) => <li key={index}>{item.status === 'completed' ? '✓ ' : ''}{item.step}</li>)}</ol></details>}
-    {agent.items.map(item => <details key={item.id}><summary><I name={item.type === 'commandExecution' ? 'terminal' : item.type === 'fileChange' ? 'page' : 'plugin'} size={18}/><span>{item.command || (item.type === 'fileChange' ? 'File changes' : item.type === 'mcpToolCall' ? [item.server, item.tool].filter(Boolean).join(' / ') : item.type)}</span><small>{item.status}</small></summary>{item.aggregatedOutput && <pre>{item.aggregatedOutput}</pre>}{item.changes?.map(change => <div key={change.path}><b>{change.path}</b><pre>{change.diff || change.kind?.type}</pre></div>)}</details>)}
+    {showItems && agent.items.map(item => <details key={item.id}><summary><I name={item.type === 'commandExecution' ? 'terminal' : item.type === 'fileChange' ? 'page' : 'plugin'} size={18}/><span>{item.command || (item.type === 'fileChange' ? 'File changes' : item.type === 'mcpToolCall' ? [item.server, item.tool].filter(Boolean).join(' / ') : item.type)}</span><small>{item.status}</small></summary>{item.aggregatedOutput && <pre>{item.aggregatedOutput}</pre>}{item.changes?.map(change => <div key={change.path}><b>{change.path}</b><pre>{change.diff || change.kind?.type}</pre></div>)}</details>)}
     {agent.diff && <details><summary><I name="branch" size={18}/>View changes</summary><pre>{agent.diff}</pre></details>}
     {agent.approvals.map(item => <div className="d-agent-approval" key={item.id} role="region" aria-label="Agent approval"><b>{item.kind.includes('commandExecution') ? 'Izinkan command ini?' : 'Izinkan perubahan file?'}</b>{item.details.command && <pre>{item.details.command}</pre>}<p>{item.details.cwd || item.details.grantRoot}</p><p>{item.details.reason}</p>{item.details.additionalPermissions!=null&&<pre>{JSON.stringify(item.details.additionalPermissions,null,2)}</pre>}<div><button disabled={agent.pendingDecision === item.id} onClick={() => void agent.decide(item.id, false)}>Tolak</button><button disabled={agent.pendingDecision === item.id} onClick={() => void agent.decide(item.id, true)}>Izinkan sekali</button></div></div>)}
     {agent.notice && <p role="status">{agent.notice}</p>}

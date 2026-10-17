@@ -140,3 +140,14 @@ test('native cumulative usage becomes per-turn usage across successive model cal
   assert.deepEqual(events.filter(event => event.type === 'usage').at(-1), { type: 'usage', input: 50, output: 5 });
   session.fail('closed'); session.lines.close(); child.stdout.end();
 });
+
+
+test('app-server forwards exposed reasoning summaries with normal credential redaction', async () => {
+  const { child, reply } = fakeProcess();
+  const session = new CodexAgentSession(child, { key: 'fake-secret' }, 'unused');
+  const events = []; session.threadId = 'thread-one'; session.sink = event => events.push(event);
+  reply({ method: 'item/reasoning/summaryTextDelta', params: { threadId: 'thread-one', itemId: 'summary', delta: 'Checking fake-secret configuration' } });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(events, [{ type: 'summary', itemId: 'summary:0', delta: 'Checking [REDACTED] configuration' }]);
+  session.lines.close(); child.stdout.end();
+});

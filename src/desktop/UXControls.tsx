@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject, type ReactNode } from 'react';
 import { B, I } from './Desktop';
 import { parseThinking } from '../lib/endpointChat';
 
@@ -140,8 +140,8 @@ export function ThinkingBlock({ reasoning, streaming = false }: { reasoning: str
   );
 }
 
-export function ChatMessage({ message, onEdit, onNotice, streaming = false, experience = 'ChatGPT' }: {
-  message: PreviewMessage; onEdit: (text: string) => void; onNotice: (text: string) => void; streaming?: boolean; experience?: 'ChatGPT' | 'Codex';
+export function ChatMessage({ message, onEdit, onNotice, streaming = false, experience = 'ChatGPT', streamContent }: {
+  message: PreviewMessage; onEdit: (text: string) => void; onNotice: (text: string) => void; streaming?: boolean; experience?: 'ChatGPT' | 'Codex'; streamContent?: ReactNode;
 }) {
   const [editing, setEditing] = useState(false), [draft, setDraft] = useState(message.text);
   const [time] = useState(() => message.timestamp || Date.now());
@@ -161,13 +161,13 @@ export function ChatMessage({ message, onEdit, onNotice, streaming = false, expe
 
   return <section className={'d-chat-message d-chat-message-' + message.role}>
     {!!message.attachments?.length && <div className="d-message-files">{message.attachments.map(file => <span key={file.id}><I name="paperclip" size={17}/>{file.name}</span>)}</div>}
-    {codex && streaming && message.role === 'assistant' && <div className={'d-codex-response-status' + (parsed.content ? ' d-codex-response-working' : ' d-codex-response-thinking')}>
-      {parsed.content ? `Working for ${elapsed}s` : <span role="status">Thinking</span>}
+    {codex && streaming && message.role === 'assistant' && <div className={'d-codex-response-status' + (parsed.content || streamContent ? ' d-codex-response-working' : ' d-codex-response-thinking')}>
+      {parsed.content || streamContent ? `Working for ${elapsed}s` : <span role="status">Thinking</span>}
     </div>}
     {showThinking && <ThinkingBlock reasoning={parsed.reasoning} streaming={streaming && !parsed.content} />}
     {editing ? <div className="d-message-editor"><textarea aria-label="Edit message" autoFocus value={draft} onChange={e => setDraft(e.target.value)}
       onKeyDown={event => { if (event.key === 'Escape') setEditing(false); }}/><div><button onClick={() => setEditing(false)}>Cancel</button><button disabled={!draft.trim()} onClick={() => { onEdit(draft.trim()); setEditing(false); }}>Save</button></div></div>
-      : (parsed.content || (streaming && !showThinking && !codex)) ? <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !parsed.content ? 'status' : undefined} aria-label={message.role === 'assistant' && !parsed.content ? 'Menunggu jawaban' : undefined}>{message.role === 'assistant' && parsed.content ? <RichText text={parsed.content}/> : parsed.content}</div> : null}
+      : streamContent ? streamContent : (parsed.content || (streaming && !showThinking && !codex)) ? <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !parsed.content ? 'status' : undefined} aria-label={message.role === 'assistant' && !parsed.content ? 'Menunggu jawaban' : undefined}>{message.role === 'assistant' && parsed.content ? <RichText text={parsed.content}/> : parsed.content}</div> : null}
     {!editing && !streaming && parsed.content && <MessageActions text={parsed.content} user={message.role === 'user'} timestamp={time} onNotice={onNotice} onEdit={() => { setDraft(message.text); setEditing(true); }}/ >}
   </section>;
 }

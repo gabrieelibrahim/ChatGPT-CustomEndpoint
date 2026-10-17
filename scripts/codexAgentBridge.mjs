@@ -103,6 +103,7 @@ export class CodexAgentSession {
     switch (message.method) {
       case 'turn/started': this.turnId = p.turn?.id || ''; break;
       case 'item/agentMessage/delta': this.emit({ type: 'text', itemId: p.itemId, delta: p.delta || '' }); break;
+      case 'item/reasoning/summaryTextDelta': this.emit({ type: 'summary', itemId: p.itemId + ':' + (p.summaryIndex || 0), delta: p.delta || '' }); break;
       case 'item/commandExecution/outputDelta': this.emit({ type: 'output', itemId: p.itemId, delta: p.delta || '' }); break;
       case 'item/started': case 'item/completed':
         if (['commandExecution', 'fileChange', 'mcpToolCall', 'webSearch', 'plan'].includes(p.item?.type)) this.emit({ type: 'item', item: p.item });
