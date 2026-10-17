@@ -45,3 +45,19 @@ test('only a runtime summary at the live tail appears, and running tools do not 
   assert.equal(entries.at(-1).kind, 'summary');
   assert.ok(render(entries, true).includes('Checking dependencies again'));
 });
+
+test('completed command batches collapse without swallowing commentary, failed or running tools', () => {
+  const command = (id, status = 'completed') => ({ id, kind:'tool', startedAt:Date.now(), item:{id, type:'commandExecution', command:'echo ' + id, status} });
+  const commentary = {id:'comment', kind:'message', startedAt:Date.now(), text:'After commands'};
+  const complete = render([command('a'),command('b'),commentary,command('c')],true);
+  assert.ok(complete.includes('Ran commands'));
+  assert.ok(complete.indexOf('Ran commands') < complete.indexOf('After commands'));
+  assert.ok(complete.indexOf('After commands') < complete.indexOf('Ran echo c'));
+  const live = render([command('a'),command('b','inProgress')],true);
+  assert.ok(!live.includes('Ran commands'));
+  assert.ok(live.includes('Running echo b'));
+  assert.ok(!render([command('a'),command('b','failed')],true).includes('Ran commands'));
+  const stopped = render([command('a','inProgress')],false);
+  assert.ok(stopped.includes('Stopped command'));
+  assert.ok(!stopped.includes('Ran echo a'));
+});

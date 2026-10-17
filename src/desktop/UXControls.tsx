@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject, type ReactNode } from 'react';
 import { B, I } from './Desktop';
-import { completedThinkingLabel, reasoningSeconds } from '../lib/reasoningTiming';
 import { parseThinking } from '../lib/endpointChat';
 
 export { parseThinking };
@@ -103,45 +102,6 @@ export function ComposerAddMenu({ anchor, plan, onFiles, onSelect, onUnavailable
 
 export type PreviewMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; reasoningDurationMs?: number; timestamp?: number; attachments?: { id: string; name: string; type: string }[] };
 
-export function ThinkingBlock({ reasoning, streaming = false, durationMs }: { reasoning: string; streaming?: boolean; durationMs?: number }) {
-  const [open, setOpen] = useState<boolean>(true);
-  const [seconds, setSeconds] = useState(() => reasoningSeconds(durationMs) ?? 0);
-
-  useEffect(() => {
-    if (!streaming) return;
-    const start = performance.now(), base = typeof durationMs === 'number' && Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : 0;
-    const update = () => setSeconds(Math.floor((base + Math.max(0, performance.now() - start)) / 1000));
-    update();
-    const timer = setInterval(update, 1000);
-    return () => clearInterval(timer);
-  }, [streaming, durationMs]);
-
-  if (!reasoning && !streaming) return null;
-  const thinkingLabel = streaming ? `Thinking...${seconds > 0 ? ` (${seconds}s)` : ''}` : completedThinkingLabel(durationMs);
-
-  return (
-    <div className="d-thinking-block" data-streaming={streaming}>
-      <button
-        type="button"
-        className="d-thinking-toggle"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        <span className="d-thinking-badge">
-          {streaming ? <span className="d-thinking-pulse" aria-hidden="true" /> : <I name="lightning" size={14} />}
-          <span>{thinkingLabel}</span>
-        </span>
-        <I name="down" size={14} />
-      </button>
-      {open && (
-        <div className="d-thinking-body">
-          <div className="d-thinking-text">{reasoning ? <RichText text={reasoning}/> : (streaming ? 'Analyzing request...' : '')}</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function ChatMessage({ message, onEdit, onNotice, streaming = false, experience = 'ChatGPT', streamContent }: {
   message: PreviewMessage; onEdit: (text: string) => void; onNotice: (text: string) => void; streaming?: boolean; experience?: 'ChatGPT' | 'Codex'; streamContent?: ReactNode;
 }) {
@@ -159,17 +119,15 @@ export function ChatMessage({ message, onEdit, onNotice, streaming = false, expe
   }, [codex, streaming, time]);
 
   const parsed = message.role === 'assistant' ? parseThinking(message.text, message.reasoning) : { reasoning: '', content: message.text, isThinking: false };
-  const showThinking = !codex && message.role === 'assistant' && !!parsed.reasoning;
 
   return <section className={'d-chat-message d-chat-message-' + message.role}>
     {!!message.attachments?.length && <div className="d-message-files">{message.attachments.map(file => <span key={file.id}><I name="paperclip" size={17}/>{file.name}</span>)}</div>}
     {codex && streaming && message.role === 'assistant' && <div className={'d-codex-response-status' + (parsed.content || streamContent ? ' d-codex-response-working' : ' d-codex-response-thinking')}>
       {parsed.content || streamContent ? `Working for ${elapsed}s` : <span role="status">Thinking</span>}
     </div>}
-    {showThinking && <ThinkingBlock reasoning={parsed.reasoning} durationMs={message.reasoningDurationMs} streaming={streaming && !parsed.content} />}
     {editing ? <div className="d-message-editor"><textarea aria-label="Edit message" autoFocus value={draft} onChange={e => setDraft(e.target.value)}
       onKeyDown={event => { if (event.key === 'Escape') setEditing(false); }}/><div><button onClick={() => setEditing(false)}>Cancel</button><button disabled={!draft.trim()} onClick={() => { onEdit(draft.trim()); setEditing(false); }}>Save</button></div></div>
-      : streamContent ? streamContent : (parsed.content || (streaming && !showThinking && !codex)) ? <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !parsed.content ? 'status' : undefined} aria-label={message.role === 'assistant' && !parsed.content ? 'Menunggu jawaban' : undefined}>{message.role === 'assistant' && parsed.content ? <RichText text={parsed.content}/> : parsed.content}</div> : null}
+      : streamContent ? streamContent : (parsed.content || (streaming && !codex)) ? <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !parsed.content ? 'status' : undefined} aria-label={message.role === 'assistant' && !parsed.content ? 'Menunggu jawaban' : undefined}>{message.role === 'assistant' && parsed.content ? <RichText text={parsed.content}/> : parsed.content}</div> : null}
     {!editing && !streaming && parsed.content && <MessageActions text={parsed.content} user={message.role === 'user'} timestamp={time} onNotice={onNotice} onEdit={() => { setDraft(message.text); setEditing(true); }}/ >}
   </section>;
 }

@@ -38,26 +38,36 @@ test('malformed reasoning in an older saved message cannot crash the message com
   }
 });
 
-test('stopped reasoning survives saved-history filtering and renders without a waiting-answer element', () => {
+test('stopped reasoning remains stored but ChatGPT does not render it or a stale waiting indicator', () => {
   const messages = JSON.parse(JSON.stringify([{ role: 'user', text: 'Question' }, { role: 'assistant', text: '', reasoning: 'Partial reasoning before Stop' }, { role: 'assistant', text: '' }]));
   const restored = messages.filter(hasMessageContent);
   assert.equal(restored.length, 2);
+  assert.equal(restored[1].reasoning, 'Partial reasoning before Stop');
   const markup = render(restored[1]);
-  assert.ok(markup.includes('Partial reasoning before Stop'));
-  assert.ok(markup.includes('data-streaming="false"'));
+  assert.ok(!markup.includes('Partial reasoning'));
+  assert.ok(!markup.includes('d-thinking-block'));
   assert.ok(!markup.includes('class="d-assistant-message"'));
   assert.ok(!markup.includes('role="status"'));
 });
 
-test('active reasoning remains collapsible while final text and response actions render normally', () => {
-  const active = render({ role: 'assistant', text: '', reasoning: 'Working' }, true);
-  assert.ok(active.includes('data-streaming="true"')); assert.ok(active.includes('aria-expanded="true"'));
-  assert.ok(!active.includes('class="d-assistant-message"'));
-  const complete = render({ role: 'assistant', text: 'Answer', reasoning: 'Working' });
-  assert.ok(complete.includes('data-streaming="false"')); assert.ok(complete.includes('class="d-assistant-message"')); assert.ok(complete.includes('Answer'));
-  assert.ok(complete.includes('Copy response'));
+test('ChatGPT shows its waiting dot even when the provider streams reasoning, then only answer text', () => {
+  for (const message of [{ role:'assistant', text:'', reasoning:'Provider analysis' }, { role:'assistant', text:'<think>Provider analysis' }]) {
+    const active = render(message, true);
+    assert.ok(active.includes('class="d-assistant-message"'));
+    assert.ok(active.includes('aria-label="Menunggu jawaban"'));
+    assert.ok(!active.includes('Provider analysis'));
+    assert.ok(!active.includes('d-thinking-block'));
+    assert.ok(!active.includes('Thinking'));
+  }
+  const complete = render({ role:'assistant', text:'<think>Provider analysis</think>Answer' }, true);
+  assert.ok(complete.includes('Answer'));
+  assert.ok(!complete.includes('Provider analysis'));
+  assert.ok(!complete.includes('role="status"'));
+  assert.ok(complete.indexOf('Copy response') === -1);
+  const saved = render({ role:'assistant', text:'Answer', reasoning:'Provider analysis' });
+  assert.ok(saved.includes('Copy response'));
+  assert.ok(!saved.includes('Provider analysis'));
 });
-
 
 test('waiting without provider reasoning shows only the answer indicator until real content arrives', () => {
   const waiting = render({ role: 'assistant', text: '' }, true);
@@ -94,11 +104,11 @@ test('Codex transitions from plain Thinking to elapsed Working above streamed te
 });
 
 
-test('saved reasoning duration renders on reopened history without a live timer', () => {
+test('saved reasoning metadata never brings the panel back in ChatGPT history', () => {
   const message = JSON.parse(JSON.stringify({ role:'assistant', text:'Saved answer', reasoning:'Saved reasoning', reasoningDurationMs:3600 }));
   const markup = render(message);
-  assert.ok(markup.includes('Thought for 3 seconds'));
-  assert.ok(!markup.includes('Thinking...'));
-  assert.ok(render({...message, reasoningDurationMs:200}).includes('Thought</span>'));
-  assert.ok(render({...message, reasoningDurationMs:undefined}).includes('Thought</span>'));
+  assert.ok(markup.includes('Saved answer'));
+  assert.ok(!markup.includes('Saved reasoning'));
+  assert.ok(!markup.includes('Thought'));
+  assert.ok(!markup.includes('d-thinking-block'));
 });

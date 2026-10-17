@@ -26,6 +26,22 @@ export function updateAgentStream(entries: StreamEntry[], event: StreamEvent, no
   return index < 0 ? [...entries, entry].slice(-100) : entries.map((value, i) => i === index ? entry : value);
 }
 
+function ToolRow({ entry, streaming, now }: { entry: StreamEntry; streaming: boolean; now: number }) {
+  const item = entry.item!;
+  const active = streaming && running(item.status);
+  const stopped = !streaming && running(item.status);
+  const seconds = Math.max(0, Math.floor(((entry.endedAt ?? now) - entry.startedAt) / 1000));
+  const command = item.type === 'commandExecution';
+  const failed = item.status === 'failed' || item.status === 'declined';
+  const state = failed ? 'Failed' : stopped ? 'Stopped' : active ? 'Running' : 'Completed';
+  const description = item.command || (item.type === 'fileChange' ? 'File changes' : item.type === 'mcpToolCall' ? [item.server, item.tool].filter(Boolean).join(' / ') : item.type);
+  const label = command ? failed ? 'Command failed' : stopped ? 'Stopped command' : active ? seconds >= 10 ? `Running command for ${seconds}s` : `Running ${description}` : `Ran ${description}` : `${state} ${description}`;
+  return <details className="d-agent-stream-tool">
+    <summary><I name={command ? 'terminal' : item.type === 'fileChange' ? 'page' : 'plugin'} size={18}/><span className="d-tool-label-collapsed" title={description}>{label}</span><span className="d-tool-label-expanded">{command && !active && !failed && !stopped ? 'Ran command' : label}</span><I name="down" size={14}/></summary>
+    <div className="d-agent-stream-output">{command && <><small>Shell</small><pre>$ {item.command}</pre></>}{item.aggregatedOutput && <pre>{item.aggregatedOutput}</pre>}{item.changes?.map(change => <div key={change.path}><b>{change.path}</b><pre>{change.diff || change.kind?.type}</pre></div>)}</div>
+  </details>;
+}
+
 export function AgentStream({ entries, streaming }: { entries: StreamEntry[]; streaming: boolean }) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -36,16 +52,14 @@ export function AgentStream({ entries, streaming }: { entries: StreamEntry[]; st
   return <div className="d-agent-stream">{entries.map((entry, index) => {
     if (entry.kind === 'message') return entry.text ? <div className="d-assistant-message" key={'message-' + entry.id}><RichText text={entry.text}/></div> : null;
     if (entry.kind === 'summary') return streaming && index === entries.length - 1 && entry.text ? <p key={'summary-' + entry.id} className="d-agent-stream-summary"><span>{entry.text}</span></p> : null;
-    const item = entry.item!;
-    const active = streaming && running(item.status);
-    const seconds = Math.max(0, Math.floor(((entry.endedAt || now) - entry.startedAt) / 1000));
-    const command = item.type === 'commandExecution';
-    const failed = item.status === 'failed' || item.status === 'declined';
-    const label = command ? (failed ? 'Command failed' : active ? (seconds ? `Running command for ${seconds}s` : 'Running') : 'Ran') : active ? 'Running' : failed ? 'Failed' : 'Completed';
-    const description = item.command || (item.type === 'fileChange' ? 'File changes' : item.type === 'mcpToolCall' ? [item.server, item.tool].filter(Boolean).join(' / ') : item.type);
-    return <details className="d-agent-stream-tool" key={'tool-' + entry.id}>
-      <summary><I name={command ? 'terminal' : item.type === 'fileChange' ? 'page' : 'plugin'} size={18}/><span title={description}>{active && command && seconds > 0 ? label : `${label} ${description}`}</span><I name="down" size={12}/></summary>
-      <div className="d-agent-stream-output">{command && <><small>Shell</small><pre>$ {item.command}</pre></>}{item.aggregatedOutput && <pre>{item.aggregatedOutput}</pre>}{item.changes?.map(change => <div key={change.path}><b>{change.path}</b><pre>{change.diff || change.kind?.type}</pre></div>)}</div>
-    </details>;
+    if (entries[index - 1]?.kind === 'tool') return null;
+    const tools: StreamEntry[] = [];
+    for (let cursor = index; entries[cursor]?.kind === 'tool'; cursor++) tools.push(entries[cursor]);
+    const completedCommands = tools.length > 1 && tools.every(tool => tool.item?.type === 'commandExecution' && tool.item.status === 'completed');
+    const rows = tools.map(tool => <ToolRow key={tool.id} entry={tool} streaming={streaming} now={now}/>);
+    return completedCommands ? <details className="d-agent-stream-tool d-agent-stream-batch" key={'batch-' + entry.id}>
+      <summary><I name="terminal" size={18}/><span>Ran commands</span><I name="down" size={14}/></summary>
+      <div className="d-agent-stream-tools">{rows}</div>
+    </details> : <div className="d-agent-stream-tools" key={'tools-' + entry.id}>{rows}</div>;
   })}</div>;
 }
