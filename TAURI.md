@@ -38,6 +38,8 @@ If Rust is installed outside the normal PATH, optional `CARGO_HOME` and `RUSTUP_
 
 ## Checks
 
+Pending the next native build: source validation, development relay, native HTTP scopes, and the agent gateway now accept plain HTTP to numeric Tailscale IPv4 destinations within `100.64.0.0/10`. HTTPS remains supported; arbitrary public HTTP, URL credentials, query credentials, and redirects remain blocked. This address check does not detect whether Tailscale is connected. MagicDNS HTTP names and Tailscale IPv6 are not added by this change. Existing v0.1.3 installers retain the older localhost-only HTTP policy until rebuilt.
+
 The v0.1.3 release executable passed the isolated three-launch Windows smoke test: real native HTTP model discovery and chat streaming against a fake-key local gateway, saved profile/endpoint persistence, session-only API keys, frameless window controls, and dark/light themes. The bundled Node/Codex runtime also passed approval, terminal, file-write, MCP echo, streaming and shutdown checks against a local mock gateway. No real provider credentials or paid inference were used.
 
 Version 0.1.3 rebuilds the native HTTP capability with escaped IPv6 URLPattern colons and an explicit IPv4 loopback regex. The invalid IPv6 pattern in v0.1.2 rejected every native HTTP request while deserializing scope. String transport failures now receive actionable UI errors. This release also includes the reviewed Temporary Chat memory suppression and keyboard/touch accessible local image gallery with optional prompt templates.

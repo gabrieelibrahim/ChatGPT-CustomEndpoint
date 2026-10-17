@@ -33,8 +33,8 @@ export async function validateAgentConnection(payload) {
   const cwd = await realpath(payload.cwd).catch(() => { throw Error('Folder project tidak ditemukan.'); });
   if (!(await stat(cwd)).isDirectory()) throw Error('Path project harus berupa folder.');
   const url = new URL(payload.baseUrl);
-  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
-  if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) || url.username || url.password || url.search || url.hash) throw Error('Alamat gateway tidak valid.');
+  const httpAllowedHost = url.hostname === 'localhost' || /^127\.\d+\.\d+\.\d+$/.test(url.hostname) || url.hostname === '[::1]' || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+$/.test(url.hostname);
+  if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && httpAllowedHost)) || url.username || url.password || url.search || url.hash) throw Error('Alamat gateway tidak valid.');
   if (!payload.responsesConfirmed) throw Error('Konfirmasikan dukungan Responses API terlebih dahulu.');
   if (typeof payload.key !== 'string' || payload.key.length > 4096 || /[\r\n]/.test(payload.key)) throw Error('API key tidak valid.');
   if (typeof payload.model !== 'string' || !payload.model.trim() || payload.model.length > 160) throw Error('Pilih model terlebih dahulu.');

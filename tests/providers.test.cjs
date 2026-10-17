@@ -14,7 +14,7 @@ function load(file) {
   return module.exports;
 }
 const { streamEndpointChat, parseThinking } = load('src/lib/endpointChat.ts');
-const { discoverEndpointModels } = load('src/lib/endpointProfiles.ts');
+const { discoverEndpointModels, normalizeBaseUrl } = load('src/lib/endpointProfiles.ts');
 const profile = { id: 'test', name: 'Custom', baseUrl: 'https://provider.example/v1', model: 'vendor/model', models: [], auth: 'bearer', protocol: 'openai-compatible' };
 const realFetch = global.fetch;
 test.afterEach(() => { global.fetch = realFetch; delete global.__LOCAL_PROVIDER_RELAY__; delete global.location; });
@@ -167,4 +167,29 @@ test('development relay enforces loopback/same-origin and forwards models and st
     const denied = await call(target + '/v1/denied/models'); assert.equal(denied.status, 401); assert.ok(!(await denied.text()).includes('secret-body'));
     assert.equal((await call(target + '/v1/redirect/models')).status, 502);
   } finally { await Promise.all([new Promise(resolve => relay.close(resolve)), new Promise(resolve => upstream.close(resolve))]); }
+});
+
+
+test('endpoint profiles accept only the Tailscale IPv4 range for remote plain HTTP', () => {
+  for (const host of ['100.64.0.0', '100.99.10.20', '100.127.255.255']) assert.equal(normalizeBaseUrl(`http://${host}:20128/v1/models`), `http://${host}:20128/v1`);
+  for (const host of ['100.63.255.255', '100.128.0.0', '100.90.1.2.evil.example', '192.168.1.2']) assert.throws(() => normalizeBaseUrl(`http://${host}/v1`), /HTTPS/);
+  assert.throws(() => normalizeBaseUrl('http://user:secret@100.90.1.2/v1'), /login/);
+});
+
+test('development relay allows Tailscale upstream while preserving its loopback-only client access', async () => {
+  const { localProviderRelay } = await import('../scripts/localProviderRelay.mjs');
+  let middleware, forwarded;
+  localProviderRelay().configureServer({ middlewares: { use(_route, handler) { middleware = handler; } } });
+  const relay = http.createServer((req, res) => middleware(req, res));
+  await new Promise(resolve => relay.listen(0, '127.0.0.1', resolve));
+  const origin = 'http://127.0.0.1:' + relay.address().port;
+  global.fetch = async (url, options) => { forwarded = { url: String(url), options }; return new Response('{"data":[]}', { headers: { 'content-type': 'application/json' } }); };
+  const call = (host, originHeader = origin) => realFetch(origin + '/__client/provider', { method: 'POST', headers: { Origin: originHeader, 'Content-Type': 'application/json' }, body: JSON.stringify({ url: `http://${host}:20128/v1/models`, key: 'fake-test-key' }) });
+  try {
+    const result = await call('100.90.1.2'); assert.equal(result.status, 200); await result.text();
+    assert.equal(forwarded.url, 'http://100.90.1.2:20128/v1/models');
+    assert.equal(forwarded.options.redirect, 'error');
+    assert.equal((await call('100.128.0.0')).status, 400);
+    assert.equal((await call('100.90.1.2', 'https://untrusted.example')).status, 403);
+  } finally { global.fetch = realFetch; relay.closeAllConnections(); await new Promise(resolve => relay.close(resolve)); }
 });

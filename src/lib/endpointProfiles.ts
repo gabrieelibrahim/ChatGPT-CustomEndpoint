@@ -10,8 +10,8 @@ export const endpointSecretsKey = 'client-endpoint-keys-v1';
 export function normalizeBaseUrl(value: string): string {
   let url: URL;
   try { url = new URL(value.trim()); } catch { throw Error('Masukkan Base URL yang valid.'); }
-  const loopback = url.hostname === 'localhost' || /^127\.\d+\.\d+\.\d+$/.test(url.hostname) || url.hostname === '[::1]';
-  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) throw Error('Gunakan HTTPS, atau HTTP untuk server localhost.');
+  const httpAllowedHost = url.hostname === 'localhost' || /^127\.\d+\.\d+\.\d+$/.test(url.hostname) || url.hostname === '[::1]' || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+$/.test(url.hostname);
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && httpAllowedHost)) throw Error('Gunakan HTTPS, atau HTTP untuk localhost dan alamat Tailscale (100.64.0.0/10).');
   if (url.username || url.password || url.search || url.hash) throw Error('Base URL tidak boleh berisi login, query, atau fragmen. Masukkan kunci pada kolom API key.');
   url.pathname = url.pathname.replace(/\/+$/, '').replace(/\/(chat\/completions|models)$/, '');
   return url.toString().replace(/\/+$/, '');
