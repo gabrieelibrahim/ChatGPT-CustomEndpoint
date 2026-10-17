@@ -21,6 +21,9 @@
 .d-history-scroll{min-height:0;flex:1;overflow:auto;scrollbar-width:thin;scrollbar-color:#333 transparent}
 .d-history-section{display:flex;align-items:center;justify-content:space-between;padding:0 12px;margin:27px 0 14px;min-height:30px;color:#858585}
 .d-history-section.d-recents-section{margin-top:31px;margin-bottom:13px}
+.d-history-group{margin-bottom:6px}
+.d-history-group-header{font-size:13px;font-weight:600;color:#858585;padding:12px 12px 6px;letter-spacing:-0.01em;user-select:none}
+.d-history-group:first-child .d-history-group-header{padding-top:4px}
 .d-root .d-section-toggle{display:flex;align-items:center;gap:9px;font-size:20px;font-weight:600;color:#858585;min-height:30px}
 .d-section-toggle>svg{visibility:hidden;width:16px;height:16px;transition:transform .12s ease}
 .d-section-toggle[aria-expanded=false]>svg{transform:rotate(-90deg)}
@@ -50,7 +53,7 @@
 .d-turn-preview{max-height:170px}
 .d-chat-message{position:relative}
 .d-chat-message-user{margin:30px 0 80px}
-.d-chat-message-user>.d-user-message{margin:0 0 0 auto}
+.d-chat-message-user>.d-user-message{margin:0 0 0 auto;max-width:70%;background:var(--d-user-bubble,#2f2f2f);border-radius:22px;padding:10px 18px;line-height:1.55;word-break:break-word}
 .d-chat-message-assistant{margin:0 0 40px}
 .d-chat-message-assistant>.d-assistant-message{margin:0}
 .d-root .d-live-actions{position:relative;gap:15px;margin:12px 0 0;color:#888;min-height:28px;font-size:17px}

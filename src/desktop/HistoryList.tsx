@@ -10,6 +10,55 @@ export type HistoryListProps = {
   onArchive: (title: string) => void; onOptions?: (title: string, action: string) => void; onCreateProject?: () => void; onProject?: (title: string) => void;
 };
 
+function getTitleTimestamp(title: string): number {
+  if (typeof localStorage === 'undefined') return 0;
+  try {
+    const raw = localStorage.getItem('desktop-chat-content');
+    if (raw) {
+      const data = JSON.parse(raw);
+      const msgs = data[title];
+      if (Array.isArray(msgs) && msgs.length > 0) {
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          if (typeof msgs[i]?.timestamp === 'number') return msgs[i].timestamp;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return 0;
+}
+
+function groupTitlesByDate(titles: string[]) {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfYesterday = startOfToday - 86400000;
+  const startOf7Days = startOfToday - 6 * 86400000;
+  const startOf30Days = startOfToday - 29 * 86400000;
+
+  const groups: { label: string; items: string[] }[] = [
+    { label: 'Today', items: [] },
+    { label: 'Yesterday', items: [] },
+    { label: 'Previous 7 Days', items: [] },
+    { label: 'Previous 30 Days', items: [] },
+  ];
+
+  for (const title of titles) {
+    const ts = getTitleTimestamp(title);
+    if (!ts || ts >= startOfToday) {
+      groups[0].items.push(title);
+    } else if (ts >= startOfYesterday) {
+      groups[1].items.push(title);
+    } else if (ts >= startOf7Days) {
+      groups[2].items.push(title);
+    } else {
+      groups[3].items.push(title);
+    }
+  }
+
+  return groups.filter(g => g.items.length > 0);
+}
+
 export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, onPin, onArchive,
   showPinned = true, projects = [], experience = 'ChatGPT', onOptions, onCreateProject, onProject }: HistoryListProps) {
   const preview = useHoverPreview<{ title: string; top: number }>(180);
@@ -77,7 +126,16 @@ export function HistoryList({ titles, pinned, archived, active, onNew, onOpen, o
       <div className="d-history-section d-recents-section"><button className="d-section-toggle" aria-expanded={!collapsed} onClick={() => { setCollapsed(!collapsed); preview.close(); }}><span>Recents</span><I name="down" size={15}/></button>
         <div className="d-section-tools"><B icon="dots" label="Recent chat options" onClick={event => toggleOptions('Recents', event.currentTarget)}/><B icon="edit" label="New chat" onClick={onNew}/></div>
       </div>
-      <Disclosure open={!collapsed}>{sortedTitles.map(row)}</Disclosure>
+      <Disclosure open={!collapsed}>
+        {experience === 'ChatGPT' && !alphabetical
+          ? groupTitlesByDate(sortedTitles).map(group => (
+              <div key={group.label} className="d-history-group">
+                <div className="d-history-group-header">{group.label}</div>
+                {group.items.map(row)}
+              </div>
+            ))
+          : sortedTitles.map(row)}
+      </Disclosure>
     </div>
     {options && root && createPortal(<div className="d-history-options" style={{ ...optionsPosition, position: 'fixed' }} ref={optionsRef} role="menu" aria-label={options + ' options'}>{options === 'Projects' ? <button role="menuitem" onClick={() => { onCreateProject?.(); setOptions(null); }}>New project</button> : <><button role="menuitemradio" aria-checked={!alphabetical} onClick={() => { setAlphabetical(false); setOptions(null); }}>Recent first{!alphabetical && <I name="check" size={18}/>}</button><button role="menuitemradio" aria-checked={alphabetical} onClick={() => { setAlphabetical(true); setOptions(null); }}>Alphabetical{alphabetical && <I name="check" size={18}/>}</button></>}</div>, root)}
     {experience === 'ChatGPT' && chatOptions && root && createPortal(<div className="d-history-chat-options" style={{ left: chatOptions.left, top: chatOptions.top, position: 'fixed' }} ref={chatOptionsRef} role="menu" aria-label={'Options for ' + chatOptions.title}>
