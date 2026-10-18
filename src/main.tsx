@@ -35,3 +35,5 @@ import './mobile/endpoints.css';
 import './mobile/theme.css';
 
 import './mobile/motion.css';
+
+import './mobile/response-actions.css';

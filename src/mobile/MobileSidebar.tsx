@@ -24,7 +24,7 @@ export function MobileSidebar(props: Props) {
   const loading = !history || history.source !== props.titles || history.archived !== props.archived;
   const titles = loading ? [] : history.titles;
   const groups = [['Disematkan', titles.filter(title => props.pinned.includes(title))], ['Terkini', titles.filter(title => !props.pinned.includes(title))]] as const;
-  if (searching) return <div className="m-overlay"><MobileSearch titles={props.titles} archived={props.archived} documents={props.documents || []} onClose={() => { setSearching(false); requestAnimationFrame(() => props.closeRef.current?.focus()); }} onOpen={props.onOpen} onProject={props.onProject || (() => props.onNavigate('projects'))}/></div>;
+  if (searching) return <div className="m-overlay"><MobileSearch titles={props.titles} archived={props.archived} documents={props.documents || []} onClose={() => { setSearching(false); requestAnimationFrame(() => props.closeRef.current?.focus({ preventScroll: true })); }} onOpen={props.onOpen} onProject={props.onProject || (() => props.onNavigate('projects'))}/></div>;
   return <div className="m-overlay m-sidebar-overlay">
     <button className="m-backdrop" aria-label="Close sidebar" onClick={props.onClose}/>
     <aside className="m-drawer m-sidebar" role="dialog" aria-modal="true" aria-label="Sidebar">

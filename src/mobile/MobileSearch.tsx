@@ -10,10 +10,10 @@ export function MobileSearch({ titles, archived, documents, onClose, onOpen, onP
   const [files, setFiles] = useState<SearchItem[]>([]), [loading, setLoading] = useState(true), [error, setError] = useState('');
   const [selected, setSelected] = useState<SearchItem | null>(null), [preview, setPreview] = useState('');
   const close = useRef<HTMLButtonElement>(null);
-  useEffect(() => { close.current?.focus(); }, []);
+  useEffect(() => { close.current?.focus({ preventScroll: true }); }, []);
   useEffect(() => {
     let active = true;
-    close.current?.focus();
+    close.current?.focus({ preventScroll: true });
     setPreview('');
     if (selected && !selected.file) setPreview(selected.text || '');
     else if (selected?.file && (selected.file.type.startsWith('text/') || /\.(txt|md|json|csv|html?|js|ts|css|py|log)$/i.test(selected.title))) {

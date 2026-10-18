@@ -3,6 +3,9 @@ import { UIIcon } from '../components/UIIcon';
 // Mobile reference silhouettes differ from the web SDK's dashed-chat and
 // microphone-with-base glyphs. Keep these local to the mobile controls.
 export function MobileControlIcon({ name }: { name: string }) {
+  if (name === 'share-android') return <svg data-icon="share-android" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="5" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="m8.3 10.7 7.4-4.4m-7.4 7 7.4 4.4"/>
+  </svg>;
   if (name === 'mic') return <svg data-icon="mic" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <rect x="8.5" y="2" width="7" height="12" rx="3.5"/><path d="M5 10.5v1a7 7 0 0 0 14 0v-1M12 18.5V22"/>
   </svg>;
