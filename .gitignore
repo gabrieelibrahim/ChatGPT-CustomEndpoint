@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.java-tmp/
 .sites-runtime/
 *.local
 .env
