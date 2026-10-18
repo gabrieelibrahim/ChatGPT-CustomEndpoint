@@ -23,6 +23,7 @@
     "test:native": "npm run prepare:desktop && node scripts/desktop.mjs --cargo test --manifest-path src-tauri/Cargo.toml --release --lib -- --nocapture",
     "test:desktop-window": "node tests/desktop-window-smoke.mjs",
     "dev:mobile": "vite --mode mobile --host 0.0.0.0 --port 1420 --strictPort",
+    "icons:android": "node scripts/generateAndroidIcons.mjs",
     "android:init": "node scripts/mobile.mjs android init",
     "android:dev": "node scripts/mobile.mjs android dev",
     "android:build": "node scripts/mobile.mjs android build --apk --target aarch64 --debug",
