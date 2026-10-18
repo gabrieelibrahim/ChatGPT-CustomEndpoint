@@ -27,6 +27,23 @@ function fixture() {
 }
 function answer() { return new Response(JSON.stringify({ choices: [{ message: { content: 'Halo mobile', reasoning_content: 'Provider reasoning' } }] }), { headers: { 'content-type': 'application/json' } }); }
 
+test('mobile think harder overrides only the current request and respects endpoint reasoning opt-in', async () => {
+  for (const enabled of [true, false]) {
+    const app = fixture();
+    try {
+      const store = JSON.parse(localStorage.getItem('client-endpoint-profiles-v1'));
+      store.profiles[0].sendReasoning = enabled;
+      localStorage.setItem('client-endpoint-profiles-v1', JSON.stringify(store));
+      const savedSettings = localStorage.getItem('client-settings-v1');
+      let payload;
+      global.fetch = async (_, init) => { payload = JSON.parse(init.body); return answer(); };
+      await app.render().send('Think harder', [], false, { memories: false, instructions: true, reasoningEffort: 'high' });
+      assert.equal(payload.reasoning_effort, enabled ? 'high' : undefined);
+      assert.equal(localStorage.getItem('client-settings-v1'), savedSettings);
+    } finally { app.restore(); }
+  }
+});
+
 test('mobile sends via shared provider transport and preserves desktop history and reasoning metadata', async () => {
   const app = fixture();
   try {
