@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { defaultSettings, loadSettings, saveSettings, type ClientSettings } from '../lib/clientSettings';
+import { applyClientTheme } from '../lib/clientTheme';
 
 export function useClientSettings(notify: (message: string) => void) {
   const [settings, setSettings] = useState(loadSettings);
   useEffect(() => { const refresh = () => setSettings(loadSettings()); window.addEventListener('client-settings-changed', refresh); const storage = (event: StorageEvent) => { if (event.key === 'client-settings-v1') refresh(); }; window.addEventListener('storage', storage); return () => { window.removeEventListener('client-settings-changed', refresh); window.removeEventListener('storage', storage); }; }, []);
   useEffect(() => {
     const root = document.documentElement, media = window.matchMedia('(prefers-color-scheme: light)'), motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const apply = () => { root.dataset.clientTheme = settings.theme === 'system' ? media.matches ? 'light' : 'dark' : settings.theme; root.dataset.theme = root.dataset.clientTheme; root.dataset.reduceMotion = String(settings.motion === 'on' || (settings.motion === 'system' && motion.matches)); };
+    const apply = () => { applyClientTheme(settings.theme, media.matches); root.dataset.reduceMotion = String(settings.motion === 'on' || (settings.motion === 'system' && motion.matches)); };
     apply(); media.addEventListener('change', apply); motion.addEventListener('change', apply);
     root.dataset.clientTranslucent = String(settings.translucent); root.dataset.clientFullWidth = String(settings.fullWidth);
     const fonts = { system: 'var(--font-sans, ui-sans-serif, -apple-system, system-ui, "Segoe UI", "Noto Sans", "Helvetica", "Arial", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif)', serif: 'Georgia, "Times New Roman", serif', mono: 'var(--font-mono, ui-monospace, monospace)' };

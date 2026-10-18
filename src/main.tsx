@@ -32,3 +32,4 @@ import './mobile/navigation.css';
 import './mobile/search.css';
 import './mobile/sdk-controls.css';
 import './mobile/endpoints.css';
+import './mobile/theme.css';
