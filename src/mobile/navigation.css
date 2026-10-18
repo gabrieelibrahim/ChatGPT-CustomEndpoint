@@ -5,6 +5,7 @@
 .m-sidebar header strong{font-size:22px;font-weight:600;line-height:28px;letter-spacing:0}
 .m-app .m-sidebar .m-sidebar-search,.m-app .m-sidebar .m-sidebar-account{width:46px;height:46px;min-height:46px;border-radius:50%;border:1px solid #4c4c4c;background:#303030;padding:9px;justify-content:center;margin-left:auto}
 .m-sidebar-search svg,.m-sidebar-account svg{width:28px!important;height:28px!important}
+.m-app .m-sidebar .m-sidebar-account{width:49px;height:49px;min-height:49px}
 .m-sidebar-scroll{flex:1;min-height:0;overflow:auto;scrollbar-width:none;margin-right:-8px;padding-right:8px;mask-image:linear-gradient(#000 96%,transparent)}
 .m-sidebar nav{padding:3px 0 0;border:0;display:grid}
 .m-app .m-sidebar nav button{height:49px;min-height:49px;padding:0;gap:14px;font-size:18px;font-weight:600;line-height:24px;white-space:nowrap}
@@ -16,6 +17,10 @@
 .m-sidebar-history button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .m-sidebar-history button svg{width:23px!important;height:23px!important}
 .m-sidebar-history>p{font-size:14px;color:#aaa;padding:20px 0}
+.m-sidebar-skeleton{margin-top:29px;padding-top:29px;border-top:1px solid #414141}
+.m-sidebar-skeleton-row{height:49px;display:flex;align-items:center}
+.m-sidebar-skeleton-row>span{display:block;width:min(162px,100%);height:20px;border-radius:5px;background:linear-gradient(100deg,#303030 25%,#414141 45%,#303030 65%);background-size:250% 100%;animation:m-sidebar-shimmer 1.5s ease-in-out infinite}
+@keyframes m-sidebar-shimmer{from{background-position:100% 0}to{background-position:0 0}}
 .m-sidebar footer{display:flex;align-items:center;justify-content:space-between;padding-top:12px;background:#212121;gap:12px}
 .m-app .m-sidebar-new{height:49px;min-height:49px;background:var(--m-action,#2b6bca);border:1px solid #7096ff80;border-radius:28px;padding:0 20px;font-size:18px;line-height:24px;color:#fff;gap:9px;font-weight:500}
 .m-sidebar-new svg{width:23px!important;height:23px!important}
@@ -83,5 +88,8 @@ html[data-client-theme=light] .m-sidebar,html[data-client-theme=light] .m-sideba
 html[data-client-theme=light] .m-setting-card,html[data-client-theme=light] .m-library-card{background:#f3f3f3;border-color:#ddd}
 html[data-client-theme=light] .m-setting-row{border-color:#ddd}
 html[data-client-theme=light] .m-setting-editor input,html[data-client-theme=light] .m-setting-editor textarea,html[data-client-theme=light] .m-page-back,html[data-client-theme=light] .m-page-add,html[data-client-theme=light] .m-sidebar-search,html[data-client-theme=light] .m-sidebar-account{background:#eee;border-color:#ddd}
-@media(prefers-reduced-motion:reduce){.m-sidebar-scroll{scroll-behavior:auto}}
+@media(prefers-reduced-motion:reduce){.m-sidebar-scroll{scroll-behavior:auto}.m-sidebar-skeleton-row>span{animation:none}}
+html[data-reduce-motion=true] .m-sidebar-skeleton-row>span{animation:none}
+html[data-client-theme=light] .m-sidebar-skeleton{border-color:#ddd}
+html[data-client-theme=light] .m-sidebar-skeleton-row>span{background:linear-gradient(100deg,#ddd 25%,#eee 45%,#ddd 65%);background-size:250% 100%}
 @media(max-width:350px){.m-sidebar{padding-left:24px;padding-right:16px}.m-setting-row{font-size:16px;gap:10px}.m-setting-detail{max-width:45%}.m-library-grid{grid-template-columns:1fr}}

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { UIIcon } from '../components/UIIcon';
 
 const shapes: Record<string, ReactNode> = {
+  profile: <><circle cx="12" cy="6.5" r="4"/><path d="M3.5 22a8.5 8.5 0 0 1 17 0"/></>,
   personal: <><circle cx="12" cy="12" r="9"/><path d="M7.5 13.5a5 5 0 0 0 9 0"/></>,
   memory: <><path d="M12 20c-2.5-2.1-5.5-2.5-9-2.5V4.5c3.5 0 6.5.4 9 2.5 2.5-2.1 5.5-2.5 9-2.5v13c-3.5 0-6.5.4-9 2.5ZM12 7v13"/><path d="M7 3v12"/></>,
   'settings-plugins': <>{[6, 18].flatMap(x => [6, 18].map(y => <circle key={x + '-' + y} cx={x} cy={y} r="3.5"/>))}</>,
