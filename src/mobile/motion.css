@@ -6,6 +6,11 @@
 .m-presence.m-leaving .m-backdrop{animation:m-backdrop-out 240ms ease-in both}
 .m-presence.m-leaving .m-drawer{animation:m-drawer-out 240ms cubic-bezier(.4,0,1,1) both}
 .m-presence.m-leaving .m-sheet{animation:m-sheet-out 240ms cubic-bezier(.4,0,1,1) both}
+/* Fade the sidebar and scrim as one layer, so a dark rectangle cannot linger
+   behind the departing panel. Backdrops are hit areas, not pressable controls. */
+.m-presence.m-leaving .m-sidebar-overlay{animation:m-backdrop-out 240ms cubic-bezier(.4,0,1,1) both}
+.m-presence.m-leaving .m-sidebar-overlay>.m-backdrop{animation:none;opacity:1}
+.m-app .m-backdrop,.m-app .m-backdrop:active:not(:disabled){transform:none;transition:none;-webkit-tap-highlight-color:transparent}
 .m-app button{transition:background-color 140ms ease,color 140ms ease,opacity 140ms ease,transform 140ms ease}
 .m-app button:active:not(:disabled){transform:scale(.96)}
 .m-app .m-mode button[aria-selected=true]{transition:background-color 200ms ease}
