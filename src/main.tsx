@@ -40,3 +40,5 @@ import './mobile/response-actions.css';
 
 import './mobile/edge-fades.css';
 import './mobile/composer-motion.css';
+
+import './mobile/voice-attachments.css';

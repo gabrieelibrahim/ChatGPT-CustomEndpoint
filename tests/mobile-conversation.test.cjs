@@ -34,7 +34,9 @@ test('mobile sends via shared provider transport and preserves desktop history a
     localStorage.setItem('desktop-titles', JSON.stringify(['Existing']));
     let payload;
     global.fetch = async (_, init) => { payload = JSON.parse(init.body); return answer(); };
-    assert.equal(await app.render().send('Halo'), true);
+    let spokenReply;
+    assert.equal(await app.render().send('Halo', [], false, { memories: false, instructions: true }, reply => { spokenReply = reply; }), true);
+    assert.equal(spokenReply, 'Halo mobile');
     const view = app.render();
     assert.equal(payload.model, 'test'); assert.equal(payload.messages[0].content, 'Halo');
     assert.equal(view.busy, false); assert.equal(view.answerText(view.messages.at(-1)), 'Halo mobile');
