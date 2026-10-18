@@ -7,6 +7,7 @@ import { libraryFiles } from '../lib/fileLibrary';
 import { downloadFile } from '../desktop/ClientCollections';
 
 type Props = {
+  screen: string; onScreen: (screen: string) => void;
   profile: LocalProfile | null; settings: ClientSettings; provider?: string; model?: string; titles: string[]; archived: string[];
   update: (change: Partial<ClientSettings>) => void; onProfile: (profile: LocalProfile) => void;
   onEndpoint: () => void; onModels: () => void; onPlugins: () => void; onOpen: (title: string) => void;
@@ -21,8 +22,10 @@ function Row({ icon, title, detail, onClick, children, disabled = false }: { ico
 const names: Record<string, string> = { root: 'Pengaturan', personalization: 'Personalisasi', memory: 'Memori', account: 'Akun', usage: 'Penggunaan dan batasan', appearance: 'Tampilan', accent: 'Warna aksen', general: 'Umum', notifications: 'Notifikasi', voice: 'Suara', security: 'Keamanan dan masuk', storage: 'Penyimpanan', privacy: 'Pusat privasi', data: 'Kontrol data', about: 'Tentang' };
 
 export function MobileSettings(p: Props) {
-  const [screen, setScreen] = useState('root'), [name, setName] = useState(p.profile?.name || ''), [memory, setMemory] = useState(''), [signOut, setSignOut] = useState(false);
+  const screen = p.screen, setScreen = p.onScreen;
+  const [name, setName] = useState(p.profile?.name || ''), [memory, setMemory] = useState(''), [signOut, setSignOut] = useState(false);
   const [storage, setStorage] = useState<string>(''), [voices, setVoices] = useState(() => window.speechSynthesis?.getVoices() || []);
+  useEffect(() => { const back = (event: Event) => { if (signOut) { event.preventDefault(); setSignOut(false); } }; window.addEventListener('client-settings-back', back); return () => window.removeEventListener('client-settings-back', back); }, [signOut]);
   useEffect(() => { const synthesis = window.speechSynthesis; const refresh = () => setVoices(synthesis?.getVoices() || []); synthesis?.addEventListener('voiceschanged', refresh); refresh(); return () => synthesis?.removeEventListener('voiceschanged', refresh); }, []);
   const s = p.settings, update = p.update;
   const select = (label: string, value: string, options: [string, string][], change: (value: string) => void) => <select aria-label={label} value={value} onChange={event => change(event.target.value)}>{options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>;

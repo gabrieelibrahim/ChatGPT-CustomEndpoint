@@ -21,6 +21,7 @@ import { MobileTemporaryHome } from './MobileTemporaryHome';
 import { MobileControlIcon } from './MobileControlIcon';
 import { MobileSidebar, type MobileDestination } from './MobileSidebar';
 import { MobileSettings } from './MobileSettings';
+import { bindSettingsBack } from './settingsBack';
 import { MobileLibrary } from './MobileLibrary';
 import { useClientData } from '../desktop/ClientCollections';
 import { smartPunctuation } from '../lib/clientSettings';
@@ -36,6 +37,7 @@ export function MobileApp() {
   const [profile, setProfile] = useState(loadLocalProfile), [name, setName] = useState('');
   const [page, setPage] = useState<'chat' | 'settings' | 'endpoints' | MobileDestination>('chat');
   const [returnPage, setReturnPage] = useState<'chat' | 'settings'>('chat');
+  const [settingsScreen, setSettingsScreen] = useState('root');
   const [searchProject, setSearchProject] = useState('');
   const [drawer, setDrawer] = useState(false), [sheet, setSheet] = useState('');
   const [thinkHarder, setThinkHarder] = useState(false);
@@ -109,7 +111,16 @@ export function MobileApp() {
     return reply;
   }
   function newChat(temp = false) { setThinkHarder(false); setSpeechMode(''); chat.reset(temp); setDraft(''); setFiles([]); setDrawer(false); setPage('chat'); setSheet(''); setAboveBottom(false); setPersonalization({ memories: false, instructions: true }); }
-  function navigate(next: typeof page) { setSpeechMode(''); if (next !== 'chat' && next !== 'settings') setReturnPage(page === 'settings' ? 'settings' : 'chat'); if (next === 'settings') setName(profile?.name || ''); setPage(next); setDrawer(false); setSheet(''); }
+  function navigate(next: typeof page) { setSpeechMode(''); if (next !== 'chat' && next !== 'settings') setReturnPage(page === 'settings' ? 'settings' : 'chat'); if (next === 'settings') { setName(profile?.name || ''); if (page === 'chat') setSettingsScreen('root'); } setPage(next); setDrawer(false); setSheet(''); }
+  function backFromSettings() {
+    if (!window.dispatchEvent(new Event('client-settings-back', { cancelable: true }))) return;
+    if (sheet) { setSheet(''); return; }
+    if (page !== 'settings') { navigate('settings'); return; }
+    if (settingsScreen !== 'root') setSettingsScreen('root'); else navigate('chat');
+  }
+  const settingsBack = useRef(backFromSettings); settingsBack.current = backFromSettings;
+  const inSettings = page === 'settings' || (page !== 'chat' && returnPage === 'settings');
+  useEffect(() => inSettings ? bindSettingsBack(() => settingsBack.current()) : undefined, [inSettings]);
   function temporaryChat() { const temp = !chat.temporary; newChat(temp); if (temp && localStorage.getItem('client-temporary-intro-v1') !== 'seen') setSheet('temporary'); }
   async function send() {
     if (uploading || chat.busy || (!draft.trim() && !files.length)) return;
@@ -130,7 +141,7 @@ export function MobileApp() {
   try { const value = JSON.parse(localStorage.getItem('desktop-pinned') || '[]'); if (Array.isArray(value)) pinned = value.filter(title => typeof title === 'string'); } catch { /* Empty lists are safe. */ }
 
   return <div className={`m-app${page === 'chat' && home ? ' m-home' : ''}${chat.temporary ? ' m-temporary' : ''}`} style={{ height, '--m-action': preferences.settings.accent === '#2b6bca' ? '#2861df' : preferences.settings.accent } as CSSProperties} onKeyDown={event => {
-    if (event.key === 'Escape') { setDrawer(false); setSheet(''); closeSpeech(); }
+    if (event.key === 'Escape') { if (inSettings && !drawer && !speechMode) backFromSettings(); else { setDrawer(false); setSheet(''); closeSpeech(); } }
     if (event.key === 'Tab' && (drawer || sheet || speechMode === 'voice')) {
       const dialog = event.currentTarget.querySelector<HTMLElement>('[role="dialog"]');
       const controls = dialog?.querySelectorAll<HTMLElement>('button:not(:disabled),input,select,textarea,[tabindex="0"]');
@@ -143,7 +154,7 @@ export function MobileApp() {
         <span/>
         <div className="m-header-pill"><Button icon="edit" label="New chat" onClick={() => newChat()}/><Button icon="dots" label="Conversation options" onClick={() => setSheet('conversation')}/></div>
       </header>}
-      {page === 'endpoints' ? <div className="m-endpoints d-mobile"><EndpointSettings onSaved={() => { setNotice('Endpoint tersimpan.'); navigate(returnPage); }} onNotice={setNotice}/></div> : page === 'settings' ? <MobileSettings profile={profile} settings={preferences.settings} provider={chat.endpoint?.name} model={chat.endpoint?.model} titles={chat.titles} archived={archived} update={preferences.update} onProfile={setProfile} onEndpoint={() => navigate('endpoints')} onModels={() => setSheet('models')} onPlugins={() => navigate('plugins')} onOpen={openChat} onArchive={archive} onNotice={setNotice} onClose={() => navigate('chat')} onSignOut={() => { try { chat.stop(); signOutMobileProfile(); newChat(); setName(''); setProfile(null); } catch { setNotice('Profil belum dapat dilepas.'); } }}/>
+      {page === 'endpoints' ? <div className="m-endpoints d-mobile"><EndpointSettings onSaved={() => { setNotice('Endpoint tersimpan.'); navigate(returnPage); }} onNotice={setNotice}/></div> : page === 'settings' ? <MobileSettings screen={settingsScreen} onScreen={setSettingsScreen} profile={profile} settings={preferences.settings} provider={chat.endpoint?.name} model={chat.endpoint?.model} titles={chat.titles} archived={archived} update={preferences.update} onProfile={setProfile} onEndpoint={() => navigate('endpoints')} onModels={() => setSheet('models')} onPlugins={() => navigate('plugins')} onOpen={openChat} onArchive={archive} onNotice={setNotice} onClose={() => navigate('chat')} onSignOut={() => { try { chat.stop(); signOutMobileProfile(); newChat(); setName(''); setProfile(null); } catch { setNotice('Profil belum dapat dilepas.'); } }}/>
       : page !== 'chat' ? <MobileLibrary page={page} store={clientData} titles={chat.titles} initialProject={searchProject} onClose={() => { setSearchProject(''); navigate(returnPage); }} onOpen={openChat} onDraft={text => { newChat(); setDraft(text); }} onNotice={setNotice}/> : <>
         <div className="m-messages" ref={scroll} onScroll={() => { const el = scroll.current; if (el) setAboveBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 40); }}>
           <div className="m-message-stack" ref={streamContent}>

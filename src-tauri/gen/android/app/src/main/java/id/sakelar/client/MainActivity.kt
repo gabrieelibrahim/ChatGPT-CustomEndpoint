@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.webkit.WebView
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -14,6 +15,15 @@ import androidx.webkit.WebMessageCompat
 import org.json.JSONObject
 
 class MainActivity : TauriActivity() {
+  private var settingsBackReply: androidx.webkit.JavaScriptReplyProxy? = null
+  private val settingsBack = object : OnBackPressedCallback(false) {
+    override fun handleOnBackPressed() {
+      try { settingsBackReply?.postMessage("back") } catch (_: Exception) {
+        isEnabled = false
+        onBackPressedDispatcher.onBackPressed()
+      }
+    }
+  }
   private var taskWebView: WebView? = null
   private val speechCapture by lazy { SpeechCaptureBridge(this) }
   private var pendingComposerKeyboard = false
@@ -38,7 +48,7 @@ class MainActivity : TauriActivity() {
   override fun onResume() { super.onResume(); speechCapture.onResume() }
   override fun onPause() { speechCapture.onPause(); super.onPause(); resumeTaskWebView() }
   override fun onStop() { speechCapture.onStop(); super.onStop(); resumeTaskWebView() }
-  override fun onDestroy() { speechCapture.destroy(); taskWebView = null; super.onDestroy() }
+  override fun onDestroy() { settingsBack.isEnabled = false; settingsBackReply = null; speechCapture.destroy(); taskWebView = null; super.onDestroy() }
   override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     speechCapture.onPermissionResult(requestCode, grantResults)
@@ -75,6 +85,7 @@ class MainActivity : TauriActivity() {
     })
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    onBackPressedDispatcher.addCallback(this, settingsBack)
     applySystemBars(mode())
   }
 
@@ -85,6 +96,7 @@ class MainActivity : TauriActivity() {
 
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
+    settingsBack.isEnabled = false; settingsBackReply = null
     taskWebView = webView
     webView.setBackgroundColor(if (mode() == "light" || (mode() == "system" && resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK != Configuration.UI_MODE_NIGHT_YES)) Color.WHITE else Color.BLACK)
     // CSS owns the palette. Prevent WebView from darkening explicit Light colors.
@@ -94,6 +106,12 @@ class MainActivity : TauriActivity() {
     if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
       val origins = mutableSetOf("http://tauri.localhost", "https://tauri.localhost")
       if (BuildConfig.DEBUG) origins.addAll(listOf("http://127.0.0.1:1420", "http://localhost:1420", "http://10.0.2.2:1420"))
+      WebViewCompat.addWebMessageListener(webView, "SuperGPTSettingsBack", origins) { _, message, _, mainFrame, reply ->
+        if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
+        val value = message.data
+        if (value != "enabled" && value != "disabled") return@addWebMessageListener
+        runOnUiThread { settingsBackReply = if (value == "enabled") reply else null; settingsBack.isEnabled = value == "enabled" }
+      }
       WebViewCompat.addWebMessageListener(webView, "SuperGPTComposer", origins) { _, message, _, mainFrame, _ ->
         if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
         val action = message.data ?: return@addWebMessageListener
