@@ -28,6 +28,9 @@ export function MobileComposer(props: Props) {
     <textarea ref={input} aria-label="Message" placeholder="Ask SuperGPT" rows={1} value={value} onFocus={props.onFocus} onBlur={props.onBlur} onChange={event => props.onChange(event.target.value)}/>
     <button type="button" aria-label="Dictate" onClick={props.onDictate}><MobileControlIcon name="mic"/></button>
     <button type="button" className={`m-send${props.idleSend && !canSend && !busy ? ' m-send-empty' : ''}`} aria-label={busy ? 'Stop generation' : canSend || props.idleSend ? 'Send message' : 'Voice mode'} disabled={uploading || (props.idleSend && !canSend && !busy)}
+      // Keep the input focused until click: first-focus collapse otherwise
+      // moves this button between pointerdown and pointerup and loses the tap.
+      onPointerDown={event => event.preventDefault()}
       onClick={busy ? props.onStop : canSend ? props.onSend : props.onVoice}><Icon name={busy ? 'stop' : canSend || props.idleSend ? 'arrow' : 'wave'}/></button>
   </div>;
 }
