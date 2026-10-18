@@ -6,7 +6,7 @@ import type { LocalDocument } from '../desktop/ClientCollections';
 export type MobileDestination = 'spaces' | 'projects' | 'scheduled' | 'plugins';
 type Props = {
   closeRef: RefObject<HTMLButtonElement | null>; name: string; titles: string[]; pinned: string[]; archived: string[];
-  onClose: () => void; onOpen: (title: string) => void; onNew: () => void;
+  onClose: () => void; onOpen: (title: string) => void; onNew: () => void; activeTitle?: string;
   onSettings: () => void; onNavigate: (page: MobileDestination) => void;
   documents?: LocalDocument[]; onProject?: (id: string) => void;
 };
@@ -37,7 +37,7 @@ export function MobileSidebar(props: Props) {
           <button onClick={() => props.onNavigate('scheduled')}><Icon name="clock"/>Terjadwal</button>
           <button onClick={() => props.onNavigate('plugins')}><Icon name="plugin"/>Plugin</button>
         </nav>
-        <div className="m-sidebar-history" aria-busy={loading}>{loading ? <div className="m-sidebar-skeleton" role="status" aria-label="Menyiapkan daftar obrolan">{[0, 1, 2].map(row => <div className="m-sidebar-skeleton-row" key={row} aria-hidden="true"><span/></div>)}</div> : <>{groups.map(([label, items]) => items.length > 0 && <section key={label}><h2>{label}</h2>{items.map(title => <button key={title} onClick={() => props.onOpen(title)}>{label === 'Disematkan' && <Icon name="comment"/>}<span>{title}</span></button>)}</section>)}
+        <div className="m-sidebar-history" aria-busy={loading}>{loading ? <div className="m-sidebar-skeleton" role="status" aria-label="Menyiapkan daftar obrolan">{[0, 1, 2].map(row => <div className="m-sidebar-skeleton-row" key={row} aria-hidden="true"><span/></div>)}</div> : <>{groups.map(([label, items]) => items.length > 0 && <section key={label}><h2>{label}</h2>{items.map(title => <button key={title} aria-current={title === props.activeTitle ? "page" : undefined} onClick={() => props.onOpen(title)}>{label === 'Disematkan' && <Icon name="comment"/>}<span>{title}</span></button>)}</section>)}
           {!titles.length && <p>Belum ada obrolan.</p>}</>}
         </div>
       </div>

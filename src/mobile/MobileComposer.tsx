@@ -16,11 +16,18 @@ export function MobileComposer(props: Props) {
   useLayoutEffect(() => {
     const el = input.current;
     if (!el) return;
-    const resize = () => { el.style.height = '0px'; el.style.height = Math.min(136, Math.max(expanded ? 36 : 34, el.scrollHeight)) + 'px'; };
+    const resize = () => {
+      el.style.height = '0px';
+      const height = Math.min(136, Math.max(expanded ? 36 : 34, el.scrollHeight));
+      el.style.height = height + 'px';
+      el.parentElement?.style.setProperty('--m-input-height', height + 'px');
+    };
+    const afterWidthChange = (event: TransitionEvent) => { if (event.propertyName === 'width') resize(); };
     resize();
     window.addEventListener('resize', resize);
     document.fonts?.addEventListener('loadingdone', resize);
-    return () => { window.removeEventListener('resize', resize); document.fonts?.removeEventListener('loadingdone', resize); };
+    el.addEventListener('transitionend', afterWidthChange);
+    return () => { window.removeEventListener('resize', resize); document.fonts?.removeEventListener('loadingdone', resize); el.removeEventListener('transitionend', afterWidthChange); };
   }, [input, value, expanded, engaged]);
   const canSend = !!value.trim() || hasFiles;
   return <div className="m-composer">

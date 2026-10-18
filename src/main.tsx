@@ -37,3 +37,6 @@ import './mobile/theme.css';
 import './mobile/motion.css';
 
 import './mobile/response-actions.css';
+
+import './mobile/edge-fades.css';
+import './mobile/composer-motion.css';

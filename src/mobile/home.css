@@ -1,7 +1,8 @@
 /* Home geometry normalized from the supplied 614 × 1280 captures to 390 × 813.
    Android density is not inferred from a screenshot. Native TempChatIcon is 24. */
-@font-face{font-family:SuperGPT Roboto;src:local("Roboto"),url("/fonts/Roboto-Variable.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
-.m-app{font-family:SuperGPT Roboto,Roboto,system-ui,sans-serif;--m-home-edge:12.1px;--m-home-rest-bottom:34.3px}
+/* Scope the installed Apps SDK UI semantic font token to mobile, avoiding
+   Tailwind's merged default font token. No proprietary font file is implied. */
+.m-app{--font-sans:ui-sans-serif,-apple-system,system-ui,"Segoe UI","Noto Sans","Helvetica","Arial","Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol",sans-serif;font-family:var(--font-sans);--m-home-edge:12.1px;--m-home-rest-bottom:34.3px}
 .m-home-header{position:relative;height:69.3px;padding:12.1px 14px;gap:0}
 .m-app .m-home-header .m-round{width:45.1px;height:45.1px;min-height:45.1px;padding:8px;background:#303030;flex-shrink:0}
 .m-home-header .m-round svg{width:24px!important;height:24px!important}
