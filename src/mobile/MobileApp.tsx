@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { UIIcon as Icon } from '../components/UIIcon';
 import { RichText } from '../components/RichText';
 import { EndpointSettings } from '../desktop/EndpointSettings';
 import { dictate } from '../lib/dictation';
 import { useClientSettings } from '../desktop/useClientSettings';
-import { loadLocalProfile, profileInitials, saveLocalProfile } from '../lib/localProfile';
+import { loadLocalProfile, saveLocalProfile } from '../lib/localProfile';
 import { loadEndpointKeys, saveEndpointStore } from '../lib/endpointProfiles';
 import { saveLibraryFile, type FileRef } from '../lib/fileLibrary';
 import { useMobileConversation } from '../lib/useMobileConversation';
@@ -13,6 +13,12 @@ import { MobileHomeHeader } from './MobileHomeHeader';
 import { MobileComposer } from './MobileComposer';
 import { MobileTemporaryHome } from './MobileTemporaryHome';
 import { MobileControlIcon } from './MobileControlIcon';
+import { MobileSidebar, type MobileDestination } from './MobileSidebar';
+import { MobileSettings } from './MobileSettings';
+import { MobileLibrary } from './MobileLibrary';
+import { useClientData } from '../desktop/ClientCollections';
+import { smartPunctuation, speakText } from '../lib/clientSettings';
+import { signOutMobileProfile } from '../lib/mobileProfile';
 
 function Button({ icon, label, onClick, children, ...props }: { icon?: string; label: string; onClick: () => void; children?: ReactNode; disabled?: boolean; className?: string; 'aria-pressed'?: boolean }) {
   return <button type="button" aria-label={label} onClick={onClick} {...props}>{icon && <Icon name={icon} size={22}/ >}{children}</button>;
@@ -21,11 +27,18 @@ function Button({ icon, label, onClick, children, ...props }: { icon?: string; l
 export function MobileApp() {
   const chat = useMobileConversation();
   const [profile, setProfile] = useState(loadLocalProfile), [name, setName] = useState('');
-  const [page, setPage] = useState<'chat' | 'settings' | 'endpoints'>('chat');
-  const [drawer, setDrawer] = useState(false), [sheet, setSheet] = useState(''), [query, setQuery] = useState('');
+  const [page, setPage] = useState<'chat' | 'settings' | 'endpoints' | MobileDestination>('chat');
+  const [returnPage, setReturnPage] = useState<'chat' | 'settings'>('chat');
+  const [drawer, setDrawer] = useState(false), [sheet, setSheet] = useState('');
   const [draft, setDraft] = useState(''), [files, setFiles] = useState<FileRef[]>([]), [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState(''), [mode, setMode] = useState<'Chat' | 'Work'>(() => localStorage.getItem('desktop-chat-mode') === 'Work' ? 'Work' : 'Chat');
   const preferences = useClientSettings(setNotice);
+  const remindersEnabled = useRef(preferences.settings.notifications);
+  remindersEnabled.current = preferences.settings.notifications;
+  const clientData = useClientData(message => { if (!message.startsWith('Pengingat:') || remindersEnabled.current) setNotice(message); });
+  const [archived, setArchived] = useState<string[]>(() => { try { const value = JSON.parse(localStorage.getItem('desktop-archived') || '[]'); return Array.isArray(value) ? value.filter((title): title is string => typeof title === 'string') : []; } catch { return []; } });
+  function archive(titles: string[]) { try { localStorage.setItem('desktop-archived', JSON.stringify(titles)); setArchived(titles); } catch { setNotice('Arsip belum tersimpan.'); } }
+  function openChat(title: string) { chat.open(title); setPage('chat'); setDrawer(false); setAboveBottom(false); }
   const [height, setHeight] = useState(window.visualViewport?.height || window.innerHeight);
   const [composerState, setComposerState] = useState(() => initialComposerState(window.visualViewport?.height || window.innerHeight, window.innerWidth));
   const [aboveBottom, setAboveBottom] = useState(false);
@@ -40,7 +53,7 @@ export function MobileApp() {
   useEffect(() => { if (!aboveBottom) scroll.current?.scrollTo({ top: scroll.current.scrollHeight }); }, [chat.messages, aboveBottom]);
   useEffect(() => { if (drawer) closeDrawer.current?.focus(); else if (sheet) closeSheet.current?.focus(); }, [drawer, sheet]);
   function newChat(temp = false) { chat.reset(temp); setDraft(''); setFiles([]); setDrawer(false); setPage('chat'); setSheet(''); setAboveBottom(false); setPersonalization({ memories: false, instructions: true }); }
-  function navigate(next: typeof page) { if (next === 'settings') setName(profile?.name || ''); chat.stop(); setPage(next); setDrawer(false); setSheet(''); }
+  function navigate(next: typeof page) { if (next !== 'chat' && next !== 'settings') setReturnPage(page === 'settings' ? 'settings' : 'chat'); if (next === 'settings') setName(profile?.name || ''); chat.stop(); setPage(next); setDrawer(false); setSheet(''); }
   function temporaryChat() { const temp = !chat.temporary; newChat(temp); if (temp && localStorage.getItem('client-temporary-intro-v1') !== 'seen') setSheet('temporary'); }
   async function send() {
     if (uploading || chat.busy || (!draft.trim() && !files.length)) return;
@@ -56,11 +69,10 @@ export function MobileApp() {
     finally { setUploading(false); if (picker.current) picker.current.value = ''; }
   }
   const home = !chat.messages.length;
-  const visibleTitles = chat.titles.filter(title => title.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
-  let archived: string[] = []; let pinned: string[] = [];
-  try { archived = JSON.parse(localStorage.getItem('desktop-archived') || '[]'); pinned = JSON.parse(localStorage.getItem('desktop-pinned') || '[]'); } catch { /* Empty lists are safe. */ }
-  function historyGroup(label: string, items: string[]) { return items.length ? <section className="m-history"><h2>{label}</h2>{items.map(title => <button key={title} onClick={() => { chat.open(title); setPage('chat'); setDrawer(false); setAboveBottom(false); }}>{title}</button>)}</section> : null; }
-  return <div className={`m-app${page === 'chat' && home ? ' m-home' : ''}${chat.temporary ? ' m-temporary' : ''}`} style={{ height }} onKeyDown={event => {
+  let pinned: string[] = [];
+  try { const value = JSON.parse(localStorage.getItem('desktop-pinned') || '[]'); if (Array.isArray(value)) pinned = value.filter(title => typeof title === 'string'); } catch { /* Empty lists are safe. */ }
+
+  return <div className={`m-app${page === 'chat' && home ? ' m-home' : ''}${chat.temporary ? ' m-temporary' : ''}`} style={{ height, '--m-action': preferences.settings.accent === '#2b6bca' ? '#2861df' : preferences.settings.accent } as CSSProperties} onKeyDown={event => {
     if (event.key === 'Escape') { setDrawer(false); setSheet(''); }
     if (event.key === 'Tab' && (drawer || sheet)) {
       const dialog = event.currentTarget.querySelector<HTMLElement>('[role="dialog"]');
@@ -69,24 +81,17 @@ export function MobileApp() {
     }
   }}>
     <div className="m-content" inert={drawer || !!sheet || !profile}>
-      {page === 'chat' && home ? <MobileHomeHeader mode={mode} temporary={chat.temporary} onSidebar={() => setDrawer(true)} onTemporary={temporaryChat} onMode={value => { setMode(value); localStorage.setItem('desktop-chat-mode', value); }}/ > : <header className="m-header">
+      {page !== 'chat' && page !== 'endpoints' ? null : page === 'chat' && home ? <MobileHomeHeader mode={mode} temporary={chat.temporary} onSidebar={() => setDrawer(true)} onTemporary={temporaryChat} onMode={value => { setMode(value); localStorage.setItem('desktop-chat-mode', value); }}/ > : <header className="m-header">
         <Button icon="mobile-menu" label="Open sidebar" className="m-round" onClick={() => setDrawer(true)}/>
-        {page !== 'chat' ? <strong>{page === 'settings' ? 'Settings' : 'Custom Endpoint'}</strong> : <span/>}
-        {page === 'chat' ? home ? <Button icon={chat.temporary ? 'temporary-checked' : 'temporary'} label="Temporary chat" aria-pressed={chat.temporary} className="m-round" onClick={temporaryChat}/> : <div className="m-header-pill"><Button icon="edit" label="New chat" onClick={() => newChat()}/><Button icon="dots" label="Conversation options" onClick={() => setSheet('conversation')}/></div> : <Button icon="close" label="Back to chat" onClick={() => navigate('chat')}/>}
+        {page !== 'chat' ? <strong>Custom Endpoint</strong> : <span/>}
+        {page === 'chat' ? home ? <Button icon={chat.temporary ? 'temporary-checked' : 'temporary'} label="Temporary chat" aria-pressed={chat.temporary} className="m-round" onClick={temporaryChat}/> : <div className="m-header-pill"><Button icon="edit" label="New chat" onClick={() => newChat()}/><Button icon="dots" label="Conversation options" onClick={() => setSheet('conversation')}/></div> : <Button icon="close" label="Back to chat" onClick={() => navigate(returnPage)}/>}
       </header>}
-      {page === 'endpoints' ? <div className="m-endpoints d-mobile"><EndpointSettings onSaved={() => { setNotice('Endpoint tersimpan.'); navigate('chat'); }} onNotice={setNotice}/></div> : page === 'settings' ? <div className="m-settings">
-        <h1>Settings</h1><p>{profile?.name}</p>
-        <h2>Connections</h2><button onClick={() => navigate('endpoints')}><Icon name="globe"/>Custom Endpoint<Icon name="right"/></button>
-        <button onClick={() => setSheet('models')}><Icon name="cube"/>Model<span>{chat.endpoint?.model || 'Belum dipilih'}</span></button>
-        <h2>Personalization</h2><label>Nama<input value={name} onChange={event => setName(event.target.value)}/></label><button onClick={() => { try { setProfile(saveLocalProfile(name)); setNotice('Nama tersimpan.'); } catch (error) { setNotice(String(error)); } }}>Simpan nama</button>
-        <label>Theme<select value={preferences.settings.theme} onChange={event => preferences.update({ theme: event.target.value as 'dark' | 'light' | 'system' })}><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select></label>
-        <label>Custom instructions<textarea value={preferences.settings.instructions} onChange={event => preferences.update({ instructions: event.target.value })}/></label>
-        <h2>About</h2><img className="m-brand" src="/supergpt-logo.png" alt=""/><strong>SuperGPT by Sakelar</strong><p>Client AI independen. Provider dan model bisa dipilih sendiri.</p>
-      </div> : <>
+      {page === 'endpoints' ? <div className="m-endpoints d-mobile"><EndpointSettings onSaved={() => { setNotice('Endpoint tersimpan.'); navigate(returnPage); }} onNotice={setNotice}/></div> : page === 'settings' ? <MobileSettings profile={profile} settings={preferences.settings} provider={chat.endpoint?.name} model={chat.endpoint?.model} titles={chat.titles} archived={archived} update={preferences.update} onProfile={setProfile} onEndpoint={() => navigate('endpoints')} onModels={() => setSheet('models')} onPlugins={() => navigate('plugins')} onOpen={openChat} onArchive={archive} onNotice={setNotice} onClose={() => navigate('chat')} onSignOut={() => { try { chat.stop(); signOutMobileProfile(); newChat(); setName(''); setProfile(null); } catch { setNotice('Profil belum dapat dilepas.'); } }}/>
+      : page !== 'chat' ? <MobileLibrary page={page} store={clientData} titles={chat.titles} onClose={() => navigate(returnPage)} onOpen={openChat} onDraft={text => { newChat(); setDraft(text); }} onNotice={setNotice}/> : <>
         <div className="m-messages" ref={scroll} onScroll={() => { const el = scroll.current; if (el) setAboveBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 40); }}>
           {home && chat.temporary && <MobileTemporaryHome onLearnMore={() => setSheet('temporary')} onPersonalization={() => setSheet('personalization')} personalized={personalization.instructions || personalization.memories}/>}
           {chat.messages.map((message, index) => <article key={index} className={'m-message m-' + message.role}>
-            {message.role === 'user' ? <div className="m-bubble">{message.text}{message.attachments?.map(file => <div key={file.id} className="m-attached"><Icon name="page" size={16}/>{file.name}</div>)}</div> : <><RichText text={chat.answerText(message)}/>{chat.answerText(message) && !(chat.busy && index === chat.messages.length - 1) && <div className="m-message-actions"><Button icon="copy" label="Copy response" onClick={() => { void navigator.clipboard.writeText(chat.answerText(message)).then(() => setNotice('Disalin.'), () => setNotice('Penyalinan tidak tersedia.')); }}/></div>}</>}
+            {message.role === 'user' ? <div className="m-bubble">{message.text}{message.attachments?.map(file => <div key={file.id} className="m-attached"><Icon name="page" size={16}/>{file.name}</div>)}</div> : <><RichText text={chat.answerText(message)}/>{chat.answerText(message) && !(chat.busy && index === chat.messages.length - 1) && <div className="m-message-actions"><Button icon="copy" label="Copy response" onClick={() => { void navigator.clipboard.writeText(chat.answerText(message)).then(() => setNotice('Disalin.'), () => setNotice('Penyalinan tidak tersedia.')); }}/><Button icon="sound" label="Read response aloud" onClick={() => { try { speakText(chat.answerText(message)); } catch (error) { setNotice((error as Error).message); } }}/></div>}</>}
           </article>)}
           {chat.busy && (!chat.messages.at(-1) || chat.messages.at(-1)?.role === 'user' || !chat.answerText(chat.messages.at(-1)!)) && <div className="m-waiting" role="status" aria-label="Menunggu jawaban"><span/></div>}
         </div>
@@ -96,14 +101,15 @@ export function MobileApp() {
           {chat.error && <div className="m-error" role="alert">{chat.error}<div><button onClick={() => navigate('endpoints')}>Pengaturan</button>{!chat.busy && chat.messages.at(-1)?.role === 'user' && <button onClick={() => void chat.send('', [], true, personalization)}>Coba lagi</button>}</div></div>}
           {files.length > 0 && <div className="m-attachments">{files.map(file => <button key={file.id} aria-label={'Remove ' + file.name} onClick={() => setFiles(previous => previous.filter(item => item.id !== file.id))}>{file.name} ×</button>)}</div>}
           <MobileComposer input={textarea} value={draft} expanded={composerState.phase === 'first-focus'} engaged={composerState.focused || composerState.keyboardOpen} uploading={uploading} busy={chat.busy} hasFiles={!!files.length} idleSend={chat.temporary || mode === 'Work'}
-            onChange={setDraft} onFocus={() => setComposerState(focusComposer)} onBlur={() => setComposerState(blurComposer)} onAttach={() => picker.current?.click()}
+            onChange={value => setDraft(preferences.settings.smartPunctuation ? smartPunctuation(value) : value)} onFocus={() => setComposerState(focusComposer)} onBlur={() => setComposerState(blurComposer)} onAttach={() => picker.current?.click()}
             onDictate={() => dictate(value => setDraft(previous => (previous + ' ' + value).trim()), setNotice)} onSend={() => void send()} onStop={chat.stop} onVoice={() => setNotice('Percakapan suara belum tersedia. Gunakan tombol mikrofon untuk dikte.')}/>
 
         </footer>
       </>}
     </div>
     <input hidden type="file" multiple ref={picker} onChange={event => void attach(event.target.files)}/>
-    {drawer && <div className="m-overlay"><button className="m-backdrop" aria-label="Close sidebar" onClick={() => setDrawer(false)}/><aside className="m-drawer" role="dialog" aria-modal="true" aria-label="Sidebar"><header><img className="m-brand" src="/supergpt-logo.png" alt=""/><strong>SuperGPT</strong><button ref={closeDrawer} aria-label="Close sidebar" onClick={() => setDrawer(false)}><Icon name="close"/></button></header><input aria-label="Search chats" placeholder="Search" value={query} onChange={event => setQuery(event.target.value)}/><nav><button onClick={() => navigate('settings')}><Icon name="settings"/>Settings</button><button onClick={() => navigate('endpoints')}><Icon name="globe"/>Custom Endpoint</button><button disabled><Icon name="computer"/>Codex<span>Sementara nonaktif</span></button></nav><div className="m-drawer-history">{historyGroup('Pinned', visibleTitles.filter(title => pinned.includes(title) && !archived.includes(title)))}{historyGroup('Recents', visibleTitles.filter(title => !pinned.includes(title) && !archived.includes(title)))}{!visibleTitles.length && <p>Belum ada percakapan.</p>}</div><footer><button className="m-new-chat" onClick={() => newChat()}><Icon name="edit"/>New chat</button><button className="m-profile" onClick={() => navigate('settings')}><span>{profileInitials(profile?.name || '')}</span>{profile?.name}</button></footer></aside></div>}
+    {drawer && <MobileSidebar closeRef={closeDrawer} name={profile?.name || 'Profil'} titles={chat.titles} pinned={pinned} archived={archived} onClose={() => setDrawer(false)} onOpen={openChat} onNew={() => newChat()} onSettings={() => navigate('settings')} onNavigate={navigate}/>}
+
     {(sheet || !profile) && <div className="m-overlay"><button className="m-backdrop" aria-label="Close dialog" disabled={!profile} onClick={() => setSheet('')}/><section className={`m-sheet${sheet === 'temporary' ? ' m-temporary-sheet' : ''}`} role="dialog" aria-modal="true" aria-label={!profile ? 'Welcome' : sheet === 'models' ? 'Select model' : sheet === 'temporary' ? 'Temporary chat' : sheet === 'personalization' ? 'Personalization' : 'Conversation options'}>{profile && <button className="m-sheet-close" ref={closeSheet} aria-label="Close dialog" onClick={() => setSheet('')}><Icon name="close"/></button>}
       {!profile ? <form onSubmit={event => { event.preventDefault(); try { setProfile(saveLocalProfile(name)); setName(''); } catch (error) { setNotice(String(error)); } }}><img className="m-brand" src="/supergpt-logo.png" alt=""/><h1>SuperGPT by Sakelar</h1><p>Masukkan namamu untuk mulai.</p><label>Nama kamu<input autoFocus required maxLength={80} value={name} onChange={event => setName(event.target.value)}/></label><button className="m-primary">Lanjut</button></form> : sheet === 'models' ? <><h2>Pilih model</h2>{chat.store.profiles.map(endpoint => <section key={endpoint.id}><h3>{endpoint.name}</h3>{[...new Set([endpoint.model, ...endpoint.models])].filter(Boolean).map(model => <button className="m-model-option" key={model} aria-pressed={chat.endpoint?.id === endpoint.id && chat.endpoint.model === model} onClick={() => { try { saveEndpointStore({ ...chat.store, selectedId: endpoint.id, profiles: chat.store.profiles.map(p => p.id === endpoint.id ? { ...p, model } : p) }, loadEndpointKeys(chat.store.profiles)); setSheet(''); } catch { setNotice('Pilihan model belum tersimpan.'); } }}>{model}</button>)}</section>)}<button onClick={() => navigate('endpoints')}>Kelola endpoint</button></> : sheet === 'temporary' ? <><div className="m-temporary-art"><MobileControlIcon name="temporary-checked"/></div><h2>Temporary chat</h2><p>Chat ini tidak disimpan dalam riwayat perangkat. Penyedia API menentukan penyimpanan permintaan di servernya.</p><button className="m-primary" onClick={() => { localStorage.setItem('client-temporary-intro-v1', 'seen'); setSheet(''); }}>Continue</button></> : sheet === 'personalization' ? <><h2>Personalization</h2><p>Pilih konteks lokal untuk chat sementara ini. Pilihan ini tidak mengubah pengaturan global.</p><label className="m-personalization-option"><span>Saved memories</span><input type="checkbox" checked={personalization.memories} onChange={event => { chat.stop(); setPersonalization(previous => ({ ...previous, memories: event.target.checked })); }}/></label><label className="m-personalization-option"><span>Custom instructions</span><input type="checkbox" checked={personalization.instructions} onChange={event => { chat.stop(); setPersonalization(previous => ({ ...previous, instructions: event.target.checked })); }}/></label><button className="m-primary" onClick={() => setSheet('')}>Done</button></> : sheet === 'delete' ? <><h2>Hapus percakapan?</h2><p>Riwayat lokal percakapan ini akan dihapus dari perangkat.</p><button onClick={() => setSheet('conversation')}>Batal</button><button onClick={() => { chat.remove(chat.title); setSheet(''); }}>Hapus percakapan</button></> : <><h2>{chat.title}</h2><button onClick={temporaryChat}><Icon name="temporary"/>Temporary chat</button><button onClick={() => { if (!chat.temporary) { const next = pinned.includes(chat.title) ? pinned.filter(t => t !== chat.title) : [...pinned, chat.title]; localStorage.setItem('desktop-pinned', JSON.stringify(next)); } setSheet(''); }}>Pin / unpin chat</button><button onClick={() => setSheet('delete')}>Hapus percakapan</button></>}
     </section></div>}

@@ -32,6 +32,16 @@ Evidence: token initialization `ev_e23b6b73b7d3bdacc109f367baa0ab6fc555773bfc56a
 
 No provider credentials, profile or sample conversations are packaged. Onboarding and provider configuration run on the device. Native HTTP uses the existing validated provider transport. Codex switching remains disabled; Node/Codex Windows binaries and local process commands are excluded from mobile builds.
 
+### Sidebar and Settings reference
+
+`MobileSidebar.tsx`, `MobileSettings.tsx`, `MobileLibrary.tsx` and `navigation.css` own the mobile menu and settings layouts. The supplied Android recording was compared at 390 px width: drawer width 80%, horizontal menu inset 32 px, menu/history rows 49 px, fixed bottom chat/account controls, settings inset 16 px, card radius 28 px and settings rows 55 px. The device status bar is not reproduced inside the web layout. Sidebar search expands from its header button; pinned and recent chats use real client history.
+
+The menu order follows the recording: Ruang, Proyek, Codex (still disabled), Terjadwal, Plugin. Ruang exposes saved local notes, favorites and project folders; projects group local chat titles using `client-mobile-projects-v1`; scheduled items use the existing foreground reminder store. Running an item prepares its prompt for chat, without automatically sending a provider request. Plugin configurations can be inspected, but mobile MCP execution is unavailable.
+
+Settings follows the recorded group order: personalization/memory/plugins, account, appearance/accent, general/notifications/voice/security/remote/cloud/storage/privacy/data/diagnostics/about, then local sign out. Personalization, memory notes, theme, accent, suggestions, timeout, dictation language, speech settings, archives and exports connect to the existing client stores. Local sign out explicitly releases the local profile and session provider keys while preserving conversation history and provider definitions. Email, phone, subscriptions, remote control and cloud browsing are not represented as connected ChatGPT services. Unavailable rows say so; provider billing and retention remain provider controlled.
+
+REA confirmed the APK's `SettingsRow` anchor in `defpackage.bbz0.p` (`ev_f05b610d40d92e8576904c04db5f9a5b94d8344ecd936d31c33232ace603f0aa`); this method delegates rendering and does not itself establish the measured dimensions. Geometry and visible menu order above come from recording frames around 116–122 seconds, not from invented APK constants. Subpage styling follows the measured settings system; exact native subpage parity and device back gestures remain unverified. No proprietary source or private account values from the reference are bundled.
+
 ## Android APK on Windows
 
 Prerequisites: Node/npm, Rust, JDK 17, Android command-line tools, SDK platform/build-tools and NDK. The first tested target is ARM64 (`aarch64`), Android 7/API 24 or newer.
