@@ -7,6 +7,12 @@ for (const name of ['.env.desktop.local', '.env.mobile.local']) {
   const file = join(root, name);
   if (existsSync(file)) process.loadEnvFile(file);
 }
+// Keep the compatible debug package/signature without shipping Rust's enormous
+// DWARF/symbol tables. Explicit environment overrides still allow full debugging.
+if (process.argv.includes('android') && process.argv.includes('build') && process.argv.includes('--debug')) {
+  process.env.CARGO_PROFILE_DEV_DEBUG ??= '0';
+  process.env.CARGO_PROFILE_DEV_STRIP ??= 'symbols';
+}
 if (process.env.CARGO_HOME) process.env.PATH = join(process.env.CARGO_HOME, 'bin') + delimiter + process.env.PATH;
 if (process.env.JAVA_HOME) process.env.PATH = join(process.env.JAVA_HOME, 'bin') + delimiter + process.env.PATH;
 // Windows JDK NIO pipes use short Unix-domain socket paths. The default TEMP

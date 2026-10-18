@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 
 import { UIIcon as Icon } from '../components/UIIcon';
 import { RichText } from '../components/RichText';
 import { EndpointSettings } from '../desktop/EndpointSettings';
+import { MobileAttachment } from './MobileAttachment';
 import { MobileAttachmentMenu } from './MobileAttachmentMenu';
 import { MobileSpeech } from './MobileSpeech';
 import { useClientSettings } from '../desktop/useClientSettings';
@@ -21,6 +22,7 @@ import { MobileSettings } from './MobileSettings';
 import { MobileLibrary } from './MobileLibrary';
 import { useClientData } from '../desktop/ClientCollections';
 import { smartPunctuation } from '../lib/clientSettings';
+import { endpointVaultState } from '../lib/mobileEndpointVault';
 import { signOutMobileProfile } from '../lib/mobileProfile';
 
 function Button({ icon, label, onClick, children, ...props }: { icon?: string; label: string; onClick: () => void; children?: ReactNode; disabled?: boolean; className?: string; 'aria-pressed'?: boolean }) {
@@ -58,6 +60,12 @@ export function MobileApp() {
     window.visualViewport?.addEventListener('resize', resize); window.addEventListener('resize', resize);
     return () => { window.visualViewport?.removeEventListener('resize', resize); window.removeEventListener('resize', resize); };
   }, []);
+  useEffect(() => {
+    const vaultChanged = () => { if (endpointVaultState() === 'error') setNotice('API key belum tersimpan aman. Buka Custom Endpoint dan simpan ulang.'); };
+    const toast = (event: Event) => { const message = (event as CustomEvent<unknown>).detail; if (typeof message === 'string') setNotice(message); };
+    vaultChanged(); window.addEventListener('client-endpoint-vault-changed', vaultChanged); window.addEventListener('client-toast', toast);
+    return () => { window.removeEventListener('client-endpoint-vault-changed', vaultChanged); window.removeEventListener('client-toast', toast); };
+  }, []);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 4000); return () => clearTimeout(timer); }, [notice]);
   useEffect(() => { if (!aboveBottom) scroll.current?.scrollTo({ top: scroll.current.scrollHeight }); }, [chat.messages, aboveBottom]);
   useEffect(() => { if (drawer) closeDrawer.current?.focus({ preventScroll: true }); else if (sheet) closeSheet.current?.focus({ preventScroll: true }); }, [drawer, sheet]);
@@ -84,7 +92,7 @@ export function MobileApp() {
     return reply;
   }
   function newChat(temp = false) { setThinkHarder(false); setSpeechMode(''); chat.reset(temp); setDraft(''); setFiles([]); setDrawer(false); setPage('chat'); setSheet(''); setAboveBottom(false); setPersonalization({ memories: false, instructions: true }); }
-  function navigate(next: typeof page) { setSpeechMode(''); if (next !== 'chat' && next !== 'settings') setReturnPage(page === 'settings' ? 'settings' : 'chat'); if (next === 'settings') setName(profile?.name || ''); chat.stop(); setPage(next); setDrawer(false); setSheet(''); }
+  function navigate(next: typeof page) { setSpeechMode(''); if (next !== 'chat' && next !== 'settings') setReturnPage(page === 'settings' ? 'settings' : 'chat'); if (next === 'settings') setName(profile?.name || ''); setPage(next); setDrawer(false); setSheet(''); }
   function temporaryChat() { const temp = !chat.temporary; newChat(temp); if (temp && localStorage.getItem('client-temporary-intro-v1') !== 'seen') setSheet('temporary'); }
   async function send() {
     if (uploading || chat.busy || (!draft.trim() && !files.length)) return;
@@ -122,7 +130,7 @@ export function MobileApp() {
         <div className="m-messages" ref={scroll} onScroll={() => { const el = scroll.current; if (el) setAboveBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 40); }}>
           {home && chat.temporary && <MobileTemporaryHome onLearnMore={() => setSheet('temporary')} onPersonalization={() => setSheet('personalization')} personalized={personalization.instructions || personalization.memories}/>}
           {chat.messages.map((message, index) => <article key={index} className={'m-message m-' + message.role}>
-            {message.role === 'user' ? <div className="m-bubble">{message.text}{message.attachments?.map(file => <div key={file.id} className="m-attached"><Icon name="page" size={16}/>{file.name}</div>)}</div> : <><RichText text={chat.answerText(message)}/>{chat.answerText(message) && !(chat.busy && index === chat.messages.length - 1) && <MobileResponseActions text={chat.answerText(message)} onNotice={setNotice} onMore={article => { responseArticle.current = article; setResponseText(chat.answerText(message)); setSheet('response-actions'); }}/>}</>}
+            {message.role === 'user' ? <div className="m-bubble">{message.text}{!!message.attachments?.length && <div className="m-message-files">{message.attachments.map(file => <MobileAttachment key={file.id} file={file}/>)}</div>}</div> : <><RichText text={chat.answerText(message)}/>{chat.answerText(message) && !(chat.busy && index === chat.messages.length - 1) && <MobileResponseActions text={chat.answerText(message)} onNotice={setNotice} onMore={article => { responseArticle.current = article; setResponseText(chat.answerText(message)); setSheet('response-actions'); }}/>}</>}
           </article>)}
           {chat.busy && (!chat.messages.at(-1) || chat.messages.at(-1)?.role === 'user' || !chat.answerText(chat.messages.at(-1)!)) && <div className="m-waiting" role="status" aria-label="Menunggu jawaban"><span/></div>}
         </div>
@@ -130,7 +138,7 @@ export function MobileApp() {
           {aboveBottom && <Button icon="arrow" label="Scroll to latest" className="m-to-bottom" onClick={() => { setAboveBottom(false); scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' }); }}/ >}
           {home && !chat.temporary && preferences.settings.suggestions && <div className="m-suggestions">{['Summarize the files in my project', 'Review my code for bugs', 'Help me plan the next feature'].map(value => <button key={value} onClick={() => { setDraft(value); textarea.current?.focus(); }}><Icon name="github" size={20}/><span>{value}</span></button>)}</div>}
           {chat.error && <div className="m-error" role="alert">{chat.error}<div><button onClick={() => navigate('endpoints')}>Pengaturan</button>{!chat.busy && chat.messages.at(-1)?.role === 'user' && <button onClick={() => void chat.send('', [], true, requestContext)}>Coba lagi</button>}</div></div>}
-          {files.length > 0 && <div className="m-attachments">{files.map(file => <button key={file.id} aria-label={'Remove ' + file.name} onClick={() => setFiles(previous => previous.filter(item => item.id !== file.id))}>{file.name} ×</button>)}</div>}
+          {files.length > 0 && <div className="m-attachments">{files.map(file => <MobileAttachment key={file.id} file={file} pending onRemove={() => setFiles(previous => previous.filter(item => item.id !== file.id))}/>)}</div>}
           {speechMode === 'dictation' ? <MobileSpeech mode="dictation" onClose={closeSpeech} onDictation={value => { setDraft(previous => (previous + ' ' + value).trim()); setSpeechMode(''); }} onReply={voiceReply}/> : <MobileComposer input={textarea} value={draft} expanded={composerState.phase === 'first-focus'} engaged={composerState.focused || composerState.keyboardOpen} uploading={uploading} busy={chat.busy} hasFiles={!!files.length} idleSend={chat.temporary || mode === 'Work'}
             onChange={value => setDraft(preferences.settings.smartPunctuation ? smartPunctuation(value) : value)} onFocus={() => setComposerState(focusComposer)} onBlur={() => setComposerState(blurComposer)} onAttach={() => setSheet('attachments')}
             onDictate={() => setSpeechMode('dictation')} onSend={() => void send()} onStop={chat.stop} onVoice={() => setSpeechMode('voice')}/>}
@@ -139,7 +147,7 @@ export function MobileApp() {
       </>}
     </div>
     <input hidden type="file" accept="image/*" capture="environment" ref={cameraPicker} onChange={event => void attach(event.target.files)}/>
-    <input hidden type="file" accept="image/*" multiple ref={photoPicker} onChange={event => void attach(event.target.files)}/>
+    <input hidden type="file" accept="image/*,video/*" multiple ref={photoPicker} onChange={event => void attach(event.target.files)}/>
     <input hidden type="file" multiple ref={picker} onChange={event => void attach(event.target.files)}/>
     <MobilePresence show={drawer}><MobileSidebar closeRef={closeDrawer} name={profile?.name || 'Profil'} activeTitle={chat.title} titles={chat.titles} pinned={pinned} archived={archived} documents={clientData.data.documents} onProject={id => { setSearchProject(id); navigate('projects'); }} onClose={() => setDrawer(false)} onOpen={openChat} onNew={() => newChat()} onSettings={() => navigate('settings')} onNavigate={next => { setSearchProject(''); navigate(next); }}/></MobilePresence>
 

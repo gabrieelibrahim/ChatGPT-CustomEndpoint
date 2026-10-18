@@ -1,4 +1,5 @@
 import { providerFetch } from './providerTransport';
+import { nativeEndpointKeys, persistNativeEndpointKeys, usesNativeEndpointVault } from './mobileEndpointVault';
 export type EndpointProfile = {
   id: string; name: string; baseUrl: string; protocol: 'openai-compatible';
   model: string; models: string[]; auth: 'bearer' | 'none'; sendReasoning?: boolean;
@@ -36,7 +37,7 @@ export function loadEndpointStore(): EndpointStore {
 
 export function loadEndpointKeys(profiles: EndpointProfile[]): Record<string, string> {
   try {
-    const data = JSON.parse(sessionStorage.getItem(endpointSecretsKey) || '{}');
+    const data = usesNativeEndpointVault() ? nativeEndpointKeys() : JSON.parse(sessionStorage.getItem(endpointSecretsKey) || '{}');
     return Object.fromEntries(profiles.filter(profile => typeof data?.[profile.id] === 'string' && data[profile.id].length <= 4096).map(profile => [profile.id, data[profile.id]]));
   } catch { return {}; }
 }
@@ -44,13 +45,16 @@ export function loadEndpointKeys(profiles: EndpointProfile[]): Record<string, st
 // Serialize explicit fields so credentials never enter persistent profile storage.
 export function saveEndpointStore(store: EndpointStore, keys: Record<string, string>) {
   const profiles = store.profiles.map(({ id, name, baseUrl, protocol, model, models, auth, sendReasoning }) => ({ id, name, baseUrl, protocol, model, models, auth, sendReasoning: sendReasoning === true }));
-  const previousKeys = sessionStorage.getItem(endpointSecretsKey);
-  sessionStorage.setItem(endpointSecretsKey, JSON.stringify(Object.fromEntries(profiles.filter(profile => profile.auth === 'bearer' && keys[profile.id]).map(profile => [profile.id, keys[profile.id]]))));
+  const native = usesNativeEndpointVault();
+  const nextKeys = Object.fromEntries(profiles.filter(profile => profile.auth === 'bearer' && keys[profile.id]).map(profile => [profile.id, keys[profile.id]]));
+  const previousKeys = native ? null : sessionStorage.getItem(endpointSecretsKey);
+  if (!native) sessionStorage.setItem(endpointSecretsKey, JSON.stringify(nextKeys));
   try { localStorage.setItem(endpointStorageKey, JSON.stringify({ version: 1, profiles, selectedId: store.selectedId })); }
   catch (error) {
-    try { if (previousKeys === null) sessionStorage.removeItem(endpointSecretsKey); else sessionStorage.setItem(endpointSecretsKey, previousKeys); } catch { /* Preserve the original storage failure. */ }
+    try { if (!native) { if (previousKeys === null) sessionStorage.removeItem(endpointSecretsKey); else sessionStorage.setItem(endpointSecretsKey, previousKeys); } } catch { /* Preserve the original storage failure. */ }
     throw error;
   }
+  if (native) persistNativeEndpointKeys(nextKeys);
   window.dispatchEvent(new Event('client-endpoints-changed'));
 }
 

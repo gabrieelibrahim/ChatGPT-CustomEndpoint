@@ -27,6 +27,25 @@ function fixture() {
 }
 function answer() { return new Response(JSON.stringify({ choices: [{ message: { content: 'Halo mobile', reasoning_content: 'Provider reasoning' } }] }), { headers: { 'content-type': 'application/json' } }); }
 
+test('native request background lifetime ends after successful and canceled requests', async () => {
+  const app = fixture();
+  try {
+    const calls = [];
+    window.SuperGPTTask = { postMessage: value => calls.push(JSON.parse(value)) };
+    global.fetch = async () => answer();
+    await app.render().send('Finished');
+    assert.deepEqual(calls.map(value => value.op), ['start', 'finish']);
+    assert.equal(calls[0].id, calls[1].id);
+    let respond;
+    global.fetch = () => new Promise(resolve => { respond = resolve; });
+    const waiting = app.render().send('Canceled');
+    await new Promise(resolve => setImmediate(resolve));
+    app.render().reset(); respond(answer()); await waiting;
+    assert.deepEqual(calls.slice(2).map(value => value.op), ['start', 'finish']);
+    assert.equal(calls[2].id, calls[3].id);
+  } finally { app.restore(); }
+});
+
 test('mobile think harder overrides only the current request and respects endpoint reasoning opt-in', async () => {
   for (const enabled of [true, false]) {
     const app = fixture();

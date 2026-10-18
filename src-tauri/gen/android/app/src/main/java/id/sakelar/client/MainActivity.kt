@@ -11,8 +11,15 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebMessageCompat
+import org.json.JSONObject
 
 class MainActivity : TauriActivity() {
+  private var taskWebView: WebView? = null
+  private fun resumeTaskWebView() {
+    if (TaskForegroundService.active()) { taskWebView?.onResume(); taskWebView?.resumeTimers() }
+  }
+  override fun onPause() { super.onPause(); resumeTaskWebView() }
+  override fun onStop() { super.onStop(); resumeTaskWebView() }
   private val themePrefs by lazy { getSharedPreferences("supergpt-appearance", MODE_PRIVATE) }
   private fun mode() = themePrefs.getString("theme", "system") ?: "system"
 
@@ -55,6 +62,7 @@ class MainActivity : TauriActivity() {
 
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
+    taskWebView = webView
     webView.setBackgroundColor(if (mode() == "light" || (mode() == "system" && resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK != Configuration.UI_MODE_NIGHT_YES)) Color.WHITE else Color.BLACK)
     // CSS owns the palette. Prevent WebView from darkening explicit Light colors.
     if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, false)
@@ -63,6 +71,35 @@ class MainActivity : TauriActivity() {
     if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
       val origins = mutableSetOf("http://tauri.localhost", "https://tauri.localhost")
       if (BuildConfig.DEBUG) origins.addAll(listOf("http://127.0.0.1:1420", "http://localhost:1420", "http://10.0.2.2:1420"))
+      EndpointVault.install(webView, origins)
+      WebViewCompat.addWebMessageListener(webView, "SuperGPTTask", origins) { _, message, _, mainFrame, reply ->
+        if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
+        val raw = message.data ?: return@addWebMessageListener
+        if (raw.length > 1024) return@addWebMessageListener
+        runOnUiThread {
+          val status = JSONObject()
+          try {
+            val request = JSONObject(raw); val id = request.getString("id")
+            require(id.isNotEmpty() && id.length <= 100)
+            when (request.getString("op")) {
+              "start" -> {
+                TaskForegroundService.begin(this, id)
+                if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                  val backgroundPrefs = getSharedPreferences("supergpt-background", MODE_PRIVATE)
+                  if (!backgroundPrefs.getBoolean("notification-asked", false)) {
+                    backgroundPrefs.edit().putBoolean("notification-asked", true).apply()
+                    requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 2416)
+                  }
+                }
+              }
+              "finish" -> TaskForegroundService.finish(this, id)
+              else -> error("Unsupported task operation")
+            }
+            status.put("ok", true)
+          } catch (_: Exception) { status.put("ok", false) }
+          reply.postMessage(status.toString())
+        }
+      }
       WebViewCompat.addWebMessageListener(webView, "SuperGPTTheme", origins) { _, message, _, mainFrame, _ ->
         if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
         val value = message.data ?: return@addWebMessageListener

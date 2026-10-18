@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { beginMobileBackgroundTask } from './mobileBackground';
 import { loadEndpointKeys, loadEndpointStore } from './endpointProfiles';
 import { parseThinking, streamEndpointChat } from './endpointChat';
 import { loadSettings, prepareChatMessages, recordUsage } from './clientSettings';
@@ -45,6 +46,7 @@ export function useMobileConversation() {
     if (!title) { let suffix = 2; while (titles.includes(name)) name = `${base} (${suffix++})`; }
     const names = [name, ...titles.filter(t => t !== name)];
     const controller = new AbortController(); active.current = controller;
+    const releaseBackground = beginMobileBackgroundTask(crypto.randomUUID());
     const settings = loadSettings(), timeout = setTimeout(() => controller.abort('timeout'), settings.timeoutSeconds * 1000);
     setBusy(true); setError(''); setTitle(name); setMessages(next);
     let answer = '', reasoning = '', failed = false;
@@ -70,7 +72,7 @@ export function useMobileConversation() {
       failed = true;
       if (active.current === controller) setError(controller.signal.aborted ? controller.signal.reason === 'timeout' ? 'Penyedia terlalu lama merespons.' : 'Jawaban dihentikan.' : providerErrorMessage(failure, isNativeDesktop(), 'Jawaban gagal dimuat.'));
     } finally {
-      clearTimeout(timeout);
+      releaseBackground(); clearTimeout(timeout);
       try { recordUsage({ provider: endpoint.name, model: endpoint.model, source: 'chat', status: controller.signal.aborted ? 'interrupted' : failed ? 'failed' : 'completed', ...reported }); } catch { /* Usage is optional. */ }
       if (active.current === controller) { publish(current()); active.current = null; setBusy(false); onCompleted?.(!failed && !controller.signal.aborted ? answer : ''); }
     }

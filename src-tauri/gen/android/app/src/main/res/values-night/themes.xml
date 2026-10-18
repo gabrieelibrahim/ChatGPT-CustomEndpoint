@@ -1,6 +1,1 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.sakelar" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
-    </style>
-</resources>
+<resources><color name="supergpt_splash_bg">#000000</color><color name="supergpt_splash_ink">#FFFFFF</color><style name="Theme.sakelar" parent="Theme.Material3.DayNight.NoActionBar"><item name="android:windowBackground">@drawable/supergpt_launch_background</item><item name="android:windowLightStatusBar">false</item></style></resources>
