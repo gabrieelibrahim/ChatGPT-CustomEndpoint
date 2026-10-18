@@ -9,7 +9,7 @@ function fixture() {
  let engine;
  class Recognition { constructor(){engine=this;} start(){events.push('start');} stop(){events.push('stop');} abort(){events.push('abort');} }
  global.window = {SpeechRecognition:Recognition};
- const capture = captureSpeech({language:'id-ID',continuous:true,onStart(){events.push('listening');},onText(value){text.push(value);},onError(error){errors.push(error);},onEnd(value){ended.push(value);}});
+ const capture = captureSpeech({language:'id-ID',continuous:true,onStart(){events.push('listening');},onText(value){text.push(value);},onError(error){errors.push(error);},onEnd(value){ended.push(value);},onProcessing(){events.push('processing');}});
  return {capture,get engine(){return engine;},events,text,errors,ended,restore(){capture.cancel();if(previous===undefined)delete global.window;else global.window=previous;}};
 }
 function results(...values){return {results:values.map(transcript=>({0:{transcript}}))};}
@@ -36,4 +36,11 @@ test('permission denial reports an error and never sends an utterance',async()=>
 });
 test('unsupported speech engine is an explicit unavailable state',()=>{
  const previous=global.window;global.window={};try{assert.throws(()=>captureSpeech({}),/belum didukung/);}finally{if(previous===undefined)delete global.window;else global.window=previous;}
+});
+test('continuous web dictation keeps accepting speech across silence; processing starts only after stop',async()=>{
+ const f=fixture();try{
+  f.engine.onstart();f.engine.onspeechend();assert.ok(!f.events.includes('processing'));
+  f.engine.onresult(results('Masih mendengarkan'));const done=f.capture.stop();f.engine.onspeechend();
+  assert.ok(f.events.includes('processing'));f.engine.onend();assert.equal(await done,'Masih mendengarkan');
+ }finally{f.restore();}
 });

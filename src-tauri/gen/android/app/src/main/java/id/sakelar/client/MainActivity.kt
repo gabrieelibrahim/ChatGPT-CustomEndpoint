@@ -15,6 +15,7 @@ import org.json.JSONObject
 
 class MainActivity : TauriActivity() {
   private var taskWebView: WebView? = null
+  private val speechCapture by lazy { SpeechCaptureBridge(this) }
   private var pendingComposerKeyboard = false
   private fun showComposerKeyboard() {
     val webView = taskWebView ?: return
@@ -28,13 +29,20 @@ class MainActivity : TauriActivity() {
   }
   override fun onWindowFocusChanged(hasFocus: Boolean) {
     super.onWindowFocusChanged(hasFocus)
+    speechCapture.onWindowFocusChanged(hasFocus)
     if (hasFocus) showComposerKeyboard()
   }
   private fun resumeTaskWebView() {
     if (TaskForegroundService.active()) { taskWebView?.onResume(); taskWebView?.resumeTimers() }
   }
-  override fun onPause() { super.onPause(); resumeTaskWebView() }
-  override fun onStop() { super.onStop(); resumeTaskWebView() }
+  override fun onResume() { super.onResume(); speechCapture.onResume() }
+  override fun onPause() { speechCapture.onPause(); super.onPause(); resumeTaskWebView() }
+  override fun onStop() { speechCapture.onStop(); super.onStop(); resumeTaskWebView() }
+  override fun onDestroy() { speechCapture.destroy(); taskWebView = null; super.onDestroy() }
+  override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    speechCapture.onPermissionResult(requestCode, grantResults)
+  }
   private val themePrefs by lazy { getSharedPreferences("supergpt-appearance", MODE_PRIVATE) }
   private fun mode() = themePrefs.getString("theme", "system") ?: "system"
 
@@ -97,6 +105,7 @@ class MainActivity : TauriActivity() {
         }
       }
       EndpointVault.install(webView, origins)
+      speechCapture.install(webView, origins)
       WebViewCompat.addWebMessageListener(webView, "SuperGPTTask", origins) { _, message, _, mainFrame, reply ->
         if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
         val raw = message.data ?: return@addWebMessageListener

@@ -22,4 +22,10 @@ html[data-client-theme] .m-app .m-home-header .m-mode button[aria-selected=true]
 html[data-reduce-motion=true] .m-app .m-mode::before{transition:none}
 
 .m-message-stack{display:flow-root;min-width:0}
+.m-end-pull{display:flex;justify-content:center;padding:76px 0 48px;animation:m-dictation-enter 180ms ease-out}
+.m-app .m-end-pull button{display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:400;color:var(--m-muted);padding:0;align-items:center}
+.m-end-pull button>span{display:grid;place-items:center;background:var(--m-action);color:white;border-radius:50%;width:44px;height:44px}
+.m-end-pull svg{width:24px;height:24px}
+@media(prefers-reduced-motion:reduce){.m-end-pull{animation:none}}
+html[data-reduce-motion=true] .m-end-pull{animation:none}
 .m-home.m-temporary .m-message-stack{display:flex;flex:1}

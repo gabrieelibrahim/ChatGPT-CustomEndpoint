@@ -8,14 +8,14 @@
 .m-app .m-sidebar .m-sidebar-account{width:49px;height:49px;min-height:49px}
 .m-sidebar-scroll{flex:1;min-height:0;overflow:auto;scrollbar-width:none;margin-right:-8px;padding-right:8px;mask-image:linear-gradient(#000 96%,transparent)}
 .m-sidebar nav{padding:3px 0 0;border:0;display:grid}
-.m-app .m-sidebar nav button{height:49px;min-height:49px;padding:0;gap:14px;font-size:18px;font-weight:600;line-height:24px;white-space:nowrap}
-.m-sidebar nav button svg{width:23px!important;height:23px!important}
+.m-app .m-sidebar nav button{height:49px;min-height:49px;padding:0;gap:16px;font-size:18px;font-weight:500;line-height:24px;white-space:nowrap}
+.m-sidebar nav button svg{width:21px!important;height:21px!important}
 .m-sidebar nav button:disabled{opacity:.45}
 .m-sidebar-history section{margin-top:29px}
 .m-sidebar-history h2{font-size:18px;line-height:24px;font-weight:600;margin:0 0 12px}
 .m-app .m-sidebar-history button{display:flex;width:100%;min-height:49px;height:49px;font-size:18px;font-weight:400;line-height:24px;padding:0;gap:14px}
 .m-sidebar-history button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.m-sidebar-history button svg{width:23px!important;height:23px!important}
+.m-sidebar-history button svg{width:21px!important;height:21px!important}
 .m-sidebar-history>p{font-size:14px;color:#aaa;padding:20px 0}
 .m-sidebar-skeleton{margin-top:29px;padding-top:29px;border-top:1px solid #414141}
 .m-sidebar-skeleton-row{height:49px;display:flex;align-items:center}

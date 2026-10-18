@@ -6,6 +6,7 @@ import { loadSettings, prepareChatMessages, recordUsage } from './clientSettings
 import { resolveMessageFiles, type FileRef } from './fileLibrary';
 import { providerErrorMessage } from './providerErrors';
 import { isNativeDesktop } from './nativeDesktop';
+import { changeConversationName } from './mobileConversationMetadata';
 
 export type MobileMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; timestamp?: number; attachments?: FileRef[] };
 function read<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; } catch { return fallback; } }
@@ -30,9 +31,14 @@ export function useMobileConversation() {
   function reset(temp = false) { active.current?.abort(); active.current = null; setBusy(false); setError(''); setMessages([]); setTitle(''); setTemporary(temp); }
   function open(name: string) { reset(); setTitle(name); setMessages(content[name] || []); }
   function remove(name: string) {
-    const next = { ...content }; delete next[name]; const names = titles.filter(t => t !== name);
-    try { localStorage.setItem('desktop-chat-content', JSON.stringify(next)); localStorage.setItem('desktop-titles', JSON.stringify(names)); setContent(next); setTitles(names); if (title === name) reset(); }
-    catch { setError('Percakapan belum dapat dihapus.'); }
+    if (busy && title === name) { const message = 'Hentikan jawaban sebelum menghapus percakapan.'; setError(message); return message; }
+    try { changeConversationName(localStorage, name, null); setContent(read('desktop-chat-content', {})); setTitles(read('desktop-titles', [])); if (title === name) reset(); }
+    catch { const message = 'Percakapan belum dapat dihapus.'; setError(message); return message; }
+  }
+  function rename(oldName: string, newName: string) {
+    if (busy && title === oldName) return 'Tunggu jawaban selesai sebelum mengganti nama.';
+    try { changeConversationName(localStorage, oldName, newName); setContent(read('desktop-chat-content', {})); setTitles(read('desktop-titles', [])); if (title === oldName) setTitle(newName.trim()); }
+    catch (failure) { return failure instanceof Error ? failure.message : 'Nama percakapan belum tersimpan.'; }
   }
   async function send(text: string, attachments: FileRef[] = [], retry = false, personalization: { memories: boolean; instructions: boolean; reasoningEffort?: string } = { memories: false, instructions: true }, onCompleted?: (answer: string) => void) {
     if (active.current || (!retry && !text.trim() && !attachments.length)) return false;
@@ -44,7 +50,6 @@ export function useMobileConversation() {
     const base = next[0]?.text.slice(0, 60) || attachments[0]?.name || 'New chat';
     let name = title || base;
     if (!title) { let suffix = 2; while (titles.includes(name)) name = `${base} (${suffix++})`; }
-    const names = [name, ...titles.filter(t => t !== name)];
     const controller = new AbortController(); active.current = controller;
     const releaseBackground = beginMobileBackgroundTask(crypto.randomUUID());
     const settings = loadSettings(), timeout = setTimeout(() => controller.abort('timeout'), settings.timeoutSeconds * 1000);
@@ -57,7 +62,8 @@ export function useMobileConversation() {
       if (!temporary) {
         // Read on each publication so another window's saved chats are preserved.
         const all = { ...read<Record<string, MobileMessage[]>>('desktop-chat-content', {}), [name]: items };
-        try { localStorage.setItem('desktop-chat-content', JSON.stringify(all)); localStorage.setItem('desktop-titles', JSON.stringify([...new Set([...names, ...read<string[]>('desktop-titles', [])])])); setContent(all); setTitles([...new Set([...names, ...read<string[]>('desktop-titles', [])])]); }
+        const names = [name, ...read<string[]>('desktop-titles', []).filter(value => value !== name)];
+        try { localStorage.setItem('desktop-chat-content', JSON.stringify(all)); localStorage.setItem('desktop-titles', JSON.stringify(names)); setContent(all); setTitles(names); }
         catch { setError('Penyimpanan percakapan penuh.'); }
       }
     };
@@ -78,5 +84,5 @@ export function useMobileConversation() {
     }
     return true;
   }
-  return { store, endpoint, titles, title, messages, temporary, busy, error, reset, open, remove, send, stop, answerText: (message: MobileMessage) => parseThinking(message.text, message.reasoning).content };
+  return { store, endpoint, titles, title, messages, temporary, busy, error, reset, open, remove, rename, send, stop, answerText: (message: MobileMessage) => parseThinking(message.text, message.reasoning).content };
 }

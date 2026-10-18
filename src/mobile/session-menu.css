@@ -1,0 +1,26 @@
+.m-app .m-sidebar-history button{touch-action:pan-y;-webkit-touch-callout:none;user-select:none}
+.m-app .m-sidebar-history button.m-session-held{background:var(--m-selected)}
+.m-session-layer{position:absolute;inset:0;z-index:5}
+.m-app .m-session-dismiss{position:absolute;inset:0;min-height:0;width:100%;height:100%;padding:0;background:transparent;border:0;border-radius:0;transform:none}
+.m-session-menu{position:absolute;padding:8px 14px;border:1px solid var(--m-border);border-radius:22px;background:var(--m-field);box-shadow:0 8px 24px #0002;animation:m-session-appear 140ms cubic-bezier(.2,.8,.2,1) both;transform-origin:50% 30%;color:var(--m-text)}
+.m-app .m-session-menu>button{width:100%;height:49px;min-height:49px;display:flex;gap:17px;padding:0 10px;font-size:18px;line-height:24px;font-weight:500;white-space:nowrap;border-radius:8px;text-align:left}
+.m-session-menu>button>svg{width:22px!important;height:22px!important;flex:none}
+.m-session-menu>button>svg:last-child:not(:first-child){margin-left:auto;width:16px!important;height:16px!important;transform:rotate(-90deg)}
+.m-app .m-session-menu button.m-session-danger{color:var(--m-danger)}
+.m-app .m-session-menu button:active{transform:none;background:var(--m-selected)}
+.m-app .m-session-menu button:focus-visible{outline:2px solid var(--m-detail);outline-offset:-2px}
+.m-session-menu.m-session-dialog{width:min(340px,calc(100% - 40px));max-height:calc(100% - 40px);overflow:auto;left:50%;top:50%;transform:translate(-50%,-50%);padding:24px;border-radius:26px;animation:m-session-dialog-appear 140ms ease-out both}
+.m-session-dialog h2{font-size:20px;font-weight:600;line-height:26px;margin:0 0 20px}
+.m-session-dialog label{display:grid;gap:8px;font-size:14px;line-height:20px}
+.m-app .m-session-dialog input{width:100%;padding:12px;font-size:16px;font-weight:400;line-height:24px;border:1px solid var(--m-detail);border-radius:8px;background:transparent;color:var(--m-text)}
+.m-session-dialog p{font-size:15px;line-height:22px;margin:8px 0 16px;overflow-wrap:anywhere;color:var(--m-detail)}
+.m-session-dialog p[role=alert]{color:var(--m-danger)}
+.m-app .m-session-dialog footer{display:flex;justify-content:flex-end;gap:12px;margin-top:18px;padding:0;background:transparent}
+.m-app .m-session-dialog footer button{font-size:15px;line-height:22px;font-weight:500;min-height:44px;padding:8px 10px}
+.m-app .m-session-dialog footer button:disabled{opacity:.4}
+.m-app .m-session-dialog .m-session-project{font-size:16px;white-space:normal;height:auto}
+.m-session-project span{min-width:0;overflow-wrap:anywhere}
+@keyframes m-session-appear{from{opacity:0;scale:.94}to{opacity:1;scale:1}}
+@keyframes m-session-dialog-appear{from{opacity:0;scale:.96}to{opacity:1;scale:1}}
+@media(prefers-reduced-motion:reduce){.m-session-menu{animation:none}}
+html[data-reduce-motion=true] .m-session-menu{animation:none}

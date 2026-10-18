@@ -27,6 +27,26 @@ function fixture() {
 }
 function answer() { return new Response(JSON.stringify({ choices: [{ message: { content: 'Halo mobile', reasoning_content: 'Provider reasoning' } }] }), { headers: { 'content-type': 'application/json' } }); }
 
+test('renaming and deleting other chats while streaming does not resurrect old history titles', async () => {
+  const app = fixture();
+  try {
+    localStorage.setItem('desktop-titles', JSON.stringify(['Rename me', 'Delete me']));
+    localStorage.setItem('desktop-chat-content', JSON.stringify({ 'Rename me': [{ role: 'user', text: 'Saved' }], 'Delete me': [] }));
+    let respond; global.fetch = () => new Promise(resolve => { respond = resolve; });
+    const waiting = app.render().send('Active');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(app.render().rename('Rename me', 'New name'),undefined);
+    assert.equal(app.render().remove('Delete me'),undefined);
+    assert.match(app.render().rename('Active','Unsafe rename'),/Tunggu/);
+    respond(answer()); await waiting;
+    assert.deepEqual(JSON.parse(localStorage.getItem('desktop-titles')),['Active','New name']);
+    assert.equal(JSON.parse(localStorage.getItem('desktop-chat-content'))['Rename me'],undefined);
+    app.render().open('New name');
+    assert.equal(app.render().title,'New name');
+    assert.equal(app.render().messages[0].text,'Saved');
+  } finally { app.restore(); }
+});
+
 test('native request background lifetime ends after successful and canceled requests', async () => {
   const app = fixture();
   try {
