@@ -8,9 +8,9 @@ type Props = {
 };
 
 export function MobileHomeHeader({ mode, temporary, onMode, onSidebar, onTemporary }: Props) {
-  return <header className="m-header m-home-header">
+  return <header className="m-header m-home-header" data-mode={mode}>
     <button type="button" className="m-round" aria-label="Open sidebar" onClick={onSidebar}><Icon name="mobile-menu"/></button>
-    {!temporary && <div className="m-mode" role="tablist" aria-label="Chat mode">
+    {!temporary && <div className="m-mode" data-mode={mode} role="tablist" aria-label="Chat mode">
       {(['Chat', 'Work'] as const).map(value => <button type="button" key={value} role="tab" aria-selected={mode === value} tabIndex={mode === value ? 0 : -1}
         onClick={() => onMode(value)} onKeyDown={event => {
           if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -21,6 +21,6 @@ export function MobileHomeHeader({ mode, temporary, onMode, onSidebar, onTempora
           tabs?.[next === 'Chat' ? 0 : 1].focus();
         }}>{value}</button>)}
     </div>}
-    <button type="button" className="m-round" aria-label="Temporary chat" aria-pressed={temporary} onClick={onTemporary}><MobileControlIcon name={temporary ? 'temporary-checked' : 'temporary'}/></button>
+    <button type="button" className="m-round" aria-label="Temporary chat" aria-pressed={temporary} disabled={mode === 'Work'} onClick={onTemporary}><MobileControlIcon name={temporary ? 'temporary-checked' : 'temporary'}/></button>
   </header>;
 }

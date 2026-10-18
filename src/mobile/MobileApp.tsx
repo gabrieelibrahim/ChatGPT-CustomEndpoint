@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { UIIcon as Icon } from '../components/UIIcon';
-import { RichText } from '../components/RichText';
+import { MobileStreamingReply } from './MobileStreamingReply';
+import { mobileComposerKeyboard } from './composerKeyboard';
 import { EndpointSettings } from '../desktop/EndpointSettings';
 import { MobileAttachment } from './MobileAttachment';
 import { MobileAttachmentMenu } from './MobileAttachmentMenu';
@@ -55,6 +56,14 @@ export function MobileApp() {
   const [responseText, setResponseText] = useState('');
   const footer = useRef<HTMLElement>(null), cameraPicker = useRef<HTMLInputElement>(null), photoPicker = useRef<HTMLInputElement>(null);
   const scroll = useRef<HTMLDivElement>(null), textarea = useRef<HTMLTextAreaElement>(null), picker = useRef<HTMLInputElement>(null), closeDrawer = useRef<HTMLButtonElement>(null), closeSheet = useRef<HTMLButtonElement>(null);
+  const streamContent = useRef<HTMLDivElement>(null);
+  const initialKeyboard = useRef(false);
+  useEffect(() => {
+    if (initialKeyboard.current || !profile || page !== 'chat') return;
+    initialKeyboard.current = true;
+    const frame = requestAnimationFrame(() => { textarea.current?.focus({ preventScroll: true }); mobileComposerKeyboard('show'); });
+    return () => cancelAnimationFrame(frame);
+  }, [profile, page]);
   useEffect(() => {
     const resize = () => { const nextHeight = window.visualViewport?.height || window.innerHeight; setHeight(nextHeight); setComposerState(state => resizeComposer(state, nextHeight, window.innerWidth, document.activeElement === textarea.current)); };
     window.visualViewport?.addEventListener('resize', resize); window.addEventListener('resize', resize);
@@ -83,6 +92,13 @@ export function MobileApp() {
     observer?.observe(element, { box: 'border-box' }); window.addEventListener('resize', measure);
     return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
   }, [page, chat.messages.length === 0, aboveBottom, speechMode]);
+  useEffect(() => {
+    const content = streamContent.current;
+    if (!content || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => { if (!aboveBottom) scroll.current?.scrollTo({ top: scroll.current.scrollHeight }); });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [page, aboveBottom]);
   const requestContext = { ...personalization, reasoningEffort: thinkHarder ? 'high' : undefined };
   function closeSpeech() { if (speechMode === 'voice') chat.stop(); setSpeechMode(''); }
   async function voiceReply(value: string) {
@@ -97,6 +113,7 @@ export function MobileApp() {
   async function send() {
     if (uploading || chat.busy || (!draft.trim() && !files.length)) return;
     const value = draft, attached = files;
+    textarea.current?.blur(); mobileComposerKeyboard('hide'); setComposerState(blurComposer);
     setDraft(''); setFiles([]); setAboveBottom(false);
     if (!await chat.send(value, attached, false, requestContext)) { setDraft(value); setFiles(attached); }
   }
@@ -128,11 +145,13 @@ export function MobileApp() {
       {page === 'endpoints' ? <div className="m-endpoints d-mobile"><EndpointSettings onSaved={() => { setNotice('Endpoint tersimpan.'); navigate(returnPage); }} onNotice={setNotice}/></div> : page === 'settings' ? <MobileSettings profile={profile} settings={preferences.settings} provider={chat.endpoint?.name} model={chat.endpoint?.model} titles={chat.titles} archived={archived} update={preferences.update} onProfile={setProfile} onEndpoint={() => navigate('endpoints')} onModels={() => setSheet('models')} onPlugins={() => navigate('plugins')} onOpen={openChat} onArchive={archive} onNotice={setNotice} onClose={() => navigate('chat')} onSignOut={() => { try { chat.stop(); signOutMobileProfile(); newChat(); setName(''); setProfile(null); } catch { setNotice('Profil belum dapat dilepas.'); } }}/>
       : page !== 'chat' ? <MobileLibrary page={page} store={clientData} titles={chat.titles} initialProject={searchProject} onClose={() => { setSearchProject(''); navigate(returnPage); }} onOpen={openChat} onDraft={text => { newChat(); setDraft(text); }} onNotice={setNotice}/> : <>
         <div className="m-messages" ref={scroll} onScroll={() => { const el = scroll.current; if (el) setAboveBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 40); }}>
+          <div className="m-message-stack" ref={streamContent}>
           {home && chat.temporary && <MobileTemporaryHome onLearnMore={() => setSheet('temporary')} onPersonalization={() => setSheet('personalization')} personalized={personalization.instructions || personalization.memories}/>}
           {chat.messages.map((message, index) => <article key={index} className={'m-message m-' + message.role}>
-            {message.role === 'user' ? <div className="m-bubble">{message.text}{!!message.attachments?.length && <div className="m-message-files">{message.attachments.map(file => <MobileAttachment key={file.id} file={file}/>)}</div>}</div> : <><RichText text={chat.answerText(message)}/>{chat.answerText(message) && !(chat.busy && index === chat.messages.length - 1) && <MobileResponseActions text={chat.answerText(message)} onNotice={setNotice} onMore={article => { responseArticle.current = article; setResponseText(chat.answerText(message)); setSheet('response-actions'); }}/>}</>}
+            {message.role === 'user' ? <div className="m-bubble">{message.text}{!!message.attachments?.length && <div className="m-message-files">{message.attachments.map(file => <MobileAttachment key={file.id} file={file}/>)}</div>}</div> : <MobileStreamingReply text={chat.answerText(message)} streaming={chat.busy && index === chat.messages.length - 1}>{chat.answerText(message) && !(chat.busy && index === chat.messages.length - 1) && <MobileResponseActions text={chat.answerText(message)} onNotice={setNotice} onMore={article => { responseArticle.current = article; setResponseText(chat.answerText(message)); setSheet('response-actions'); }}/>}</MobileStreamingReply>}
           </article>)}
-          {chat.busy && (!chat.messages.at(-1) || chat.messages.at(-1)?.role === 'user' || !chat.answerText(chat.messages.at(-1)!)) && <div className="m-waiting" role="status" aria-label="Menunggu jawaban"><span/></div>}
+          {chat.busy && chat.messages.at(-1)?.role !== 'assistant' && <div className="m-waiting" role="status" aria-label="Menunggu jawaban"><span/></div>}
+          </div>
         </div>
         <footer ref={footer} className={`m-footer${home ? ' m-footer-home' : ''}${composerState.focused || composerState.keyboardOpen ? ' m-composer-engaged' : ''}${composerState.phase === 'first-focus' ? ' m-composer-expanded' : ''}`}>
           {aboveBottom && <Button icon="arrow" label="Scroll to latest" className="m-to-bottom" onClick={() => { setAboveBottom(false); scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' }); }}/ >}
@@ -140,7 +159,7 @@ export function MobileApp() {
           {chat.error && <div className="m-error" role="alert">{chat.error}<div><button onClick={() => navigate('endpoints')}>Pengaturan</button>{!chat.busy && chat.messages.at(-1)?.role === 'user' && <button onClick={() => void chat.send('', [], true, requestContext)}>Coba lagi</button>}</div></div>}
           {files.length > 0 && <div className="m-attachments">{files.map(file => <MobileAttachment key={file.id} file={file} pending onRemove={() => setFiles(previous => previous.filter(item => item.id !== file.id))}/>)}</div>}
           {speechMode === 'dictation' ? <MobileSpeech mode="dictation" onClose={closeSpeech} onDictation={value => { setDraft(previous => (previous + ' ' + value).trim()); setSpeechMode(''); }} onReply={voiceReply}/> : <MobileComposer input={textarea} value={draft} expanded={composerState.phase === 'first-focus'} engaged={composerState.focused || composerState.keyboardOpen} uploading={uploading} busy={chat.busy} hasFiles={!!files.length} idleSend={chat.temporary || mode === 'Work'}
-            onChange={value => setDraft(preferences.settings.smartPunctuation ? smartPunctuation(value) : value)} onFocus={() => setComposerState(focusComposer)} onBlur={() => setComposerState(blurComposer)} onAttach={() => setSheet('attachments')}
+            onChange={value => setDraft(preferences.settings.smartPunctuation ? smartPunctuation(value) : value)} onFocus={() => setComposerState(focusComposer)} onBlur={() => { setComposerState(blurComposer); mobileComposerKeyboard('hide'); }} onAttach={() => setSheet('attachments')}
             onDictate={() => setSpeechMode('dictation')} onSend={() => void send()} onStop={chat.stop} onVoice={() => setSpeechMode('voice')}/>}
 
         </footer>

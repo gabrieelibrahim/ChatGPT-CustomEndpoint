@@ -50,3 +50,5 @@ import './mobile/composer-motion.css';
 
 import './mobile/voice-attachments.css';
 import './mobile/media-rich-text.css';
+
+import './mobile/reference-motion.css';

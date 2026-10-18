@@ -15,6 +15,21 @@ import org.json.JSONObject
 
 class MainActivity : TauriActivity() {
   private var taskWebView: WebView? = null
+  private var pendingComposerKeyboard = false
+  private fun showComposerKeyboard() {
+    val webView = taskWebView ?: return
+    if (!pendingComposerKeyboard || !hasWindowFocus()) return
+    webView.post {
+      if (!pendingComposerKeyboard || !hasWindowFocus()) return@post
+      webView.requestFocus()
+      val keyboard = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+      if (keyboard.showSoftInput(webView, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)) pendingComposerKeyboard = false
+    }
+  }
+  override fun onWindowFocusChanged(hasFocus: Boolean) {
+    super.onWindowFocusChanged(hasFocus)
+    if (hasFocus) showComposerKeyboard()
+  }
   private fun resumeTaskWebView() {
     if (TaskForegroundService.active()) { taskWebView?.onResume(); taskWebView?.resumeTimers() }
   }
@@ -71,6 +86,16 @@ class MainActivity : TauriActivity() {
     if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
       val origins = mutableSetOf("http://tauri.localhost", "https://tauri.localhost")
       if (BuildConfig.DEBUG) origins.addAll(listOf("http://127.0.0.1:1420", "http://localhost:1420", "http://10.0.2.2:1420"))
+      WebViewCompat.addWebMessageListener(webView, "SuperGPTComposer", origins) { _, message, _, mainFrame, _ ->
+        if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
+        val action = message.data ?: return@addWebMessageListener
+        if (action != "show" && action != "hide") return@addWebMessageListener
+        pendingComposerKeyboard = action == "show"
+        if (pendingComposerKeyboard) showComposerKeyboard() else webView.post {
+          val keyboard = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+          keyboard.hideSoftInputFromWindow(webView.windowToken, 0)
+        }
+      }
       EndpointVault.install(webView, origins)
       WebViewCompat.addWebMessageListener(webView, "SuperGPTTask", origins) { _, message, _, mainFrame, reply ->
         if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener

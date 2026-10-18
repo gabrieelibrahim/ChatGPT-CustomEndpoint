@@ -1,0 +1,25 @@
+/* Video 296: pale blue pulsing wait marker, stable response origin. */
+.m-app .m-waiting{height:26px;align-items:center}
+.m-app .m-waiting span{width:15px;height:15px;background:#aecbfa;animation:m-reference-dot 1250ms ease-in-out infinite}
+@keyframes m-reference-dot{0%,100%{transform:scale(.92);opacity:1}20%{transform:scale(1);opacity:1}70%{transform:scale(.78);opacity:1}}
+.m-app .m-message.m-assistant{animation:none}
+.m-app .m-messages{padding-inline:16px}
+.m-app .m-user{margin-bottom:26px}
+.m-app .m-bubble{max-width:78%;font-size:18px;line-height:26.4px;padding:12px 18px}
+html[data-client-theme=dark] .m-app .m-bubble{background:#020461}
+/* The recording keeps the same resting inset before and after the first send. */
+.m-app .m-footer:not(.m-composer-engaged) .m-composer{width:calc(100% - 44px)}
+.m-app:has(.m-footer:not(.m-composer-engaged)) .m-attachment-menu{left:34px;max-width:calc(100% - 46px)}
+/* A single moving selection surface, rather than two cross-fading buttons. */
+.m-app .m-home-header .m-mode{isolation:isolate}
+.m-home-header .m-mode::before{content:"";position:absolute;left:4px;top:4px;width:calc(50% - 4px);height:calc(100% - 8px);border-radius:24px;background:var(--m-segment);transform:translateX(0);transition:transform 240ms cubic-bezier(.2,.8,.2,1);pointer-events:none;z-index:-1}
+.m-home-header .m-mode[data-mode=Work]::before{transform:translateX(100%)}
+html[data-client-theme] .m-app .m-home-header .m-mode button[aria-selected=true]{background:transparent}
+.m-app .m-home-header .m-mode button:active{transform:none}
+.m-home-header[data-mode=Work]>.m-round:last-child{opacity:0;visibility:hidden;pointer-events:none}
+.m-home-header>.m-round:last-child{transition:opacity 180ms ease,visibility 180ms ease}
+@media(prefers-reduced-motion:reduce){.m-app .m-mode::before{transition:none}}
+html[data-reduce-motion=true] .m-app .m-mode::before{transition:none}
+
+.m-message-stack{display:flow-root;min-width:0}
+.m-home.m-temporary .m-message-stack{display:flex;flex:1}
