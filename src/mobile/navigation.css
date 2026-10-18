@@ -24,9 +24,6 @@
 .m-sidebar footer{display:flex;align-items:center;justify-content:space-between;padding-top:12px;background:#212121;gap:12px}
 .m-app .m-sidebar-new{height:49px;min-height:49px;background:var(--m-action,#2b6bca);border:1px solid #7096ff80;border-radius:28px;padding:0 20px;font-size:18px;line-height:24px;color:#fff;gap:9px;font-weight:500}
 .m-sidebar-new svg{width:23px!important;height:23px!important}
-.m-sidebar-query{display:flex;align-items:center;gap:8px;border-radius:24px;background:#303030;padding:0 12px;margin:6px -8px 12px 0;flex-shrink:0}
-.m-app .m-sidebar-query input{padding:10px 0;background:none;border:0;font-size:15px;flex:1;width:100%}
-.m-sidebar-query svg{color:#aaa}
 .m-settings-screen,.m-library-screen{display:flex;flex:1;flex-direction:column;min-height:0;background:var(--m-bg)}
 .m-page-header{height:70px;min-height:70px;padding:12px 14px;display:grid;grid-template-columns:46px minmax(0,1fr) 46px;align-items:center;gap:12px;background:var(--m-bg);z-index:2}
 .m-page-header h1{font-size:18px;line-height:24px;font-weight:600;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}

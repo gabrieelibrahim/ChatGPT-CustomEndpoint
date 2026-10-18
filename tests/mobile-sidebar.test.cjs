@@ -29,6 +29,9 @@ test('sidebar skeleton resolves to filtered history and cancels superseded prepa
     flush();
     const ready = render();
     assert.match(ready, /Visible chat/); assert.doesNotMatch(ready, /Archived chat|m-sidebar-skeleton/);
+    props.pinned = ['Visible chat'];
+    const pinned = render(); assert.match(pinned, /Disematkan/); assert.match(pinned, /data-icon="comment"/); assert.doesNotMatch(pinned, /Terkini/);
+    props.pinned = [];
     props.titles = ['Superseded']; render(); assert.equal(pending.size, 1);
     props.titles = []; render(); assert.equal(pending.size, 1);
     flush();

@@ -2,15 +2,14 @@ import { useEffect, useState } from 'react';
 import { UIIcon as Icon } from '../components/UIIcon';
 import { type useClientData } from '../desktop/ClientCollections';
 import type { MobileDestination } from './MobileSidebar';
+import { loadMobileProjects as projects } from './searchData';
+import type { MobileProject as Project } from './searchData';
 
-type Project = { id: string; name: string; chats: string[] };
-function projects(): Project[] { try { const values = JSON.parse(localStorage.getItem('client-mobile-projects-v1') || '[]'); return Array.isArray(values) ? values.filter(p => p && typeof p.id === 'string' && typeof p.name === 'string' && Array.isArray(p.chats) && p.chats.every((title: unknown) => typeof title === 'string')) : []; } catch { return []; } }
-
-export function MobileLibrary({ page, store, titles, onClose, onOpen, onDraft, onNotice }: { page: MobileDestination; store: ReturnType<typeof useClientData>; titles: string[]; onClose: () => void; onOpen: (title: string) => void; onDraft: (text: string) => void; onNotice: (text: string) => void }) {
+export function MobileLibrary({ page, store, titles, initialProject = '', onClose, onOpen, onDraft, onNotice }: { page: MobileDestination; store: ReturnType<typeof useClientData>; titles: string[]; initialProject?: string; onClose: () => void; onOpen: (title: string) => void; onDraft: (text: string) => void; onNotice: (text: string) => void }) {
   const [query, setQuery] = useState(''), [adding, setAdding] = useState(false), [title, setTitle] = useState(''), [text, setText] = useState(''), [date, setDate] = useState('');
   const [projectList, setProjects] = useState(projects), [selected, setSelected] = useState(''), [tab, setTab] = useState('Disarankan');
   const [favorites, setFavorites] = useState<string[]>(() => { try { const value = JSON.parse(localStorage.getItem('client-mobile-favorites-v1') || '[]'); return Array.isArray(value) ? value.filter(id => typeof id === 'string') : []; } catch { return []; } });
-  useEffect(() => { setQuery(''); setAdding(false); setSelected(''); setTitle(''); setText(''); setDate(''); }, [page]);
+  useEffect(() => { setQuery(''); setAdding(false); setSelected(page === 'projects' ? initialProject : ''); setTitle(''); setText(''); setDate(''); }, [page, initialProject]);
   const selectedProject = projectList.find(project => project.id === selected);
   const heading = { spaces: 'Ruang', projects: 'Proyek', scheduled: 'Terjadwal', plugins: 'Plugin' }[page];
   const includes = (value: string) => value.toLocaleLowerCase().includes(query.toLocaleLowerCase());
