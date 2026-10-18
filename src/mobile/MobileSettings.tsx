@@ -5,6 +5,7 @@ import { loadUsage, type ClientSettings } from '../lib/clientSettings';
 import { saveLocalProfile, type LocalProfile } from '../lib/localProfile';
 import { libraryFiles } from '../lib/fileLibrary';
 import { downloadFile } from '../desktop/ClientCollections';
+import { MobileSettingsSkeleton } from './MobileSettingsSkeleton';
 
 type Props = {
   screen: string; onScreen: (screen: string) => void;
@@ -25,12 +26,23 @@ export function MobileSettings(p: Props) {
   const screen = p.screen, setScreen = p.onScreen;
   const [name, setName] = useState(p.profile?.name || ''), [memory, setMemory] = useState(''), [signOut, setSignOut] = useState(false);
   const [storage, setStorage] = useState<string>(''), [voices, setVoices] = useState(() => window.speechSynthesis?.getVoices() || []);
+  const [prepared, setPrepared] = useState(screen === 'root' ? screen : '');
+  useEffect(() => {
+    if (screen === 'root') { setPrepared(screen); return; }
+    let active = true, preparedData = screen !== 'storage', settled = false;
+    const publish = () => { if (active && preparedData && settled) setPrepared(screen); };
+    // Keep placeholders stable through the page transition. This is a short UI
+    // preparation window, not a pretend network request or provider spinner.
+    const timer = window.setTimeout(() => { settled = true; publish(); }, 240);
+    if (screen === 'storage') void libraryFiles().then(files => { if (active) setStorage(`${files.length} file · ${(files.reduce((size, file) => size + file.size, 0) / 1024 / 1024).toFixed(1)} MB`); }, () => { if (active) setStorage('Penyimpanan file tidak tersedia.'); }).finally(() => { preparedData = true; publish(); });
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [screen]);
   useEffect(() => { const back = (event: Event) => { if (signOut) { event.preventDefault(); setSignOut(false); } }; window.addEventListener('client-settings-back', back); return () => window.removeEventListener('client-settings-back', back); }, [signOut]);
   useEffect(() => { const synthesis = window.speechSynthesis; const refresh = () => setVoices(synthesis?.getVoices() || []); synthesis?.addEventListener('voiceschanged', refresh); refresh(); return () => synthesis?.removeEventListener('voiceschanged', refresh); }, []);
   const s = p.settings, update = p.update;
   const select = (label: string, value: string, options: [string, string][], change: (value: string) => void) => <select aria-label={label} value={value} onChange={event => change(event.target.value)}>{options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>;
   const toggle = (title: string, value: boolean, change: (value: boolean) => void) => <Row title={title}><ClientSwitch label={title} value={value} change={change}/></Row>;
-  const openStorage = async () => { setScreen('storage'); try { const files = await libraryFiles(); setStorage(`${files.length} file · ${(files.reduce((size, file) => size + file.size, 0) / 1024 / 1024).toFixed(1)} MB`); } catch { setStorage('Penyimpanan file tidak tersedia.'); } };
+  const openStorage = () => setScreen('storage');
   const exportChats = () => { try { const content = JSON.parse(localStorage.getItem('desktop-chat-content') || '{}'); downloadFile('SuperGPT-chats.json', JSON.stringify({ version: 1, titles: p.titles, content }, null, 2), 'application/json'); } catch { p.onNotice('Ekspor obrolan gagal.'); } };
   const page = (key: string) => () => setScreen(key);
   return <div className="m-settings-screen" onKeyDown={event => {
@@ -39,8 +51,8 @@ export function MobileSettings(p: Props) {
     if (event.key === 'Tab') { const controls = event.currentTarget.querySelectorAll<HTMLButtonElement>('[role=dialog] button'); const first = controls[0], last = controls[controls.length - 1]; if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); } }
   }}>
     <header className="m-page-header" inert={signOut}><button aria-label={screen === 'root' ? 'Back to chat' : 'Back to Settings'} className="m-page-back" onClick={screen === 'root' ? p.onClose : page('root')}><Icon name="arrow"/></button><h1>{names[screen]}</h1><span/></header>
-    <div className="m-settings-body" key={screen} inert={signOut}>
-    {screen === 'root' ? <>
+    <div className="m-settings-body" key={screen} inert={signOut} aria-busy={prepared !== screen}>
+    {prepared !== screen ? <MobileSettingsSkeleton screen={screen}/> : screen === 'root' ? <>
       <Group title="SuperGPT saya"><Row icon="personal" title="Personalisasi" onClick={page('personalization')}/><Row icon="memory" title="Memori" onClick={page('memory')}/><Row icon="settings-plugins" title="Plugin" onClick={p.onPlugins}/></Group>
       <Group title="Akun"><Row icon="globe" title="Custom Endpoint" detail={p.provider || 'Lokal'} onClick={p.onEndpoint}><Icon name="down" size={14}/></Row><Row icon="side-chat" title="Langganan" detail="Dikelola penyedia" onClick={page('account')}/><Row icon="bars" title="Penggunaan dan batasan" onClick={page('usage')}/><Row icon="mail" title="Email" detail="Tidak digunakan"/><Row icon="phone" title="Nomor telepon" detail="Tidak digunakan"/></Group>
       <Group><Row icon="sun" title="Tampilan" detail={{ system: 'Sistem', light: 'Terang', dark: 'Gelap' }[s.theme]} onClick={page('appearance')}><Icon name="down" size={14}/></Row><Row icon="paint" title="Warna aksen" detail={s.accent === '#2b6bca' ? 'Biru' : 'Kustom'} onClick={page('accent')}><i className="m-accent-dot" style={{ background: s.accent }}/><Icon name="down" size={14}/></Row></Group>

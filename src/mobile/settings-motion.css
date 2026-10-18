@@ -1,0 +1,27 @@
+/* Supplied video: shared horizontal axis with fade, not a whole-width slide.
+   Tuned from 1.84–2.12s and 2.56–2.80s; values are reconstruction estimates. */
+.m-page-transition{position:relative;display:flex;flex:1;min-height:0;overflow:clip;isolation:isolate;background:var(--m-bg)}
+.m-page-layer{position:absolute;inset:0;display:flex;flex-direction:column;min-height:0;background:var(--m-bg)}
+.m-page-current{z-index:1}
+.m-page-moving{--m-page-shift:32px}
+.m-nav-back{--m-page-shift:-32px}
+.m-page-moving>.m-page-current{animation:m-settings-arrive 160ms 60ms cubic-bezier(.2,.8,.2,1) both}
+.m-page-moving>.m-page-departing{animation:m-settings-depart 120ms cubic-bezier(.4,0,1,1) both;pointer-events:none;z-index:2}
+@keyframes m-settings-arrive{from{opacity:0;transform:translateX(var(--m-page-shift))}to{opacity:1;transform:translateX(0)}}
+@keyframes m-settings-depart{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(calc(-1 * var(--m-page-shift)))}}
+.m-settings-skeleton{display:grid;gap:12px;padding:0 0 24px}
+.m-settings-skeleton-row{height:55px;border-radius:28px;background:var(--m-field);display:flex;align-items:center;gap:24px;padding:0 16px;justify-content:space-between}
+.m-settings-skeleton-row i{width:42%;height:12px}
+.m-settings-skeleton-row b{width:32px;height:26px;border-radius:16px}
+.m-settings-skeleton-copy{height:44px;margin:0 16px 16px;opacity:.4}
+.m-settings-skeleton-field{display:grid;gap:8px;margin-bottom:12px}
+.m-settings-skeleton-field>i{height:12px;width:48%;margin-left:16px}
+.m-settings-skeleton-field>span{height:55px;border-radius:28px;background:var(--m-field);position:relative;overflow:hidden}
+.m-settings-skeleton-field:last-child>span{height:90px;border-radius:24px}
+.m-settings-skeleton :is(i,b),.m-settings-skeleton-copy{display:block;background:var(--m-selected);border-radius:3px}
+.m-settings-skeleton-row b{border-radius:16px}
+.m-settings-skeleton-row,.m-settings-skeleton-field>span{position:relative;overflow:hidden}
+.m-settings-skeleton-row::after,.m-settings-skeleton-field>span::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 20%,color-mix(in srgb,var(--m-text) 5%,transparent) 48%,transparent 75%);transform:translateX(-100%);animation:m-settings-shimmer 1400ms linear infinite}
+@keyframes m-settings-shimmer{to{transform:translateX(100%)}}
+@media(prefers-reduced-motion:reduce){.m-page-transition .m-page-layer,.m-settings-skeleton-row::after,.m-settings-skeleton-field>span::after{animation:none}.m-page-departing{display:none}}
+html[data-reduce-motion=true] .m-page-departing{display:none}

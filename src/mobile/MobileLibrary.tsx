@@ -5,7 +5,7 @@ import type { MobileDestination } from './MobileSidebar';
 import { loadMobileProjects as projects } from './searchData';
 import type { MobileProject as Project } from './searchData';
 
-export function MobileLibrary({ page, store, titles, initialProject = '', onClose, onOpen, onDraft, onNotice }: { page: MobileDestination; store: ReturnType<typeof useClientData>; titles: string[]; initialProject?: string; onClose: () => void; onOpen: (title: string) => void; onDraft: (text: string) => void; onNotice: (text: string) => void }) {
+export function MobileLibrary({ page, store, titles, initialProject = '', backLabel = 'Back to chat', onClose, onOpen, onDraft, onNotice }: { page: MobileDestination; store: ReturnType<typeof useClientData>; titles: string[]; initialProject?: string; backLabel?: string; onClose: () => void; onOpen: (title: string) => void; onDraft: (text: string) => void; onNotice: (text: string) => void }) {
   const [query, setQuery] = useState(''), [adding, setAdding] = useState(false), [title, setTitle] = useState(''), [text, setText] = useState(''), [date, setDate] = useState('');
   const [projectList, setProjects] = useState(projects), [selected, setSelected] = useState(''), [tab, setTab] = useState('Disarankan');
   const [favorites, setFavorites] = useState<string[]>(() => { try { const value = JSON.parse(localStorage.getItem('client-mobile-favorites-v1') || '[]'); return Array.isArray(value) ? value.filter(id => typeof id === 'string') : []; } catch { return []; } });
@@ -24,7 +24,7 @@ export function MobileLibrary({ page, store, titles, initialProject = '', onClos
     setAdding(false); setTitle(''); setText(''); setDate('');
   }
   return <div className="m-library-screen">
-    <header className="m-page-header"><button className="m-page-back" aria-label={selected ? 'Back to projects' : 'Back to chat'} onClick={selected ? () => setSelected('') : onClose}><Icon name="arrow"/></button><h1>{selectedProject?.name || heading}</h1>{page !== 'plugins' && <button className="m-page-add" aria-label={'Tambah ' + heading} onClick={() => setAdding(true)}><Icon name="plus"/></button>}</header>
+    <header className="m-page-header"><button className="m-page-back" aria-label={selected ? 'Back to projects' : backLabel} onClick={selected ? () => setSelected('') : onClose}><Icon name="arrow"/></button><h1>{selectedProject?.name || heading}</h1>{page !== 'plugins' && <button className="m-page-add" aria-label={'Tambah ' + heading} onClick={() => setAdding(true)}><Icon name="plus"/></button>}</header>
     {page === 'spaces' && <div className="m-library-tabs">{['Disarankan', 'Favorit', 'Folder', 'Pages'].map(value => <button key={value} aria-pressed={tab === value} onClick={() => setTab(value)}>{value}</button>)}</div>}
     <div className="m-library-body">
       {adding ? <form className="m-library-editor" onSubmit={event => { event.preventDefault(); save(); }}><label>Nama<input autoFocus required maxLength={100} value={title} onChange={event => setTitle(event.target.value)}/></label>{page !== 'projects' && <label>{page === 'scheduled' ? 'Prompt' : 'Isi catatan'}<textarea rows={5} maxLength={20000} value={text} onChange={event => setText(event.target.value)}/></label>}{page === 'scheduled' && <label>Waktu<input type="datetime-local" required value={date} onChange={event => setDate(event.target.value)}/></label>}<button className="m-primary" type="submit">Simpan</button><button type="button" onClick={() => setAdding(false)}>Batal</button></form>

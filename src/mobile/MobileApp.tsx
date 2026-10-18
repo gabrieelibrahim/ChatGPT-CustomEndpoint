@@ -22,6 +22,7 @@ import { MobileControlIcon } from './MobileControlIcon';
 import { MobileSidebar, type MobileDestination } from './MobileSidebar';
 import { MobileSettings } from './MobileSettings';
 import { bindSettingsBack } from './settingsBack';
+import { MobilePageTransition } from './MobilePageTransition';
 import { MobileLibrary } from './MobileLibrary';
 import { useClientData } from '../desktop/ClientCollections';
 import { smartPunctuation } from '../lib/clientSettings';
@@ -149,13 +150,14 @@ export function MobileApp() {
     }
   }}>
     <div className="m-content" inert={drawer || !!sheet || speechMode === 'voice' || !profile}>
+      <MobilePageTransition active={inSettings} identity={page === 'settings' ? 'settings/' + settingsScreen : page}>
       {page === 'endpoints' ? <header className="m-page-header"><button type="button" className="m-page-back" aria-label={returnPage === 'settings' ? 'Back to Settings' : 'Back to chat'} onClick={() => navigate(returnPage)}><Icon name="arrow"/></button><h1>Custom Endpoint</h1><span/></header> : page !== 'chat' ? null : home ? <MobileHomeHeader mode={mode} temporary={chat.temporary} onSidebar={() => setDrawer(true)} onTemporary={temporaryChat} onMode={value => { setMode(value); localStorage.setItem('desktop-chat-mode', value); }}/ > : <header className="m-header m-conversation-header">
         <Button icon="mobile-menu" label="Open sidebar" className="m-round" onClick={() => setDrawer(true)}/>
         <span/>
         <div className="m-header-pill"><Button icon="edit" label="New chat" onClick={() => newChat()}/><Button icon="dots" label="Conversation options" onClick={() => setSheet('conversation')}/></div>
       </header>}
       {page === 'endpoints' ? <div className="m-endpoints d-mobile"><EndpointSettings onSaved={() => { setNotice('Endpoint tersimpan.'); navigate(returnPage); }} onNotice={setNotice}/></div> : page === 'settings' ? <MobileSettings screen={settingsScreen} onScreen={setSettingsScreen} profile={profile} settings={preferences.settings} provider={chat.endpoint?.name} model={chat.endpoint?.model} titles={chat.titles} archived={archived} update={preferences.update} onProfile={setProfile} onEndpoint={() => navigate('endpoints')} onModels={() => setSheet('models')} onPlugins={() => navigate('plugins')} onOpen={openChat} onArchive={archive} onNotice={setNotice} onClose={() => navigate('chat')} onSignOut={() => { try { chat.stop(); signOutMobileProfile(); newChat(); setName(''); setProfile(null); } catch { setNotice('Profil belum dapat dilepas.'); } }}/>
-      : page !== 'chat' ? <MobileLibrary page={page} store={clientData} titles={chat.titles} initialProject={searchProject} onClose={() => { setSearchProject(''); navigate(returnPage); }} onOpen={openChat} onDraft={text => { newChat(); setDraft(text); }} onNotice={setNotice}/> : <>
+      : page !== 'chat' ? <MobileLibrary backLabel={returnPage === 'settings' ? 'Back to Settings' : 'Back to chat'} page={page} store={clientData} titles={chat.titles} initialProject={searchProject} onClose={() => { setSearchProject(''); navigate(returnPage); }} onOpen={openChat} onDraft={text => { newChat(); setDraft(text); }} onNotice={setNotice}/> : <>
         <div className="m-messages" ref={scroll} onScroll={() => { const el = scroll.current; if (el) setAboveBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 40); }}>
           <div className="m-message-stack" ref={streamContent}>
           {home && chat.temporary && <MobileTemporaryHome onLearnMore={() => setSheet('temporary')} onPersonalization={() => setSheet('personalization')} personalized={personalization.instructions || personalization.memories}/>}
@@ -177,6 +179,7 @@ export function MobileApp() {
 
         </footer>
       </>}
+      </MobilePageTransition>
     </div>
     <input hidden type="file" accept="image/*" capture="environment" ref={cameraPicker} onChange={event => void attach(event.target.files)}/>
     <input hidden type="file" accept="image/*,video/*" multiple ref={photoPicker} onChange={event => void attach(event.target.files)}/>

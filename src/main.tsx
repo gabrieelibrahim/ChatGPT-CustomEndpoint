@@ -52,3 +52,4 @@ import './mobile/voice-attachments.css';
 import './mobile/media-rich-text.css';
 
 import './mobile/reference-motion.css';
+import './mobile/settings-motion.css';
