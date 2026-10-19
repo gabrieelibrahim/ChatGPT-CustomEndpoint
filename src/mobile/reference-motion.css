@@ -22,10 +22,17 @@ html[data-client-theme] .m-app .m-home-header .m-mode button[aria-selected=true]
 html[data-reduce-motion=true] .m-app .m-mode::before{transition:none}
 
 .m-message-stack{display:flow-root;min-width:0}
-.m-end-pull{display:flex;justify-content:center;padding:76px 0 48px;animation:m-dictation-enter 180ms ease-out}
-.m-app .m-end-pull button{display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:400;color:var(--m-muted);padding:0;align-items:center}
-.m-end-pull button>span{display:grid;place-items:center;background:var(--m-action);color:white;border-radius:50%;width:44px;height:44px}
-.m-end-pull svg{width:24px;height:24px}
-@media(prefers-reduced-motion:reduce){.m-end-pull{animation:none}}
-html[data-reduce-motion=true] .m-end-pull{animation:none}
+.m-content{position:relative}
+.m-messages:is([data-end-pull=dragging],[data-end-pull=releasing],[data-end-pull=committing])>.m-message-stack{transform:translate3d(0,calc(-1 * var(--m-pull-offset,0px)),0)}
+.m-messages[data-end-pull=dragging]{user-select:none}
+/* Overlay follows overdrag; it never inserts a permanent block into the thread. */
+.m-end-pull{position:absolute;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 16px;pointer-events:none;z-index:1;transform:translateY(calc(50% - var(--m-pull-center))) scale(var(--m-pull-scale));transform-origin:center;color:var(--m-muted);font-size:12px;font-weight:400;line-height:16px;will-change:transform,opacity}
+.m-pull-mark{position:relative;width:36px;height:36px;transform:scale(var(--m-pull-icon-scale));color:var(--m-action)}
+.m-pull-mark .m-pull-ring{position:absolute;inset:0;width:36px!important;height:36px!important;fill:none;stroke:currentColor;stroke-width:3;transform:rotate(-90deg)}
+.m-pull-track{opacity:.22}.m-pull-progress{stroke-linecap:round}
+.m-pull-edit{position:absolute;inset:0;display:grid;place-items:center;background:var(--m-action);color:white;border-radius:50%;opacity:0}
+.m-pull-edit svg{width:18px!important;height:18px!important}
+.m-end-pull[data-armed=true] .m-pull-edit{opacity:1}
+.m-end-pull[data-armed=true] .m-pull-ring{opacity:0}
+.m-pull-announcement{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .m-home.m-temporary .m-message-stack{display:flex;flex:1}

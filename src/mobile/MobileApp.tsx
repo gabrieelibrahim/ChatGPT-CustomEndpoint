@@ -166,7 +166,7 @@ export function MobileApp() {
             {message.role === 'user' ? <div className="m-bubble">{message.text}{!!message.attachments?.length && <div className="m-message-files">{message.attachments.map(file => <MobileAttachment key={file.id} file={file}/>)}</div>}</div> : <><MobileStreamingReply text={chat.answerText(message)} streaming={chat.busy && index === chat.messages.length - 1}>{chat.answerText(message) && !(chat.busy && index === chat.messages.length - 1) && <MobileResponseActions text={chat.answerText(message)} onNotice={setNotice} onMore={article => { responseArticle.current = article; setResponseText(chat.answerText(message)); setSheet('response-actions'); }}/>}</MobileStreamingReply><AgentMessageExtras state={message.agent} streaming={chat.busy && index === chat.messages.length - 1}/></>}
           </article>)}
           {chat.busy && chat.messages.at(-1)?.role !== 'assistant' && <div className="m-waiting" role="status" aria-label="Menunggu jawaban"><span/></div>}
-          <MobileEndPull scroll={scroll} enabled={!home && !chat.busy} conversation={chat.title} onNew={() => newChat()}/>
+          <MobileEndPull scroll={scroll} enabled={!home && !chat.busy && !drawer && !sheet && !speechMode} conversation={chat.title} onNew={() => { newChat(); requestAnimationFrame(() => { textarea.current?.focus({ preventScroll: true }); mobileComposerKeyboard('show'); }); }}/>
           </div>
         </div>
         <footer ref={footer} className={`m-footer${home ? ' m-footer-home' : ''}${composerState.focused || composerState.keyboardOpen ? ' m-composer-engaged' : ''}${composerState.phase === 'first-focus' ? ' m-composer-expanded' : ''}`}>

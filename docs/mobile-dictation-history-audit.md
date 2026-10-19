@@ -40,9 +40,10 @@ REA's `engine.artifact_sha256` differs and is not used to identify the APK.
   conflicting names are rejected. Current streaming chat rename/delete waits
   for the response to stop, and changing another chat does not resurrect it
   during streaming persistence.
-- An extra upward swipe at the completed conversation end exposes the new-chat
-  shortcut. Only tapping it starts another chat. Normal scrolling is retained;
-  the browser's Android overscroll physics are not replaced by a custom engine.
+- The initial extra-scroll shortcut implementation was superseded by
+  [the REA pull-to-new-chat audit](mobile-end-pull-audit.md). The gesture now
+  follows overdrag continuously, springs back on a short/cancelled pull, and
+  starts a new chat on release after arming; it does not leave a static button.
 - Dictation uses Android SpeechRecognizer through a trusted top-frame bridge
   in the APK, and Web Speech where available in the browser. Microphone permission
   is requested only after dictation is invoked. Partial/final transcripts,
