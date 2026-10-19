@@ -27,9 +27,13 @@ export function validateSession(input) {
   if (!/^[a-zA-Z0-9_-]{24,100}$/.test(input.owner)) throw inputError('Identitas penyimpanan tidak valid.');
   const models = [...new Set([p.model, ...(Array.isArray(p.models) ? p.models : [])])].filter(value => typeof value === 'string' && value.length <= 160).slice(0, 100);
   const responses = o.api === 'responses';
-  const options = { api: responses ? 'responses' : 'chat', tools: o.tools === true, vision: o.vision === true, pdf: responses && o.pdf === true, web: responses && o.web === true, code: responses && o.code === true, images: responses && o.images === true,
+  const options = { api: responses ? 'responses' : 'chat', tools: o.tools === true, vision: o.vision === true, pdf: responses && o.pdf === true, web: o.web === true && (responses || o.webSearch === 'exa'), webSearch: o.webSearch === 'exa' ? 'exa' : 'provider', code: responses && o.code === true, images: responses && o.images === true,
     vectorStores: responses && Array.isArray(o.vectorStores) ? o.vectorStores.filter(value => /^vs_[a-zA-Z0-9_-]{1,120}$/.test(value)).slice(0, 5) : [],
     mcp: o.mcp === true, transcriptionModel: typeof o.transcriptionModel === 'string' ? o.transcriptionModel.slice(0, 160) : '', realtimeModel: typeof o.realtimeModel === 'string' ? o.realtimeModel.slice(0, 160) : '',
-    instructions: typeof o.instructions === 'string' ? o.instructions.slice(0, 20000) : '', sendReasoning: p.sendReasoning === true };
-  return { owner: input.owner, provider: { baseUrl: safeUrl(p.baseUrl), model: p.model, models, key: p.key }, options };
+    instructions: typeof o.instructions === 'string' ? o.instructions.slice(0, 20000) : '', sendReasoning: p.sendReasoning === true, reasoningEffort: ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'].includes(o.reasoningEffort) ? o.reasoningEffort : 'medium' };
+  const mcpProfiles = Array.isArray(input.mcp) ? input.mcp.slice(0, 8).map((profile, index) => {
+    if (typeof profile?.name !== 'string' || !profile.name.trim() || profile.name.length > 80) throw inputError('Nama MCP tidak valid.');
+    return { name: 'plugin_' + index + '_' + profile.name.replace(/[^a-zA-Z0-9_]/g, '_'), url: safeUrl(profile.url), headers: {} };
+  }) : [];
+  return { owner: input.owner, provider: { baseUrl: safeUrl(p.baseUrl), model: p.model, models, key: p.key }, options, mcpProfiles };
 }

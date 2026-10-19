@@ -100,7 +100,8 @@ export function ComposerAddMenu({ anchor, plan, onFiles, onSelect, onUnavailable
   </div>;
 }
 
-export type PreviewMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; reasoningDurationMs?: number; timestamp?: number; attachments?: { id: string; name: string; type: string }[] };
+import { AgentMessageExtras } from '../agent/AgentMessageExtras';
+export type PreviewMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; reasoningDurationMs?: number; timestamp?: number; attachments?: { id: string; name: string; type: string }[]; agent?: import('../agent/mainClient').AgentMessageState };
 
 export function ChatMessage({ message, onEdit, onNotice, streaming = false, experience = 'ChatGPT', streamContent }: {
   message: PreviewMessage; onEdit: (text: string) => void; onNotice: (text: string) => void; streaming?: boolean; experience?: 'ChatGPT' | 'Codex'; streamContent?: ReactNode;
@@ -128,6 +129,7 @@ export function ChatMessage({ message, onEdit, onNotice, streaming = false, expe
     {editing ? <div className="d-message-editor"><textarea aria-label="Edit message" autoFocus value={draft} onChange={e => setDraft(e.target.value)}
       onKeyDown={event => { if (event.key === 'Escape') setEditing(false); }}/><div><button onClick={() => setEditing(false)}>Cancel</button><button disabled={!draft.trim()} onClick={() => { onEdit(draft.trim()); setEditing(false); }}>Save</button></div></div>
       : streamContent ? streamContent : (parsed.content || (streaming && !codex)) ? <div className={message.role === 'user' ? 'd-user-message' : 'd-assistant-message'} role={message.role === 'assistant' && !parsed.content ? 'status' : undefined} aria-label={message.role === 'assistant' && !parsed.content ? 'Menunggu jawaban' : undefined}>{message.role === 'assistant' && parsed.content ? <RichText text={parsed.content}/> : parsed.content}</div> : null}
+    {message.role === 'assistant' && <AgentMessageExtras state={message.agent} streaming={streaming}/>}
     {!editing && !streaming && parsed.content && <MessageActions text={parsed.content} user={message.role === 'user'} timestamp={time} onNotice={onNotice} onEdit={() => { setDraft(message.text); setEditing(true); }}/ >}
   </section>;
 }

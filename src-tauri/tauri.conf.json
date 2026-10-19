@@ -27,8 +27,8 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' https://cdn.platform.openai.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https: http://127.0.0.1:* http://localhost:* ipc: http://ipc.localhost; object-src 'none'; base-uri 'self'; frame-src https://cdn.platform.openai.com; form-action 'self'",
-      "devCsp": "default-src 'self'; script-src 'self' https://cdn.platform.openai.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https: http://127.0.0.1:* http://localhost:* ipc: http://ipc.localhost ws://127.0.0.1:1420; object-src 'none'; base-uri 'self'; frame-src https://cdn.platform.openai.com; form-action 'self'"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https: http://127.0.0.1:* http://localhost:* ipc: http://ipc.localhost; object-src 'none'; base-uri 'self'; frame-src 'none'; form-action 'self'",
+      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' https: http://127.0.0.1:* http://localhost:* ipc: http://ipc.localhost ws://127.0.0.1:1420; object-src 'none'; base-uri 'self'; frame-src 'none'; form-action 'self'"
     }
   },
   "bundle": {

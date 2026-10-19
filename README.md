@@ -126,10 +126,15 @@ Logo SuperGPT berasal dari aset yang disediakan pemilik project. Master transpar
 
 Sebagian ikon antarmuka dan komponen menggunakan [OpenAI Apps SDK UI](https://github.com/openai/apps-sdk-ui). Atribusi dan lisensi sumber ikon tersedia di [`src/components/openai-icons/`](src/components/openai-icons/). Logo provider dan ikon antarmuka bukan logo aplikasi SuperGPT.
 
-## ChatKit & Agents SDK
+## Tools di chat utama
 
-Buka **Pengaturan → ChatKit & Agents** untuk ruang chat resmi ChatKit dengan
-Agents SDK dan custom endpoint pilihanmu. Streaming, riwayat server, tool, agen
-spesialis, persetujuan, dan unggahan sudah terhubung. Fitur Responses/audio
-mengikuti dukungan provider. [Panduan integrasi dan status pengujian](docs/sdk-integration.md).
-Checkpoint rollback: `before-chatkit-integration` (`85d9526`).
+Composer yang sama menjalankan Agents SDK memakai custom endpoint pilihanmu.
+Pencarian web, persetujuan MCP, pertanyaan, kartu, dan tautan sumber muncul di
+percakapan. Atur **Pengaturan / Fitur AI** (desktop: **Settings / General / Fitur
+AI**), lalu tambahkan server MCP HTTP di **Plugin**. Riwayat tetap satu di
+perangkat. Schema ChatKit dipakai untuk isi jawaban; komponen chat lengkapnya
+tidak dimuat.
+
+Model perlu mendukung function calling. Server pengembangan memuat SDK;
+APK memerlukan server HTTPS yang dikonfigurasi terpisah.
+[Panduan setup dan batas pengujian](docs/sdk-integration.md).

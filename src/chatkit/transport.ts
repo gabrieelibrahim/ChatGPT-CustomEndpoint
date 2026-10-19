@@ -3,13 +3,13 @@ import type { ClientSettings } from '../lib/clientSettings';
 import { sdkOwner, sdkServer, type SdkConfig } from './config';
 
 export type SdkConnection = { apiUrl: string; fetch: typeof fetch; request: <T>(path: string, body?: unknown) => Promise<T>; close: () => Promise<void> };
-export async function connectSdk(config: SdkConfig, endpoint: EndpointProfile, key: string, serverToken: string, settings: ClientSettings): Promise<SdkConnection> {
+export async function connectSdk(config: SdkConfig, endpoint: EndpointProfile, key: string, serverToken: string, settings: ClientSettings, extra: { signal?: AbortSignal; mcp?: { name: string; url: string }[]; reasoningEffort?: string } = {}): Promise<SdkConnection> {
   const origin = sdkServer(config.server), base = origin + '/__sdk';
   let token = '', renewing: Promise<void> | null = null, closed = false;
   const authorize = async () => {
     if (closed) throw Error('Sesi SDK sudah ditutup.');
     const response = await fetch(base + '/session', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(serverToken ? { Authorization: 'Bearer ' + serverToken } : {}) }, credentials: 'omit', cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer',
-      body: JSON.stringify({ owner: sdkOwner(), provider: { baseUrl: endpoint.baseUrl, model: endpoint.model, models: endpoint.models, key: endpoint.auth === 'none' ? '' : key, sendReasoning: endpoint.sendReasoning }, options: { ...config.options, instructions: [settings.instructions, settings.writingStyle === 'concise' ? 'Prefer concise answers.' : settings.writingStyle === 'detailed' ? 'Prefer detailed answers.' : '', settings.memoriesEnabled ? 'User-saved context:\n' + settings.memories.join('\n') : ''].filter(Boolean).join('\n\n') } }) });
+      signal: extra.signal, body: JSON.stringify({ owner: sdkOwner(), mcp: extra.mcp, provider: { baseUrl: endpoint.baseUrl, model: endpoint.model, models: endpoint.models, key: endpoint.auth === 'none' ? '' : key, sendReasoning: endpoint.sendReasoning }, options: { ...config.options, reasoningEffort: extra.reasoningEffort, instructions: [settings.instructions, settings.writingStyle === 'concise' ? 'Prefer concise answers.' : settings.writingStyle === 'detailed' ? 'Prefer detailed answers.' : '', settings.memoriesEnabled ? 'User-saved context:\n' + settings.memories.join('\n') : ''].filter(Boolean).join('\n\n') } }) });
     if (!response.ok) throw Error(response.status === 403 ? 'Server menolak akses. Periksa origin yang diizinkan dan token server.' : 'Server Agents belum tersedia. Jalankan server SDK atau periksa URL server.');
     const result = await response.json(); if (typeof result.token !== 'string') throw Error('Respons sesi server tidak valid.'); token = result.token;
   };

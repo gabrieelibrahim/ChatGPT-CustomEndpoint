@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { UIIcon as Icon } from '../components/UIIcon';
+import { AgentMessageExtras } from '../agent/AgentMessageExtras';
 import { MobileStreamingReply } from './MobileStreamingReply';
 import { MobileEndPull } from './MobileEndPull';
 import { mobileComposerKeyboard } from './composerKeyboard';
@@ -33,7 +34,7 @@ function Button({ icon, label, onClick, children, ...props }: { icon?: string; l
   return <button type="button" aria-label={label} onClick={onClick} {...props}>{icon && <Icon name={icon} size={22}/ >}{children}</button>;
 }
 
-export function MobileApp({ suspended = false }: { suspended?: boolean } = {}) {
+export function MobileApp() {
   const chat = useMobileConversation();
   const [profile, setProfile] = useState(loadLocalProfile), [name, setName] = useState('');
   const [page, setPage] = useState<'chat' | 'settings' | 'endpoints' | MobileDestination>('chat');
@@ -63,11 +64,11 @@ export function MobileApp({ suspended = false }: { suspended?: boolean } = {}) {
   const streamContent = useRef<HTMLDivElement>(null);
   const initialKeyboard = useRef(false);
   useEffect(() => {
-    if (suspended || initialKeyboard.current || !profile || page !== 'chat') return;
+    if (initialKeyboard.current || !profile || page !== 'chat') return;
     initialKeyboard.current = true;
     const frame = requestAnimationFrame(() => { textarea.current?.focus({ preventScroll: true }); mobileComposerKeyboard('show'); });
     return () => cancelAnimationFrame(frame);
-  }, [profile, page, suspended]);
+  }, [profile, page]);
   useEffect(() => {
     const resize = () => { const nextHeight = window.visualViewport?.height || window.innerHeight; setHeight(nextHeight); setComposerState(state => resizeComposer(state, nextHeight, window.innerWidth, document.activeElement === textarea.current)); };
     window.visualViewport?.addEventListener('resize', resize); window.addEventListener('resize', resize);
@@ -121,7 +122,7 @@ export function MobileApp({ suspended = false }: { suspended?: boolean } = {}) {
   }
   const settingsBack = useRef(backFromSettings); settingsBack.current = backFromSettings;
   const inSettings = page === 'settings' || (page !== 'chat' && returnPage === 'settings');
-  useEffect(() => inSettings && !suspended ? bindSettingsBack(() => settingsBack.current()) : undefined, [inSettings, suspended]);
+  useEffect(() => inSettings ? bindSettingsBack(() => settingsBack.current()) : undefined, [inSettings]);
   function temporaryChat() { const temp = !chat.temporary; newChat(temp); if (temp && localStorage.getItem('client-temporary-intro-v1') !== 'seen') setSheet('temporary'); }
   async function send() {
     if (uploading || chat.busy || (!draft.trim() && !files.length)) return;
@@ -162,7 +163,7 @@ export function MobileApp({ suspended = false }: { suspended?: boolean } = {}) {
           <div className="m-message-stack" ref={streamContent}>
           {home && chat.temporary && <MobileTemporaryHome onLearnMore={() => setSheet('temporary')} onPersonalization={() => setSheet('personalization')} personalized={personalization.instructions || personalization.memories}/>}
           {chat.messages.map((message, index) => <article key={index} className={'m-message m-' + message.role}>
-            {message.role === 'user' ? <div className="m-bubble">{message.text}{!!message.attachments?.length && <div className="m-message-files">{message.attachments.map(file => <MobileAttachment key={file.id} file={file}/>)}</div>}</div> : <MobileStreamingReply text={chat.answerText(message)} streaming={chat.busy && index === chat.messages.length - 1}>{chat.answerText(message) && !(chat.busy && index === chat.messages.length - 1) && <MobileResponseActions text={chat.answerText(message)} onNotice={setNotice} onMore={article => { responseArticle.current = article; setResponseText(chat.answerText(message)); setSheet('response-actions'); }}/>}</MobileStreamingReply>}
+            {message.role === 'user' ? <div className="m-bubble">{message.text}{!!message.attachments?.length && <div className="m-message-files">{message.attachments.map(file => <MobileAttachment key={file.id} file={file}/>)}</div>}</div> : <><MobileStreamingReply text={chat.answerText(message)} streaming={chat.busy && index === chat.messages.length - 1}>{chat.answerText(message) && !(chat.busy && index === chat.messages.length - 1) && <MobileResponseActions text={chat.answerText(message)} onNotice={setNotice} onMore={article => { responseArticle.current = article; setResponseText(chat.answerText(message)); setSheet('response-actions'); }}/>}</MobileStreamingReply><AgentMessageExtras state={message.agent} streaming={chat.busy && index === chat.messages.length - 1}/></>}
           </article>)}
           {chat.busy && chat.messages.at(-1)?.role !== 'assistant' && <div className="m-waiting" role="status" aria-label="Menunggu jawaban"><span/></div>}
           <MobileEndPull scroll={scroll} enabled={!home && !chat.busy} conversation={chat.title} onNew={() => newChat()}/>

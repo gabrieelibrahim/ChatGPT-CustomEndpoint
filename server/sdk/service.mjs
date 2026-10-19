@@ -2,6 +2,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { id, now, page, publicThread, SdkStore } from './store.mjs';
 import { validateSession, MAX_BODY, SdkInputError, inputError } from './config.mjs';
 import { runAgent, card } from './agents.mjs';
+import { MainChatService } from './mainChat.mjs';
 
 const token = () => randomBytes(32).toString('base64url');
 const equal = (a, b) => { if (typeof a !== 'string' || typeof b !== 'string') return false; const left = Buffer.from(a), right = Buffer.from(b); return left.length === right.length && timingSafeEqual(left, right); };
@@ -21,7 +22,7 @@ export function safeError(error) {
 
 export class SdkService {
   constructor({ directory, mcpProfiles = [], agentRun = runAgent }) {
-    this.store = new SdkStore(directory); this.sessions = new Map(); this.running = new Map(); this.mcpProfiles = mcpProfiles; this.agentRun = agentRun;
+    this.store = new SdkStore(directory); this.sessions = new Map(); this.running = new Map(); this.mcpProfiles = mcpProfiles; this.agentRun = agentRun; this.main = new MainChatService(this.store);
   }
   createSession(input) {
     this.prune(); if (this.sessions.size >= 32) throw inputError('Terlalu banyak sesi SDK. Tunggu atau tutup sesi lama.');
@@ -204,7 +205,13 @@ export function sdkHandler(service, { origins = [], remoteToken = '', publicOrig
         json(service.createSession(JSON.parse((await readBody(req, 128 * 1024)).toString()))); return;
       }
       const session = service.session(bearer); session.baseUrl = (remote ? publicOrigin : 'http://' + host) + '/__sdk';
-      if (path === '/session' && req.method === 'DELETE') { service.sessions.delete(bearer); json({}); return; }
+      if (path === '/session' && req.method === 'DELETE') { service.main.closeSession(bearer); service.sessions.delete(bearer); json({}); return; }
+      if (path === '/main' && req.method === 'POST' && req.headers['content-type'] === 'application/json') {
+        const payload = JSON.parse((await readBody(req)).toString());
+        const emit = async event => { controller.signal.throwIfAborted(); if (!res.headersSent) { res.setHeader('Content-Type', 'text/event-stream'); res.setHeader('X-Accel-Buffering', 'no'); res.flushHeaders(); } res.write('data: ' + JSON.stringify(event) + '\n\n'); };
+        const lock = service.lock(session, 'main:' + (payload.resume || id('new')));
+        try { await service.main.execute(session, payload, emit, AbortSignal.any([controller.signal, lock.signal]), service.mcpProfiles); res.end(); } finally { lock.release(); } return;
+      }
       if (path === '/realtime' && req.method === 'POST') {
         if (!session.options.realtimeModel) throw inputError('Model Realtime belum dikonfigurasi.');
         const response = await fetch(session.provider.baseUrl + '/realtime/client_secrets', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(session.provider.key ? { Authorization: 'Bearer ' + session.provider.key } : {}) }, body: JSON.stringify({ expires_after: { anchor: 'created_at', seconds: 60 }, session: { type: 'realtime', model: session.options.realtimeModel } }), signal: controller.signal, redirect: 'error' });

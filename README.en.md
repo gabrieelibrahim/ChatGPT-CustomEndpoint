@@ -128,11 +128,15 @@ The SuperGPT logo comes from artwork supplied by the project owner. The transpar
 
 Some interface icons and components use [OpenAI Apps SDK UI](https://github.com/openai/apps-sdk-ui). Source attribution and icon licenses are in [`src/components/openai-icons/`](src/components/openai-icons/). Provider marks and interface icons are separate from the SuperGPT application logo.
 
-## ChatKit & Agents SDK
+## Tools in the main chat
 
-Open **Settings → General → Open ChatKit** (mobile: **Pengaturan → ChatKit & Agents**)
-for the official ChatKit surface backed by the Agents SDK and your selected
-custom endpoint. Streaming, durable server history, tools, handoffs, approvals
-and uploads are connected. Responses/audio require compatible provider services.
-[Integration guide and verification boundaries](docs/sdk-integration.md).
-Rollback checkpoint: `before-chatkit-integration` (`85d9526`).
+The existing composer runs Agents SDK with the selected custom endpoint.
+Web search, MCP approvals, questions, cards, and source links appear inside the
+conversation. Configure **Settings / General / Fitur AI** (mobile:
+**Pengaturan / Fitur AI**) and add HTTP MCP servers in **Plugin**.
+There is one chat UI and one device history. ChatKit schemas are used only for
+inline content; its full chat component is not loaded.
+
+Function calling requires a compatible model. The browser development server
+includes the SDK service; APK builds need a configured HTTPS server.
+[Setup and verification limits](docs/sdk-integration.md).

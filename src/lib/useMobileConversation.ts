@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { beginMobileBackgroundTask } from './mobileBackground';
 import { loadEndpointKeys, loadEndpointStore } from './endpointProfiles';
-import { parseThinking, streamEndpointChat } from './endpointChat';
+import { parseThinking } from './endpointChat';
+import { streamMainChat, type AgentMessageState } from '../agent/mainClient';
 import { loadSettings, prepareChatMessages, recordUsage } from './clientSettings';
 import { resolveMessageFiles, type FileRef } from './fileLibrary';
 import { providerErrorMessage } from './providerErrors';
 import { isNativeDesktop } from './nativeDesktop';
 import { changeConversationName } from './mobileConversationMetadata';
 
-export type MobileMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; timestamp?: number; attachments?: FileRef[] };
+export type MobileMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; timestamp?: number; attachments?: FileRef[]; agent?: AgentMessageState };
 function read<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; } catch { return fallback; } }
 
 // UI-independent conversation state. Uses the same profile, transport and history formats as desktop.
@@ -54,7 +55,7 @@ export function useMobileConversation() {
     const releaseBackground = beginMobileBackgroundTask(crypto.randomUUID());
     const settings = loadSettings(), timeout = setTimeout(() => controller.abort('timeout'), settings.timeoutSeconds * 1000);
     setBusy(true); setError(''); setTitle(name); setMessages(next);
-    let answer = '', reasoning = '', failed = false;
+    let answer = '', reasoning = '', failed = false, agent: AgentMessageState | undefined;
     let reported: { input?: number; output?: number } = {};
     const publish = (items: MobileMessage[]) => {
       if (active.current !== controller) return;
@@ -67,13 +68,13 @@ export function useMobileConversation() {
         catch { setError('Penyimpanan percakapan penuh.'); }
       }
     };
-    const current = (): MobileMessage[] => answer || reasoning ? [...next, { role: 'assistant', text: answer, reasoning, timestamp: Date.now() }] : next;
+    const current = (): MobileMessage[] => answer || reasoning || agent?.active || agent?.items.length || agent?.sources.length || agent?.notice ? [...next, { role: 'assistant', text: answer, reasoning, agent, timestamp: Date.now() }] : next;
     publish(next);
     try {
       const hydrated = await resolveMessageFiles(next, controller.signal);
-      await streamEndpointChat(endpoint, key, endpoint.model, prepareChatMessages(hydrated, settings, { suppressMemories: temporary && !personalization.memories, suppressInstructions: temporary && !personalization.instructions }), controller.signal, (value, thought) => {
+      await streamMainChat(endpoint, key, endpoint.model, prepareChatMessages(hydrated, settings, { suppressMemories: temporary && !personalization.memories, suppressInstructions: temporary && !personalization.instructions }), controller.signal, (value, thought) => {
         answer = value; reasoning = thought || ''; publish(current());
-      }, personalization.reasoningEffort || ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'][settings.defaultEffort], value => { reported = value; });
+      }, personalization.reasoningEffort || ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'][settings.defaultEffort], value => { reported = value; }, value => { agent = value; publish(current()); }, temporary);
     } catch (failure) {
       failed = true;
       if (active.current === controller) setError(controller.signal.aborted ? controller.signal.reason === 'timeout' ? 'Penyedia terlalu lama merespons.' : 'Jawaban dihentikan.' : providerErrorMessage(failure, isNativeDesktop(), 'Jawaban gagal dimuat.'));

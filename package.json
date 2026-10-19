@@ -36,7 +36,7 @@
   "dependencies": {
     "@openai/agents": "0.20.0",
     "@openai/apps-sdk-ui": "0.2.2",
-    "@openai/chatkit-react": "1.6.1",
+    "@openai/chatkit": "1.9.0",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-http": "^2.8.3",
     "@tauri-apps/plugin-opener": "^2.7.2",

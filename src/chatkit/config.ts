@@ -1,6 +1,6 @@
 export type SdkOptions = {
   api: 'chat' | 'responses'; tools: boolean; vision: boolean; pdf: boolean; web: boolean; code: boolean; images: boolean; mcp: boolean;
-  vectorStores: string[]; transcriptionModel: string; realtimeModel: string;
+  vectorStores: string[]; transcriptionModel: string; realtimeModel: string; webSearch?: 'exa' | 'provider';
 };
 export type SdkConfig = { server: string; domainKey: string; options: SdkOptions };
 export const sdkConfigKey = 'supergpt-sdk-config-v1';
@@ -31,4 +31,3 @@ export function sdkOwner() {
   if (stored && /^[a-zA-Z0-9_-]{24,100}$/.test(stored)) return stored;
   const owner = crypto.randomUUID().replaceAll('-', ''); localStorage.setItem(key, owner); return owner;
 }
-export function openSdkWorkspace() { window.dispatchEvent(new Event('supergpt-chatkit-open')); }

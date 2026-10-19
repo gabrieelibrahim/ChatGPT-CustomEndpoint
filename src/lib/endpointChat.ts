@@ -2,8 +2,8 @@ import { normalizeBaseUrl, type EndpointProfile } from './endpointProfiles';
 import { providerFetch, providerStatusError } from './providerTransport';
 export type ProviderMessage = { role: 'user' | 'assistant'; text: string; images?: string[] };
 
-export function hasMessageContent(message: { role: string; text: string; reasoning?: unknown }): boolean {
-  return message.role !== 'assistant' || !!message.text || (typeof message.reasoning === 'string' && !!message.reasoning.trim());
+export function hasMessageContent(message: { role: string; text: string; reasoning?: unknown; agent?: { sources?: unknown[]; items?: unknown[]; notice?: string } }): boolean {
+  return message.role !== 'assistant' || !!message.text || (typeof message.reasoning === 'string' && !!message.reasoning.trim()) || !!message.agent?.sources?.length || !!message.agent?.items?.length || !!message.agent?.notice;
 }
 
 function providerReasoning(message: { reasoning_content?: unknown; reasoning?: unknown; thought?: unknown } | undefined): string {

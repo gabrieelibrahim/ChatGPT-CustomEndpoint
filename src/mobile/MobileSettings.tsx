@@ -6,7 +6,7 @@ import { saveLocalProfile, type LocalProfile } from '../lib/localProfile';
 import { libraryFiles } from '../lib/fileLibrary';
 import { downloadFile } from '../desktop/ClientCollections';
 import { MobileSettingsSkeleton } from './MobileSettingsSkeleton';
-import { openSdkWorkspace } from '../chatkit/config';
+import { MainAiControls } from '../agent/MainAiControls';
 
 type Props = {
   screen: string; onScreen: (screen: string) => void;
@@ -21,7 +21,7 @@ function Row({ icon, title, detail, onClick, children, disabled = false }: { ico
   const content = <>{icon && <Icon name={icon} size={22}/>}<span className="m-setting-label">{title}</span>{detail && <span className="m-setting-detail">{detail}</span>}{children}</>;
   return onClick ? <button type="button" className="m-setting-row" disabled={disabled} onClick={onClick}>{content}</button> : <div className="m-setting-row" aria-disabled={disabled || undefined}>{content}</div>;
 }
-const names: Record<string, string> = { root: 'Pengaturan', personalization: 'Personalisasi', memory: 'Memori', account: 'Akun', usage: 'Penggunaan dan batasan', appearance: 'Tampilan', accent: 'Warna aksen', general: 'Umum', notifications: 'Notifikasi', voice: 'Suara', security: 'Keamanan dan masuk', storage: 'Penyimpanan', privacy: 'Pusat privasi', data: 'Kontrol data', about: 'Tentang' };
+const names: Record<string, string> = { root: 'Pengaturan', tools: 'Fitur AI', personalization: 'Personalisasi', memory: 'Memori', account: 'Akun', usage: 'Penggunaan dan batasan', appearance: 'Tampilan', accent: 'Warna aksen', general: 'Umum', notifications: 'Notifikasi', voice: 'Suara', security: 'Keamanan dan masuk', storage: 'Penyimpanan', privacy: 'Pusat privasi', data: 'Kontrol data', about: 'Tentang' };
 
 export function MobileSettings(p: Props) {
   const screen = p.screen, setScreen = p.onScreen;
@@ -54,12 +54,12 @@ export function MobileSettings(p: Props) {
     <header className="m-page-header" inert={signOut}><button aria-label={screen === 'root' ? 'Back to chat' : 'Back to Settings'} className="m-page-back" onClick={screen === 'root' ? p.onClose : page('root')}><Icon name="arrow"/></button><h1>{names[screen]}</h1><span/></header>
     <div className="m-settings-body" key={screen} inert={signOut} aria-busy={prepared !== screen}>
     {prepared !== screen ? <MobileSettingsSkeleton screen={screen}/> : screen === 'root' ? <>
-      <Group title="SuperGPT saya"><Row icon="personal" title="Personalisasi" onClick={page('personalization')}/><Row icon="memory" title="Memori" onClick={page('memory')}/><Row icon="settings-plugins" title="Plugin" onClick={p.onPlugins}/><Row icon="side-chat" title="ChatKit & Agents" onClick={openSdkWorkspace}/></Group>
+      <Group title="SuperGPT saya"><Row icon="personal" title="Personalisasi" onClick={page('personalization')}/><Row icon="memory" title="Memori" onClick={page('memory')}/><Row icon="settings-plugins" title="Plugin" onClick={p.onPlugins}/><Row icon="side-chat" title="Fitur AI" onClick={page('tools')}/></Group>
       <Group title="Akun"><Row icon="globe" title="Custom Endpoint" detail={p.provider || 'Lokal'} onClick={p.onEndpoint}><Icon name="down" size={14}/></Row><Row icon="side-chat" title="Langganan" detail="Dikelola penyedia" onClick={page('account')}/><Row icon="bars" title="Penggunaan dan batasan" onClick={page('usage')}/><Row icon="mail" title="Email" detail="Tidak digunakan"/><Row icon="phone" title="Nomor telepon" detail="Tidak digunakan"/></Group>
       <Group><Row icon="sun" title="Tampilan" detail={{ system: 'Sistem', light: 'Terang', dark: 'Gelap' }[s.theme]} onClick={page('appearance')}><Icon name="down" size={14}/></Row><Row icon="paint" title="Warna aksen" detail={s.accent === '#2b6bca' ? 'Biru' : 'Kustom'} onClick={page('accent')}><i className="m-accent-dot" style={{ background: s.accent }}/><Icon name="down" size={14}/></Row></Group>
       <Group><Row icon="settings" title="Umum" onClick={page('general')}/><Row icon="bell" title="Notifikasi" onClick={page('notifications')}/><Row icon="wave" title="Suara" onClick={page('voice')}/><Row icon="shield" title="Keamanan dan masuk" onClick={page('security')}/><Row icon="computer" title="Kontrol jarak jauh" detail="Belum tersedia" disabled/><Row icon="globe" title="Browser cloud" detail="Belum tersedia" disabled/><Row icon="archive" title="Penyimpanan" onClick={() => void openStorage()}/><Row icon="shield" title="Pusat privasi" onClick={page('privacy')}/><Row icon="page" title="Kontrol data" onClick={page('data')}/><Row icon="bug" title="Laporkan bug" onClick={() => { downloadFile('SuperGPT-diagnostics.json', JSON.stringify({ app: 'SuperGPT', version: '0.3.0', platform: navigator.platform, viewport: { width: innerWidth, height: innerHeight }, nativeBridge: !!('__TAURI_INTERNALS__' in window) }, null, 2), 'application/json'); p.onNotice('Diagnostik diunduh. Sertakan saat melaporkan bug.'); }}/><Row icon="info" title="Tentang" onClick={page('about')}/></Group>
       <Group><Row icon="logout" title="Keluar" onClick={() => setSignOut(true)}/></Group>
-    </> : screen === 'personalization' ? <>
+    </> : screen === 'tools' ? <Group><MainAiControls onNotice={p.onNotice}/></Group> : screen === 'personalization' ? <>
       <Group><label className="m-setting-editor">Nama<input maxLength={80} value={name} onChange={event => setName(event.target.value)}/></label><button className="m-setting-save" onClick={() => { try { p.onProfile(saveLocalProfile(name)); p.onNotice('Nama tersimpan.'); } catch (error) { p.onNotice((error as Error).message); } }}>Simpan nama</button></Group>
       <Group title="Instruksi khusus"><label className="m-setting-editor">Bagaimana AI merespons?<textarea rows={6} maxLength={20000} value={s.instructions} onChange={event => update({ instructions: event.target.value })}/></label><Row title="Gaya penulisan">{select('Gaya penulisan', s.writingStyle, [['balanced', 'Seimbang'], ['concise', 'Ringkas'], ['detailed', 'Terperinci']], value => update({ writingStyle: value as ClientSettings['writingStyle'] }))}</Row></Group>
       <p className="m-setting-caption">Instruksi dikirim bersama permintaan ke model pilihanmu.</p>

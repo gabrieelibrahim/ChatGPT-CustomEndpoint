@@ -47,6 +47,7 @@ async function fixture(t, opts = {}) {
     if (!toolResult && text.includes('card fixture')) { name = 'show_checklist'; args = { title: 'Rencana fixture', items: ['Satu', 'Dua'] }; }
     if (!toolResult && text.includes('question fixture')) { name = 'ask_user'; args = { question: 'Pilih format?', options: ['Singkat', 'Rinci'] }; }
     if (!toolResult && text.includes('mcp fixture')) { name = body.tools.find(tool => tool.function.name.includes('echo')).function.name; args = { text: 'MCP fixture' }; }
+    if (!toolResult && text.includes('web fixture')) { name = 'web_search'; args = { query: 'Public SDK documentation fixture' }; }
     const chunk = (delta, finish_reason = null) => 'data: ' + JSON.stringify({ id: 'fixture', object: 'chat.completion.chunk', created: 1, model: body.model, choices: [{ index: 0, delta, finish_reason }] }) + '\n\n';
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     if (name) {
@@ -203,4 +204,102 @@ test('Responses hosted capabilities, citations and generated images flow through
   assert.ok(events.some(event => event.item?.content?.[0]?.annotations?.some(value => value.source.url === 'https://example.org/reference')), text);
   const image = events.find(event => event.item?.type === 'generated_image')?.item;
   assert.ok(image?.image.url, text); assert.equal((await fetch(image.image.url)).status, 200);
+});
+
+const mainStream = async (f, payload, token = f.token) => {
+  const response = await f.call('/main', payload, { Authorization: 'Bearer ' + token });
+  const text = await response.text();
+  const events = text.split('\n\n').filter(line => line.startsWith('data: ')).map(line => JSON.parse(line.slice(6)));
+  return { response, text, events };
+};
+const mainInput = text => ({ messages: [{ role: 'user', text }] });
+
+test('main chat uses current device history, function calls, and never creates a second server history', async t => {
+  const f = await fixture(t), messages = [{ role: 'user', text: 'Previous question' }, { role: 'assistant', text: 'Previous answer' }, { role: 'user', text: 'calculate fixture' }];
+  const result = await mainStream(f, { messages });
+  assert.equal(result.response.status, 200); assert.ok(result.events.some(e => e.type === 'main.done'), result.text);
+  assert.ok(result.events.some(e => e.update?.delta?.includes('42')), result.text);
+  assert.ok(f.requests[0].body.messages.some(m => m.content === 'Previous answer'));
+  assert.equal(f.service.store.load(owner).threads.length, 0);
+  assert.equal(f.service.main.runs.size, 0);
+});
+
+test('main chat approval is inline, owner-bound, exactly once, and temporary notes never persist', async t => {
+  const f = await fixture(t), first = await mainStream(f, { ...mainInput('save fixture'), temporary: true });
+  assert.ok(first.events.some(e => e.type === 'main.paused'), first.text);
+  assert.equal(f.service.store.load(owner).notes.length, 0);
+  const run = first.events.find(e => e.type === 'main.run').id, item = first.events.find(e => e.item?.type === 'widget').item;
+  const action = item.widget.children.find(e => e.type === 'Button').onClickAction;
+  const decision = { kind: 'approval', itemId: item.id, ...action.payload };
+  const foreign = f.service.createSession({ ...f.payload, owner: 'foreign_owner_1234567890123456' }).token;
+  assert.equal((await mainStream(f, { resume: run, decision }, foreign)).response.status, 400);
+  assert.equal((await mainStream(f, { resume: run, decision: { ...decision, callId: 'wrong' } })).response.status, 400);
+  const final = await mainStream(f, { resume: run, decision });
+  assert.ok(final.events.some(e => e.type === 'main.done'), final.text);
+  assert.equal(f.service.store.load(owner).notes.length, 0);
+  assert.equal((await mainStream(f, { resume: run, decision })).response.status, 400);
+});
+
+test('main chat structured input and checklist remain message items in the same run', async t => {
+  const f = await fixture(t), first = await mainStream(f, mainInput('question fixture'));
+  const run = first.events.find(e => e.type === 'main.run').id, item = first.events.find(e => e.item?.type === 'structured_input').item;
+  const final = await mainStream(f, { resume: run, decision: { kind: 'answer', itemId: item.id, text: 'Rinci' } });
+  assert.ok(final.events.some(e => e.type === 'main.done'), final.text);
+  assert.ok(f.requests.at(-1).body.messages.some(m => m.role === 'tool' && m.content.includes('Rinci')));
+  const checklist = await mainStream(f, mainInput('card fixture'));
+  assert.ok(checklist.events.some(e => e.item?.widget?.children.some(child => child.onClickAction?.type === 'checklist.copy')), checklist.text);
+});
+
+async function mainMcpFixture(t, quota = false) {
+  const calls = [], server = createServer(async (req, res) => {
+    if (req.method === 'DELETE') { res.writeHead(200).end(); return; }
+    if (req.method !== 'POST') { res.writeHead(405).end(); return; }
+    const request = JSON.parse((await readBody(req)).toString());
+    if (request.id === undefined) { res.writeHead(202).end(); return; }
+    let result = {};
+    if (request.method === 'initialize') result = { protocolVersion: request.params.protocolVersion, capabilities: { tools: {} }, serverInfo: { name: 'main-fixture', version: '1' } };
+    if (request.method === 'tools/list') result = { tools: [{ name: 'echo', description: 'Synthetic echo only.', inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'], additionalProperties: false } }] };
+    if (request.method === 'tools/call') {
+      calls.push(request.params);
+      result = { content: [{ type: 'text', text: quota ? "You've hit Exa's free MCP rate limit." : request.params.name === 'web_search_exa' ? 'Title: Fixture public reference\nURL: https://example.org/main-source\nText: Synthetic search evidence.' : request.params.arguments.text }] };
+    }
+    res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ jsonrpc: '2.0', id: request.id, result }));
+  });
+  const url = await listen(server); t.after(() => stop(server)); return { url, calls };
+}
+
+test('main chat discovers HTTP MCP profiles from the existing Plugin menu and waits for approval', async t => {
+  const mcp = await mainMcpFixture(t), f = await fixture(t);
+  const token = f.service.createSession({ ...f.payload, options: { tools: true, mcp: true }, mcp: [{ name: 'Menu Plugin', url: mcp.url }] }).token;
+  const first = await mainStream(f, mainInput('mcp fixture'), token);
+  assert.ok(first.events.some(e => e.type === 'main.paused'), first.text); assert.equal(mcp.calls.length, 0);
+  const run = first.events.find(e => e.type === 'main.run').id, widget = first.events.find(e => e.item?.type === 'widget').item;
+  const action = widget.widget.children.find(child => child.type === 'Button').onClickAction;
+  const final = await mainStream(f, { resume: run, decision: { kind: 'approval', itemId: widget.id, ...action.payload } }, token);
+  assert.ok(final.events.some(e => e.type === 'main.done'), final.text); assert.equal(mcp.calls.length, 1);
+  assert.equal(mcp.calls[0].arguments.text, 'MCP fixture');
+});
+
+test('main web tool calls real MCP transport and emits only returned source URLs', async t => {
+  const mcp = await mainMcpFixture(t), previous = process.env.SUPERGPT_WEB_MCP_URL;
+  process.env.SUPERGPT_WEB_MCP_URL = mcp.url;
+  t.after(() => { if (previous === undefined) delete process.env.SUPERGPT_WEB_MCP_URL; else process.env.SUPERGPT_WEB_MCP_URL = previous; });
+  const f = await fixture(t), token = f.service.createSession({ ...f.payload, options: { tools: true, web: true, webSearch: 'exa' } }).token;
+  const result = await mainStream(f, mainInput('web fixture'), token);
+  assert.ok(result.events.some(e => e.type === 'main.done'), result.text);
+  assert.equal(mcp.calls[0].name, 'web_search_exa');
+  assert.deepEqual(result.events.find(e => e.type === 'main.sources').sources, [{ title: 'Fixture public reference', url: 'https://example.org/main-source' }]);
+  assert.ok(f.requests.at(-1).body.messages.some(m => m.role === 'tool' && m.content.includes('Synthetic search evidence')));
+});
+
+test('web quota failure is shown explicitly, returns no fake sources, and does not leak server configuration', async t => {
+  const mcp = await mainMcpFixture(t, true), previous = process.env.SUPERGPT_WEB_MCP_URL;
+  process.env.SUPERGPT_WEB_MCP_URL = mcp.url;
+  t.after(() => { if (previous === undefined) delete process.env.SUPERGPT_WEB_MCP_URL; else process.env.SUPERGPT_WEB_MCP_URL = previous; });
+  const f = await fixture(t), token = f.service.createSession({ ...f.payload, options: { tools: true, web: true, webSearch: 'exa' } }).token;
+  const result = await mainStream(f, mainInput('web fixture'), token);
+  assert.ok(result.events.some(e => e.type === 'main.notice' && e.text.includes('Kuota pencarian Exa tercapai')), result.text);
+  assert.ok(!result.events.some(e => e.type === 'main.sources'));
+  assert.ok(f.requests.at(-1).body.messages.some(m => m.role === 'tool' && m.content.includes('web_search_unavailable')));
+  assert.ok(!result.text.includes(mcp.url));
 });
