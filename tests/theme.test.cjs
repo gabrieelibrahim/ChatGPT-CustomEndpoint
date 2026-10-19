@@ -14,7 +14,7 @@ function documentFixture() {
 test('saved/system theme applies before React; invalid or inaccessible storage has a deterministic fallback', () => {
   for (const [value, systemLight, expected] of [[{ theme: 'light' }, false, 'light'], [{ theme: 'dark' }, true, 'dark'], [{ theme: 'system' }, true, 'light'], [{ theme: 'system' }, false, 'dark'], [{ theme: 'invalid' }, true, 'dark'], [null, false, 'dark'], ['corrupt', false, 'dark'], ['throws', true, 'dark']]) {
     const document = documentFixture();
-    vm.runInNewContext(bootstrap, { document, window: { matchMedia() { return { matches: systemLight }; } }, localStorage: { getItem() { if (value === 'throws') throw Error('denied'); return value === 'corrupt' ? '{' : JSON.stringify(value); } } });
+    vm.runInNewContext(bootstrap, { document, navigator: { userAgent: 'Desktop fixture' }, URLSearchParams, location: { search: '' }, window: { matchMedia() { return { matches: systemLight }; } }, localStorage: { getItem() { if (value === 'throws') throw Error('denied'); return value === 'corrupt' ? '{' : JSON.stringify(value); } } });
     assert.equal(document.documentElement.dataset.clientTheme, expected); assert.equal(document.documentElement.dataset.theme, expected); assert.equal(document.documentElement.style.colorScheme, expected);
   }
 });

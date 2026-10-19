@@ -125,3 +125,11 @@ Build memeriksa TypeScript dan urutan CSS SDK. Tes mencakup transport provider, 
 Logo SuperGPT berasal dari aset yang disediakan pemilik project. Master transparan tersedia di [`public/supergpt-logo.png`](public/supergpt-logo.png); ikon aplikasi, installer, dan favicon menggunakan desain yang sama. Versi terang untuk tampilan gelap mempertahankan bentuk serta transparansinya.
 
 Sebagian ikon antarmuka dan komponen menggunakan [OpenAI Apps SDK UI](https://github.com/openai/apps-sdk-ui). Atribusi dan lisensi sumber ikon tersedia di [`src/components/openai-icons/`](src/components/openai-icons/). Logo provider dan ikon antarmuka bukan logo aplikasi SuperGPT.
+
+## ChatKit & Agents SDK
+
+Buka **Pengaturan → ChatKit & Agents** untuk ruang chat resmi ChatKit dengan
+Agents SDK dan custom endpoint pilihanmu. Streaming, riwayat server, tool, agen
+spesialis, persetujuan, dan unggahan sudah terhubung. Fitur Responses/audio
+mengikuti dukungan provider. [Panduan integrasi dan status pengujian](docs/sdk-integration.md).
+Checkpoint rollback: `before-chatkit-integration` (`85d9526`).

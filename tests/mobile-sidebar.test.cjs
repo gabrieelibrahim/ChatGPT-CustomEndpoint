@@ -4,7 +4,7 @@ const Module = require('node:module');
 const path = require('node:path');
 const { renderToStaticMarkup } = require('react-dom/server');
 const { buildSync } = require('esbuild');
-const built = buildSync({ entryPoints: [path.join(__dirname, '../src/mobile/MobileSidebar.tsx')], bundle: true, write: false, platform: 'node', format: 'cjs', external: ['react', 'react/jsx-runtime'] }).outputFiles[0].text;
+const built = buildSync({ entryPoints: [path.join(__dirname, '../src/mobile/MobileSidebar.tsx')], bundle: true, write: false, platform: 'node', format: 'cjs', loader: { '.css': 'empty' }, external: ['react', 'react/jsx-runtime'] }).outputFiles[0].text;
 
 test('sidebar skeleton resolves to filtered history and cancels superseded preparation', () => {
   const originalWindow = global.window;
@@ -29,7 +29,7 @@ test('sidebar skeleton resolves to filtered history and cancels superseded prepa
     flush();
     const ready = render();
     assert.match(ready, /Visible chat/); assert.doesNotMatch(ready, /Archived chat|m-sidebar-skeleton/);
-    props.pinned = ['Visible chat'];
+    props.pinned = ['Visible chat']; render();
     const pinned = render(); assert.match(pinned, /Disematkan/); assert.match(pinned, /data-icon="comment"/); assert.doesNotMatch(pinned, /Terkini/);
     props.activeTitle = 'Visible chat';
     assert.match(render(), /aria-current="page"/);

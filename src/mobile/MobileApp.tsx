@@ -33,7 +33,7 @@ function Button({ icon, label, onClick, children, ...props }: { icon?: string; l
   return <button type="button" aria-label={label} onClick={onClick} {...props}>{icon && <Icon name={icon} size={22}/ >}{children}</button>;
 }
 
-export function MobileApp() {
+export function MobileApp({ suspended = false }: { suspended?: boolean } = {}) {
   const chat = useMobileConversation();
   const [profile, setProfile] = useState(loadLocalProfile), [name, setName] = useState('');
   const [page, setPage] = useState<'chat' | 'settings' | 'endpoints' | MobileDestination>('chat');
@@ -63,11 +63,11 @@ export function MobileApp() {
   const streamContent = useRef<HTMLDivElement>(null);
   const initialKeyboard = useRef(false);
   useEffect(() => {
-    if (initialKeyboard.current || !profile || page !== 'chat') return;
+    if (suspended || initialKeyboard.current || !profile || page !== 'chat') return;
     initialKeyboard.current = true;
     const frame = requestAnimationFrame(() => { textarea.current?.focus({ preventScroll: true }); mobileComposerKeyboard('show'); });
     return () => cancelAnimationFrame(frame);
-  }, [profile, page]);
+  }, [profile, page, suspended]);
   useEffect(() => {
     const resize = () => { const nextHeight = window.visualViewport?.height || window.innerHeight; setHeight(nextHeight); setComposerState(state => resizeComposer(state, nextHeight, window.innerWidth, document.activeElement === textarea.current)); };
     window.visualViewport?.addEventListener('resize', resize); window.addEventListener('resize', resize);
@@ -121,7 +121,7 @@ export function MobileApp() {
   }
   const settingsBack = useRef(backFromSettings); settingsBack.current = backFromSettings;
   const inSettings = page === 'settings' || (page !== 'chat' && returnPage === 'settings');
-  useEffect(() => inSettings ? bindSettingsBack(() => settingsBack.current()) : undefined, [inSettings]);
+  useEffect(() => inSettings && !suspended ? bindSettingsBack(() => settingsBack.current()) : undefined, [inSettings, suspended]);
   function temporaryChat() { const temp = !chat.temporary; newChat(temp); if (temp && localStorage.getItem('client-temporary-intro-v1') !== 'seen') setSheet('temporary'); }
   async function send() {
     if (uploading || chat.busy || (!draft.trim() && !files.length)) return;

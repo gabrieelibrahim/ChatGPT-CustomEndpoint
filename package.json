@@ -29,15 +29,21 @@
     "android:build": "node scripts/mobile.mjs android build --apk --target aarch64 --debug",
     "ios:init": "node scripts/mobile.mjs ios init",
     "ios:dev": "node scripts/mobile.mjs ios dev",
-    "ios:build": "node scripts/mobile.mjs ios build"
+    "ios:build": "node scripts/mobile.mjs ios build",
+    "sdk:server": "node server/sdk/main.mjs",
+    "test:sdk": "node --test tests/sdk-*.test.mjs"
   },
   "dependencies": {
+    "@openai/agents": "0.20.0",
     "@openai/apps-sdk-ui": "0.2.2",
+    "@openai/chatkit-react": "1.6.1",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-http": "^2.8.3",
     "@tauri-apps/plugin-opener": "^2.7.2",
+    "openai": "7.38.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.0",

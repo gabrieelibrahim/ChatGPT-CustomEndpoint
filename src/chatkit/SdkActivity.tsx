@@ -1,0 +1,8 @@
+import { useEffect, useState } from 'react';
+import type { SdkConnection } from './transport';
+type Activity = { activity: { name: string; event: string; time: string }[]; usage: { input: number; output: number } | null; pending: boolean };
+export function SdkActivity({ connection, threadId, onClose }: { connection: SdkConnection; threadId: string; onClose: () => void }) {
+  const [data, setData] = useState<Activity | null>(null), [error, setError] = useState('');
+  useEffect(() => { let active = true; void connection.request<Activity>('/activity', { threadId }).then(value => { if (active) setData(value); }, () => { if (active) setError('Aktivitas belum dapat dimuat.'); }); return () => { active = false; }; }, [connection, threadId]);
+  return <section className="sg-activity" role="dialog" aria-modal="true" aria-label="Aktivitas agen"><header><h2>Aktivitas agen</h2><button autoFocus aria-label="Tutup aktivitas" onClick={onClose}>×</button></header>{error ? <p role="alert">{error}</p> : !data ? <p role="status">Memuat aktivitas…</p> : <><p>{data.pending ? 'Menunggu jawaban atau persetujuanmu.' : 'Tidak ada persetujuan tertunda.'}</p>{data.usage && <p>{data.usage.input} token input · {data.usage.output} token output</p>}<ol>{data.activity.map((item, index) => <li key={index}><strong>{item.name || 'Tool'}</strong><span>{item.event === 'tool_called' ? 'Dipanggil' : item.event === 'tool_output' ? 'Hasil diterima' : 'Perpindahan agen'} · {new Date(item.time).toLocaleTimeString()}</span></li>)}</ol>{!data.activity.length && <p>Belum ada tool atau perpindahan agen di obrolan ini.</p>}<small>Aktivitas ini disimpan di server SuperGPT. Tracing OpenAI dimatikan.</small></>}</section>;
+}

@@ -2,6 +2,7 @@ node_modules/
 dist/
 .java-tmp/
 .sites-runtime/
+.supergpt-sdk/
 *.local
 .env
 .env.*

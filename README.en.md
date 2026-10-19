@@ -127,3 +127,12 @@ The detailed technical guides are maintained in their existing language.
 The SuperGPT logo comes from artwork supplied by the project owner. The transparent master is [`public/supergpt-logo.png`](public/supergpt-logo.png); application icons, installer icons, and the favicon share this design. The light version for dark surfaces preserves its shape and transparency.
 
 Some interface icons and components use [OpenAI Apps SDK UI](https://github.com/openai/apps-sdk-ui). Source attribution and icon licenses are in [`src/components/openai-icons/`](src/components/openai-icons/). Provider marks and interface icons are separate from the SuperGPT application logo.
+
+## ChatKit & Agents SDK
+
+Open **Settings → General → Open ChatKit** (mobile: **Pengaturan → ChatKit & Agents**)
+for the official ChatKit surface backed by the Agents SDK and your selected
+custom endpoint. Streaming, durable server history, tools, handoffs, approvals
+and uploads are connected. Responses/audio require compatible provider services.
+[Integration guide and verification boundaries](docs/sdk-integration.md).
+Rollback checkpoint: `before-chatkit-integration` (`85d9526`).

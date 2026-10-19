@@ -1,6 +1,7 @@
 # Agents SDK and ChatKit assessment — 19 October 2026
 
-Study only: neither SDK is installed or integrated by this change. The separate
+Historical assessment before adoption. SDK integration is now documented in
+[sdk-integration.md](sdk-integration.md); the findings below record the original study. The separate
 settings navigation repair is authorized and implemented independently.
 
 ## Sources inspected
