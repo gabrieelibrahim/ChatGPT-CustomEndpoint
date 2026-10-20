@@ -7,10 +7,10 @@ import { logDiagnostic } from '../lib/diagnosticLog';
 
 type AudioBridge = { postMessage(value: string): void; addEventListener(type: 'message', listener: (event: MessageEvent) => void): void };
 const bridges = new WeakMap<AudioBridge, Map<string, (value: Record<string, unknown>) => void>>();
-export function hasEndpointRecorder() { return !!(window as unknown as { SuperGPTAudio?: AudioBridge }).SuperGPTAudio; }
-export function hasTranscriptionEndpoint() { const store = loadEndpointStore(); return store.profiles.some(p => p.id === store.selectedId); }
+export function hasEndpointRecorder() { return !!(window as unknown as { SuperGPTAudio?: AudioBridge }).SuperGPTAudio || !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined'; }
+export function hasTranscriptionEndpoint() { const store = loadEndpointStore(); return store.profiles.some(p => p.id === (loadSettings().transcriptionEndpointId || store.selectedId)); }
 export async function transcribeAudio(blob: Blob, signal: AbortSignal, language: string): Promise<string> {
-  const settings = loadSettings(), store = loadEndpointStore(), endpoint = store.profiles.find(p => p.id === store.selectedId);
+  const settings = loadSettings(), store = loadEndpointStore(), endpoint = store.profiles.find(p => p.id === (settings.transcriptionEndpointId || store.selectedId));
   if (!endpoint) throw Error('Pilih Custom Endpoint sebelum menggunakan transkripsi API.');
   const key = endpoint.auth === 'bearer' ? loadEndpointKeys(store.profiles)[endpoint.id] || '' : '';
   if (endpoint.auth === 'bearer' && !key) throw Error('API key endpoint belum tersedia. Simpan ulang di Custom Endpoint.');

@@ -29,6 +29,23 @@ function fixture() {
 }
 function answer() { return new Response(JSON.stringify({ choices: [{ message: { content: 'Halo mobile', reasoning_content: 'Provider reasoning' } }] }), { headers: { 'content-type': 'application/json' } }); }
 
+test('completion notification is emitted only for a successful response with reminders enabled', async () => {
+  const app = fixture();
+  try {
+    const notices = [];
+    window.SuperGPTNotifications = { postMessage: raw => notices.push(JSON.parse(raw)) };
+    localStorage.setItem('client-settings-v1', JSON.stringify({ notifications: true }));
+    global.fetch = async () => answer();
+    await app.render().send('Finished task');
+    assert.equal(notices.length, 1); assert.equal(notices[0].op, 'notify'); assert.equal(notices[0].title, 'Finished task');
+    global.fetch = async () => new Response('', { status: 500 });
+    await app.render().send('Failed task'); assert.equal(notices.length, 1);
+    localStorage.setItem('client-settings-v1', JSON.stringify({ notifications: false }));
+    global.fetch = async () => answer();
+    await app.render().send('Muted task'); assert.equal(notices.length, 1);
+  } finally { app.restore(); }
+});
+
 test('renaming and deleting other chats while streaming does not resurrect old history titles', async () => {
   const app = fixture();
   try {

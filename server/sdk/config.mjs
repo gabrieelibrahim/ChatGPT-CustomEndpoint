@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-export const MAX_BODY = 15 * 1024 * 1024;
+export const MAX_BODY = 32 * 1024 * 1024;
 export class SdkInputError extends Error {}
 export const inputError = message => new SdkInputError(message);
 export function loadMcpProfiles() {

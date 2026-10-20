@@ -6,7 +6,7 @@ export function MobileAttachmentMenu({ firstRef, thinkHarder, onClose, onCamera,
   onClose: () => void; onCamera: () => void; onPhoto: () => void;
   onFile: () => void; onPlugins: () => void; onThink: () => void;
 }) {
-  return <div className="m-overlay m-attachment-overlay">
+  return <div className="m-overlay m-attachment-overlay" onPointerDown={event => event.preventDefault()}>
     <button className="m-backdrop" aria-label="Close attachments" onClick={onClose}/>
     <section className="m-attachment-menu" role="dialog" aria-modal="true" aria-label="Add attachments">
       {([

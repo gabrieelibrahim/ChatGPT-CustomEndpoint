@@ -17,7 +17,7 @@ type Props = {
 
 function SessionRow({ title, active, held, pinned, onOpen, onMenu }: { title: string; active: boolean; held: boolean; pinned: boolean; onOpen: () => void; onMenu: (target: SessionMenuTarget) => void }) {
   const button = useRef<HTMLButtonElement>(null);
-  const openMenu = (x: number, y: number) => { if (button.current) onMenu({ title, x, y, trigger: button.current }); };
+  const openMenu = (x: number, y: number) => { window.getSelection()?.removeAllRanges(); if (button.current) onMenu({ title, x, y, trigger: button.current }); };
   const latest = useRef(openMenu); latest.current = openMenu;
   const press = useRef<ReturnType<typeof createSessionPress> | null>(null);
   if (!press.current) press.current = createSessionPress((x, y) => latest.current(x, y));
@@ -53,7 +53,7 @@ export function MobileSidebar(props: Props) {
   return <div ref={overlay} className="m-overlay m-sidebar-overlay">
     <button className="m-backdrop" aria-label="Close sidebar" inert={!!menu} onClick={props.onClose}/>
     <aside className="m-drawer m-sidebar" role="dialog" aria-modal={!menu || undefined} aria-label="Sidebar" inert={!!menu}>
-      <header><strong>SuperGPT</strong><button ref={props.closeRef} className="m-sidebar-search" aria-label="Search chats" onClick={() => setSearching(true)}><Icon name="search"/></button></header>
+      <header><button className="m-sidebar-brand" aria-label="SuperGPT — Obrolan baru" onClick={props.onNew}>SuperGPT</button><button ref={props.closeRef} className="m-sidebar-search" aria-label="Search chats" onClick={() => setSearching(true)}><Icon name="search"/></button></header>
       <div className="m-sidebar-scroll">
         <nav aria-label="Menu utama">
           <button onClick={() => props.onNavigate('spaces')}><Icon name="spaces"/>Ruang</button>

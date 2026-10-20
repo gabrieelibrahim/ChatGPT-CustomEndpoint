@@ -3,10 +3,11 @@ import { UIIcon as Icon } from '../components/UIIcon';
 import { AgentMessageExtras } from '../agent/AgentMessageExtras';
 import { MobileStreamingReply } from './MobileStreamingReply';
 import { MobileEndPull } from './MobileEndPull';
-import { mobileComposerKeyboard } from './composerKeyboard';
+import { mobileComposerKeyboard, observeComposerKeyboard } from './composerKeyboard';
 import { EndpointSettings } from '../desktop/EndpointSettings';
 import { MobileConversationMenu } from './MobileConversationMenu';
 import { bindHomeShortcut, pinHomeShortcut } from './homeShortcut';
+import { notifyTaskComplete, configureTaskNotifications } from './deviceActions';
 import { logDiagnostic } from '../lib/diagnosticLog';
 import { MobileAttachment } from './MobileAttachment';
 import { MobileAttachmentMenu } from './MobileAttachmentMenu';
@@ -55,7 +56,7 @@ export function MobileApp() {
   const preferences = useClientSettings(setNotice);
   const remindersEnabled = useRef(preferences.settings.notifications);
   remindersEnabled.current = preferences.settings.notifications;
-  const clientData = useClientData(message => { if (!message.startsWith('Pengingat:') || remindersEnabled.current) setNotice(message); });
+  const clientData = useClientData(message => { if (!message.startsWith('Pengingat:') || remindersEnabled.current) setNotice(message); if (message.startsWith('Pengingat:') && remindersEnabled.current) notifyTaskComplete(message.slice(10).trim(), 'Pengingat task telah tiba. Buka Terjadwal untuk menjalankannya.'); });
   const [archived, setArchived] = useState<string[]>(() => { try { const value = JSON.parse(localStorage.getItem('desktop-archived') || '[]'); return Array.isArray(value) ? value.filter((title): title is string => typeof title === 'string') : []; } catch { return []; } });
   function archive(titles: string[]) { try { localStorage.setItem('desktop-archived', JSON.stringify(titles)); setArchived(titles); } catch { setNotice('Arsip belum tersimpan.'); } }
   function openChat(title: string) { setChatSearch(null); setThinkHarder(false); chat.open(title); setPage('chat'); setDrawer(false); setAboveBottom(false); }
@@ -69,6 +70,9 @@ export function MobileApp() {
   const scroll = useRef<HTMLDivElement>(null), textarea = useRef<HTMLTextAreaElement>(null), picker = useRef<HTMLInputElement>(null), closeDrawer = useRef<HTMLButtonElement>(null), closeSheet = useRef<HTMLButtonElement>(null);
   const streamContent = useRef<HTMLDivElement>(null);
   const initialKeyboard = useRef(false);
+  const nativeKeyboardOpen = useRef<boolean | null>(null);
+  useEffect(() => { configureTaskNotifications(preferences.settings.notifications); }, [preferences.settings.notifications]);
+  useEffect(() => observeComposerKeyboard(open => { nativeKeyboardOpen.current = open; setComposerState(state => ({ ...state, keyboardOpen: open, focused: open ? document.activeElement === textarea.current : state.keyboardOpen ? false : state.focused, phase: !open && state.keyboardOpen && state.phase === 'first-focus' ? 'compact' : state.phase })); }), []);
   useEffect(() => {
     const preview = (event: Event) => { const close = (event as CustomEvent<unknown>).detail; mediaClose.current = typeof close === 'function' ? close as () => void : null; setMediaPreview(!!mediaClose.current); };
     window.addEventListener('client-media-preview', preview); return () => window.removeEventListener('client-media-preview', preview);
@@ -80,7 +84,7 @@ export function MobileApp() {
     return () => cancelAnimationFrame(frame);
   }, [profile, page]);
   useEffect(() => {
-    const resize = () => { const nextHeight = window.visualViewport?.height || window.innerHeight; setHeight(nextHeight); setComposerState(state => resizeComposer(state, nextHeight, window.innerWidth, document.activeElement === textarea.current)); };
+    const resize = () => { const nextHeight = window.visualViewport?.height || window.innerHeight; setHeight(nextHeight); setComposerState(state => resizeComposer(state, nextHeight, window.innerWidth, document.activeElement === textarea.current && nativeKeyboardOpen.current !== false)); };
     window.visualViewport?.addEventListener('resize', resize); window.addEventListener('resize', resize);
     return () => { window.visualViewport?.removeEventListener('resize', resize); window.removeEventListener('resize', resize); };
   }, []);
@@ -92,7 +96,7 @@ export function MobileApp() {
   }, []);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 4000); return () => clearTimeout(timer); }, [notice]);
   useEffect(() => { if (!aboveBottom) scroll.current?.scrollTo({ top: scroll.current.scrollHeight }); }, [chat.messages, aboveBottom]);
-  useEffect(() => { if (drawer) closeDrawer.current?.focus({ preventScroll: true }); else if (sheet) closeSheet.current?.focus({ preventScroll: true }); }, [drawer, sheet]);
+  useEffect(() => { if (drawer) closeDrawer.current?.focus({ preventScroll: true }); else if (sheet && sheet !== 'attachments') closeSheet.current?.focus({ preventScroll: true }); }, [drawer, sheet]);
   useEffect(() => {
     const element = footer.current;
     if (!element) return;
@@ -128,7 +132,7 @@ export function MobileApp() {
     if (!window.dispatchEvent(new Event('client-settings-back', { cancelable: true }))) return;
     if (sheet) { setSheet(''); return; }
     if (page !== 'settings') { navigate('settings'); return; }
-    if (settingsScreen !== 'root') setSettingsScreen('root'); else navigate('chat');
+    if (settingsScreen !== 'root') setSettingsScreen(settingsScreen === 'deviceLibrary' ? 'storage' : 'root'); else navigate('chat');
   }
   const settingsBack = useRef(backFromSettings); settingsBack.current = () => {
     if (mediaClose.current) { mediaClose.current(); return; }
@@ -152,9 +156,10 @@ export function MobileApp() {
   async function attach(incoming: FileList | null) {
     if (!incoming) return;
     setUploading(true);
-    try { const added: FileRef[] = []; for (const file of Array.from(incoming)) added.push(await saveLibraryFile(file)); setFiles(previous => [...previous, ...added]); logDiagnostic('files', 'attached', { count: added.length }); }
+    const added: FileRef[] = [];
+    try { for (const file of Array.from(incoming)) added.push(await saveLibraryFile(file)); logDiagnostic('files', 'attached', { count: added.length }); }
     catch (error) { logDiagnostic('files', 'attach-failed', {}, 'error'); setNotice(error instanceof Error ? error.message : 'Lampiran gagal disimpan.'); }
-    finally { setUploading(false); for (const input of [picker.current, cameraPicker.current, photoPicker.current]) if (input) input.value = ''; }
+    finally { if (added.length) setFiles(previous => [...previous, ...added]); setUploading(false); for (const input of [picker.current, cameraPicker.current, photoPicker.current]) if (input) input.value = ''; }
   }
   const shortcutOpen = useRef(openChat); shortcutOpen.current = openChat;
   useEffect(() => bindHomeShortcut(title => shortcutOpen.current(title), setNotice), []);
@@ -173,7 +178,7 @@ export function MobileApp() {
       if (controls?.length) { const first = controls[0], last = controls[controls.length - 1]; if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); } }
     }
   }}>
-    <div className="m-content" inert={drawer || !!sheet || speechMode === 'voice' || mediaPreview || !profile}>
+    <div className="m-content" inert={drawer || (!!sheet && sheet !== 'attachments') || speechMode === 'voice' || mediaPreview || !profile}>
       <MobilePageTransition active={inSettings} identity={page === 'settings' ? 'settings/' + settingsScreen : page}>
       {page === 'endpoints' ? <header className="m-page-header"><button type="button" className="m-page-back" aria-label={returnPage === 'settings' ? 'Back to Settings' : 'Back to chat'} onClick={() => navigate(returnPage)}><Icon name="arrow"/></button><h1>Custom Endpoint</h1><span/></header> : page !== 'chat' ? null : home ? <MobileHomeHeader mode={mode} temporary={chat.temporary} onSidebar={() => setDrawer(true)} onTemporary={temporaryChat} onMode={value => { setMode(value); localStorage.setItem('desktop-chat-mode', value); }}/ > : <header className="m-header m-conversation-header">
         <Button icon="mobile-menu" label="Open sidebar" className="m-round" onClick={() => setDrawer(true)}/>
@@ -187,7 +192,7 @@ export function MobileApp() {
           <div className="m-message-stack" ref={streamContent}>
           {home && chat.temporary && <MobileTemporaryHome onLearnMore={() => setSheet('temporary')} onPersonalization={() => setSheet('personalization')} personalized={personalization.instructions || personalization.memories}/>}
           {chat.messages.map((message, index) => <article key={index} className={'m-message m-' + message.role + (matches.includes(index) ? ' m-chat-match' : '')}>
-            {message.role === 'user' ? <div className="m-user-stack">{!!message.attachments?.length && <div className="m-message-files">{message.attachments.map(file => <MobileAttachment key={file.id} file={file}/>)}</div>}{message.text && <div className="m-bubble">{message.text}</div>}</div> : <><MobileStreamingReply text={chat.answerText(message)} streaming={chat.busy && index === chat.messages.length - 1}>{chat.answerText(message) && !(chat.busy && index === chat.messages.length - 1) && <MobileResponseActions text={chat.answerText(message)} onNotice={setNotice} onMore={article => { responseArticle.current = article; setResponseText(chat.answerText(message)); setSheet('response-actions'); }}/>}</MobileStreamingReply><AgentMessageExtras state={message.agent} streaming={chat.busy && index === chat.messages.length - 1}/></>}
+            {message.role === 'user' ? <div className="m-user-stack">{!!message.attachments?.length && <div className="m-message-files">{message.attachments.map(file => <MobileAttachment key={file.id} file={file}/>)}</div>}{message.text && <div className="m-bubble">{message.text}</div>}</div> : <><MobileStreamingReply text={chat.answerText(message)} streaming={chat.busy && index === chat.messages.length - 1}>{chat.answerText(message) && !(chat.busy && index === chat.messages.length - 1) && <MobileResponseActions text={chat.answerText(message)} onNotice={setNotice} onMore={article => { responseArticle.current = article; setResponseText(chat.answerText(message)); setSheet('response-actions'); }}/>}</MobileStreamingReply><AgentMessageExtras compact state={message.agent} streaming={chat.busy && index === chat.messages.length - 1}/></>}
           </article>)}
           {chat.busy && chat.messages.at(-1)?.role !== 'assistant' && <div className="m-waiting" role="status" aria-label="Menunggu jawaban"><span/></div>}
           <MobileEndPull scroll={scroll} enabled={!home && !chat.busy && !drawer && !sheet && !speechMode} conversation={chat.title} onNew={() => { newChat(); requestAnimationFrame(() => { textarea.current?.focus({ preventScroll: true }); mobileComposerKeyboard('show'); }); }}/>

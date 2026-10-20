@@ -6,6 +6,7 @@ import { streamMainChat, type AgentMessageState } from '../agent/mainClient';
 import { loadSettings, prepareChatMessages, recordUsage } from './clientSettings';
 import { resolveMessageFiles, type FileRef } from './fileLibrary';
 import { providerErrorMessage } from './providerErrors';
+import { notifyTaskComplete } from '../mobile/deviceActions';
 import { isNativeDesktop } from './nativeDesktop';
 import { changeConversationName } from './mobileConversationMetadata';
 import { logDiagnostic } from './diagnosticLog';
@@ -81,6 +82,7 @@ export function useMobileConversation() {
       failed = true;
       if (active.current === controller) setError(controller.signal.aborted ? controller.signal.reason === 'timeout' ? 'Penyedia terlalu lama merespons.' : 'Jawaban dihentikan.' : providerErrorMessage(failure, isNativeDesktop(), 'Jawaban gagal dimuat.'));
     } finally {
+      if (!failed && !controller.signal.aborted && answer.trim() && loadSettings().notifications) notifyTaskComplete(name);
       releaseBackground(); clearTimeout(timeout);
       logDiagnostic('chat', 'request-finished', { code: controller.signal.aborted ? 'interrupted' : failed ? 'failed' : 'completed', durationMs: Date.now() - startedAt }, failed ? 'error' : 'info');
       try { recordUsage({ provider: endpoint.name, model: endpoint.model, source: 'chat', status: controller.signal.aborted ? 'interrupted' : failed ? 'failed' : 'completed', ...reported }); } catch { /* Usage is optional. */ }

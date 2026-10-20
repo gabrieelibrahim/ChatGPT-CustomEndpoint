@@ -32,6 +32,7 @@ class MainActivity : TauriActivity() {
   private val speechCapture by lazy { SpeechCaptureBridge(this) }
   private val audioCapture by lazy { AudioCaptureBridge(this) }
   private val fileOpen by lazy { FileOpenBridge(this) }
+  private val deviceActions by lazy { DeviceActionsBridge(this) }
   private val launch by lazy { LaunchBridge(this) }
   private var homeReply: androidx.webkit.JavaScriptReplyProxy? = null
   private fun openShortcut() {
@@ -40,7 +41,12 @@ class MainActivity : TauriActivity() {
     try { reply.postMessage(JSONObject().put("event", "open").put("title", title).toString()); intent.removeExtra("supergpt-chat-title") } catch (_: Exception) { }
   }
   override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); openShortcut() }
+  @Deprecated("Android activity result compatibility")
+  override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    if (!deviceActions.result(requestCode, resultCode, data)) super.onActivityResult(requestCode, resultCode, data)
+  }
   private var pendingComposerKeyboard = false
+  private var keyboardObserver: android.view.ViewTreeObserver.OnGlobalLayoutListener? = null
   private fun showComposerKeyboard() {
     val webView = taskWebView ?: return
     if (!pendingComposerKeyboard || !hasWindowFocus()) return
@@ -63,7 +69,7 @@ class MainActivity : TauriActivity() {
   override fun onResume() { super.onResume(); speechCapture.onResume(); audioCapture.onResume() }
   override fun onPause() { speechCapture.onPause(); audioCapture.onPause(); super.onPause(); resumeTaskWebView() }
   override fun onStop() { speechCapture.onStop(); audioCapture.onStop(); super.onStop(); resumeTaskWebView() }
-  override fun onDestroy() { settingsBack.isEnabled = false; settingsBackReply = null; homeReply = null; launch.destroy(); speechCapture.destroy(); audioCapture.destroy(); fileOpen.destroy(); taskWebView = null; super.onDestroy() }
+  override fun onDestroy() { settingsBack.isEnabled = false; settingsBackReply = null; homeReply = null; launch.destroy(); speechCapture.destroy(); audioCapture.destroy(); fileOpen.destroy(); deviceActions.destroy(); keyboardObserver?.let { taskWebView?.viewTreeObserver?.removeOnGlobalLayoutListener(it) }; keyboardObserver = null; taskWebView = null; super.onDestroy() }
   override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     speechCapture.onPermissionResult(requestCode, grantResults)
@@ -129,9 +135,24 @@ class MainActivity : TauriActivity() {
         if (value != "enabled" && value != "disabled") return@addWebMessageListener
         runOnUiThread { settingsBackReply = if (value == "enabled") reply else null; settingsBack.isEnabled = value == "enabled" }
       }
-      WebViewCompat.addWebMessageListener(webView, "SuperGPTComposer", origins) { _, message, _, mainFrame, _ ->
+      WebViewCompat.addWebMessageListener(webView, "SuperGPTComposer", origins) { _, message, _, mainFrame, reply ->
         if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
         val action = message.data ?: return@addWebMessageListener
+        if (action == "observe") {
+          runOnUiThread {
+            keyboardObserver?.let { webView.viewTreeObserver.removeOnGlobalLayoutListener(it) }
+            var previous: Boolean? = null
+            val listener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
+              val insets = androidx.core.view.ViewCompat.getRootWindowInsets(webView)
+              if (insets != null) {
+                val open = insets.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())
+                if (open != previous) { previous = open; try { reply.postMessage(JSONObject().put("event", "keyboard").put("open", open).toString()) } catch (_: Exception) { } }
+              }
+            }
+            keyboardObserver = listener; webView.viewTreeObserver.addOnGlobalLayoutListener(listener)
+          }
+          return@addWebMessageListener
+        }
         if (action != "show" && action != "hide") return@addWebMessageListener
         pendingComposerKeyboard = action == "show"
         if (pendingComposerKeyboard) showComposerKeyboard() else webView.post {
@@ -144,6 +165,7 @@ class MainActivity : TauriActivity() {
       speechCapture.install(webView, origins)
       audioCapture.install(webView, origins)
       fileOpen.install(webView, origins)
+      deviceActions.install(webView, origins)
       WebViewCompat.addWebMessageListener(webView, "SuperGPTShare", origins) { _, message, _, mainFrame, _ ->
         if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
         val text = message.data ?: return@addWebMessageListener

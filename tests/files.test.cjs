@@ -51,9 +51,12 @@ test('missing, unsupported or excessive attachments fail before sending', async 
   const text = await saveLibraryFile(new File(['x'.repeat(512 * 1024 + 1)], 'large.txt', { type: 'text/plain' }));
   await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: [text] }], signal), /512 KB/);
   const image = await saveLibraryFile(new File(['tiny'], 'image.png', { type: 'image/png' }));
-  await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: Array(5).fill(image) }], signal), /4 gambar/);
+  assert.equal((await resolveMessageFiles([{ role: 'user', text: '', attachments: Array(8).fill(image) }], signal))[0].images.length, 8);
   const largeImage = await saveLibraryFile(new File(['x'.repeat(1024 * 1024 + 1)], 'large.png', { type: 'image/png' }));
-  await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: [largeImage] }], signal), /1 MB/);
+  assert.equal((await resolveMessageFiles([{ role: 'user', text: '', attachments: [largeImage] }], signal))[0].images.length, 1);
+  const history = Array.from({ length: 7 }, () => ({ role: 'user', text: '', attachments: [image] }));
+  assert.equal((await resolveMessageFiles(history, signal)).length, 7);
+  await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: Array(22).fill(largeImage) }], signal), /28 MB/);
   await assert.rejects(saveLibraryFile(new File(['x'.repeat(10 * 1024 * 1024 + 1)], 'huge.txt')), /10 MB/);
 });
 

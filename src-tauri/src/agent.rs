@@ -222,7 +222,7 @@ pub fn native_agent_request(
     {
         return Err("Invalid request id".into());
     }
-    if payload.to_string().len() > 8 * 1024 * 1024 {
+    if payload.to_string().len() > 32 * 1024 * 1024 {
         return Err("Permintaan terlalu besar.".into());
     }
     let action = payload.get("action").and_then(Value::as_str).unwrap_or("");

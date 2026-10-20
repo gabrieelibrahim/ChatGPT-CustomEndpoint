@@ -19,14 +19,17 @@ export function libraryFile(id: string) { return operation<LibraryFile | undefin
 export async function removeLibraryFile(id: string) { await operation('readwrite', store => store.delete(id)); window.dispatchEvent(new Event('client-files-changed')); }
 function dataUrl(blob: Blob): Promise<string> { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(Error('Gambar tidak bisa dibaca.')); reader.readAsDataURL(blob); }); }
 export async function resolveMessageFiles<T extends { role: string; text: string; attachments?: FileRef[] }>(messages: T[], signal: AbortSignal): Promise<(T & { images?: string[] })[]> {
-  let total = 0, imageCount = 0;
+  let total = 0, imageBytes = 0;
   const output = [];
   for (const message of messages) {
     let context = ''; const images: string[] = [];
     for (const reference of message.attachments || []) {
       signal.throwIfAborted(); const file = await libraryFile(reference.id); if (!file) throw Error('Lampiran ' + reference.name + ' tidak ditemukan di library perangkat ini.');
       if (/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
-        if (file.size > 1024 * 1024 || ++imageCount > 4) throw Error('Input vision maksimal 4 gambar, masing-masing 1 MB.');
+        // Limit bytes, not image count or the number of earlier chat turns.
+        // A larger attachment is valid; the provider decides its model's limits.
+        imageBytes += Math.ceil(file.size / 3) * 4;
+        if (imageBytes > 28 * 1024 * 1024) throw Error('Total data gambar pada riwayat melebihi 28 MB. Mulai obrolan baru atau gunakan gambar berukuran lebih kecil.');
         images.push(await dataUrl(file.blob));
       } else if (file.type.startsWith('text/') || /\.(txt|md|json|csv|js|jsx|ts|tsx|css|html|py|log|yaml|yml)$/i.test(file.name)) {
         total += file.size; if (total > 512 * 1024) throw Error('Total lampiran teks maksimal 512 KB per permintaan.');

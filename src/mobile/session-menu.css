@@ -1,9 +1,10 @@
-.m-app .m-sidebar-history button{touch-action:pan-y;-webkit-touch-callout:none;user-select:none}
+.m-app .m-sidebar-history button,.m-session-layer,.m-session-layer *{touch-action:pan-y;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.m-session-layer input{user-select:text;-webkit-user-select:text}
 .m-app .m-sidebar-history button.m-session-held{background:var(--m-selected)}
 .m-session-layer{position:absolute;inset:0;z-index:5}
 .m-app .m-session-dismiss{position:absolute;inset:0;min-height:0;width:100%;height:100%;padding:0;background:transparent;border:0;border-radius:0;transform:none}
 .m-session-menu{position:absolute;padding:8px 14px;border:1px solid var(--m-border);border-radius:22px;background:var(--m-field);box-shadow:0 8px 24px #0002;animation:m-session-appear 140ms cubic-bezier(.2,.8,.2,1) both;transform-origin:50% 30%;color:var(--m-text)}
-.m-app .m-session-menu>button{width:100%;height:49px;min-height:49px;display:flex;gap:17px;padding:0 10px;font-size:18px;line-height:24px;font-weight:500;white-space:nowrap;border-radius:8px;text-align:left}
+.m-app .m-session-menu>button{width:100%;height:49px;min-height:49px;display:flex;gap:17px;padding:0 10px;font-size:18px;line-height:24px;font-weight:400;white-space:nowrap;border-radius:8px;text-align:left}
 .m-session-menu>button>svg{width:22px!important;height:22px!important;flex:none}
 .m-session-menu>button>svg:last-child:not(:first-child){margin-left:auto;width:16px!important;height:16px!important;transform:rotate(-90deg)}
 .m-app .m-session-menu button.m-session-danger{color:var(--m-danger)}

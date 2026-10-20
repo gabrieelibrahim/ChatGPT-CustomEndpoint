@@ -15,6 +15,7 @@ export function MobileSessionMenu({ target, pinned, container, onClose, onPin, o
   const left = Math.max(12, Math.min(target.x - (rect?.left || 0), width - menuWidth - 12));
   const top = Math.max(12, Math.min(target.y - (rect?.top || 0), height - menuHeight - 12));
   useEffect(() => {
+    window.getSelection()?.removeAllRanges();
     if (page === 'rename') { input.current?.focus({ preventScroll: true }); input.current?.select(); }
     else panel.current?.querySelector<HTMLElement>('button:not(:disabled)')?.focus({ preventScroll: true });
   }, [page]);

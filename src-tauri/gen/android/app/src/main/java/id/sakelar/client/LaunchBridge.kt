@@ -23,10 +23,10 @@ class LaunchBridge(private val activity: Activity) {
       val root = activity.window.decorView as android.view.ViewGroup
       val overlay = FrameLayout(activity).apply { setBackgroundColor(if (light) Color.WHITE else Color.BLACK); isClickable = true }
       val logo = ImageView(activity)
-      val resource = activity.resources.getIdentifier("ic_launcher_foreground", "mipmap", activity.packageName)
+      val resource = activity.resources.getIdentifier("supergpt_launch_mark", "drawable", activity.packageName)
       logo.setImageResource(if (resource != 0) resource else activity.applicationInfo.icon)
       logo.setColorFilter(if (light) Color.BLACK else Color.WHITE)
-      val size = (144 * activity.resources.displayMetrics.density).toInt()
+      val size = (68 * activity.resources.displayMetrics.density).toInt()
       overlay.addView(logo, FrameLayout.LayoutParams(size, size, android.view.Gravity.CENTER))
       root.addView(overlay, android.view.ViewGroup.LayoutParams(-1, -1))
       remove = { overlay.animate().alpha(0f).setDuration(120).withEndAction { root.removeView(overlay) }.start() }

@@ -33,7 +33,7 @@ export function MobileComposer(props: Props) {
   const canSend = !!value.trim() || hasFiles;
   return <div className={`m-composer${hasFiles ? ' m-composer-files' : ''}`}>
     {props.attachments}
-    <button type="button" aria-label="Attach files" disabled={uploading || busy} onClick={props.onAttach}><Icon name="plus"/></button>
+    <button type="button" aria-label="Attach files" disabled={uploading || busy} onPointerDown={event => event.preventDefault()} onClick={props.onAttach}><Icon name="plus"/></button>
     <textarea ref={input} aria-label="Message" placeholder="Ask SuperGPT" rows={1} value={value} onFocus={props.onFocus} onBlur={props.onBlur} onChange={event => props.onChange(event.target.value)}/>
     <button type="button" aria-label="Dictate" onClick={props.onDictate}><MobileControlIcon name="mic"/></button>
     <button type="button" className={`m-send${props.idleSend && !canSend && !busy ? ' m-send-empty' : ''}`} aria-label={busy ? 'Stop generation' : canSend || props.idleSend ? 'Send message' : 'Voice mode'} disabled={uploading || (props.idleSend && !canSend && !busy)}
