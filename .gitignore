@@ -9,3 +9,11 @@ dist/
 !.env.example
 *.pem
 *.key
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore.properties
+release-signing.properties
+release.properties
+signing.properties

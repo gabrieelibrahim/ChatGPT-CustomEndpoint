@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { readSigningIdentity } from './androidSigning.mjs';
 
 export function releaseArguments(tag, apk, checksum, notes) {
   if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw Error('Use a stable tag such as v1.2.0.');
@@ -14,8 +15,14 @@ export function validateApkMetadata(tag, badging) {
   if (!/^v\d+\.\d+\.\d+$/.test(tag)) throw Error('Invalid stable release tag.');
   const version = /versionName='([^']+)'/.exec(badging)?.[1];
   if (version !== tag.slice(1)) throw Error('APK versionName must match the release tag.');
-  if (!/package: name='id\.sakelar\.client(?:\.debug)?'/.test(badging)) throw Error('Unexpected Android package.');
+  if (!/package: name='id\.sakelar\.client'/.test(badging)) throw Error('Only the production Android package may be released.');
+  if (/^application-debuggable\b/m.test(badging)) throw Error('Debuggable APKs cannot be published.');
   if (!/native-code:.*'arm64-v8a'/.test(badging)) throw Error('Release APK must support ARM64.');
+}
+export function validateApkSignature(certificateReport, fingerprint) {
+  if (!/^[a-f0-9]{64}$/.test(fingerprint)) throw Error('Invalid pinned release certificate.');
+  const digests = [...certificateReport.matchAll(/^Signer #\d+ certificate SHA-256 digest: ([a-fA-F0-9:]+)\s*$/gm)].map(match => match[1].replaceAll(':', '').toLowerCase());
+  if (digests.length !== 1 || digests[0] !== fingerprint || /certificate DN:.*Android Debug/i.test(certificateReport)) throw Error('APK is not signed by the permanent SuperGPT release key.');
 }
 function main() {
   const args = process.argv.slice(2), value = key => args[args.indexOf(key) + 1];
@@ -29,7 +36,8 @@ function main() {
   const windows = process.platform === 'win32';
   const badging = execFileSync(join(tools, windows ? 'aapt.exe' : 'aapt'), ['dump', 'badging', source], { encoding: 'utf8', windowsHide: true });
   validateApkMetadata(tag, badging);
-  execFileSync(process.env.JAVA_HOME ? join(process.env.JAVA_HOME, 'bin', windows ? 'java.exe' : 'java') : 'java', ['-jar', join(tools, 'lib/apksigner.jar'), 'verify', '--verbose', source], { stdio: 'pipe', windowsHide: true });
+  const certificates = execFileSync(process.env.JAVA_HOME ? join(process.env.JAVA_HOME, 'bin', windows ? 'java.exe' : 'java') : 'java', ['-jar', join(tools, 'lib/apksigner.jar'), 'verify', '--verbose', '--print-certs', source], { encoding: 'utf8', windowsHide: true });
+  validateApkSignature(certificates, readSigningIdentity(root).sha256);
   execFileSync('git', ['rev-parse', '--verify', `${tag}^{commit}`], { cwd: root, stdio: 'pipe', windowsHide: true });
   const folder = mkdtempSync(join(tmpdir(), 'supergpt-release-'));
   const apk = join(folder, 'SuperGPT.apk'), checksum = join(folder, 'SHA256SUMS.txt');

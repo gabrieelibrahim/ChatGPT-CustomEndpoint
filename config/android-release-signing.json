@@ -1,0 +1,7 @@
+{
+  "packageId": "id.sakelar.client",
+  "alias": "supergpt-release",
+  "sha256": "7544dc65194da6bb8b0bb8c86005759e91707f7dc0a6f8ddb53eb907bf7a7737",
+  "subject": "O=SuperGPT\nCN=SuperGPT Release",
+  "validTo": "Mar  7 23:52:09 2054 GMT"
+}

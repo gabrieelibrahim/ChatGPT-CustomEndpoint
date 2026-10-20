@@ -44,7 +44,7 @@ test('release tooling uses one APK name and stable latest releases and rejects v
   const {releaseArguments,validateApkMetadata}=await import('../scripts/publishAndroidRelease.mjs');
   const args=releaseArguments('v1.2.0','/tmp/SuperGPT.apk','/tmp/SHA256SUMS.txt','/tmp/notes.md');assert.ok(args.includes('--prerelease=false'));assert.ok(args.includes('--latest'));assert.ok(args.includes('--verify-tag'));assert.ok(!args.includes('--draft'));
   assert.throws(()=>releaseArguments('v1.2.0-beta','a','b','c'));
-  validateApkMetadata('v1.2.0',"package: name='id.sakelar.client.debug' versionCode='1200' versionName='1.2.0'\nnative-code: 'arm64-v8a'");
+  validateApkMetadata('v1.2.0',"package: name='id.sakelar.client' versionCode='1200' versionName='1.2.0'\nnative-code: 'arm64-v8a'");
   assert.throws(()=>validateApkMetadata('v1.2.0',"package: name='id.sakelar.client.debug' versionName='1.1.0'\nnative-code: 'arm64-v8a'"));
 });
 

@@ -2,13 +2,17 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join, delimiter } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { signingPropertiesPath, readSigningProperties, readSigningIdentity } from './androidSigning.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 for (const name of ['.env.desktop.local', '.env.mobile.local']) {
   const file = join(root, name);
   if (existsSync(file)) process.loadEnvFile(file);
 }
-// Keep the compatible debug package/signature without shipping Rust's enormous
-// DWARF/symbol tables. Explicit environment overrides still allow full debugging.
+// Debug builds are explicit development artifacts; public builds use the pinned release key.
+if (process.argv.includes('android') && process.argv.includes('build') && !process.argv.includes('--debug')) {
+  const properties = signingPropertiesPath(); readSigningProperties(properties); readSigningIdentity(root);
+  process.env.SUPERGPT_ANDROID_SIGNING_PROPERTIES = properties;
+}
 if (process.argv.includes('android') && process.argv.includes('build') && process.argv.includes('--debug')) {
   process.env.CARGO_PROFILE_DEV_DEBUG ??= '0';
   process.env.CARGO_PROFILE_DEV_STRIP ??= 'symbols';
