@@ -37,12 +37,15 @@ test('completion notification is emitted only for a successful response with rem
     localStorage.setItem('client-settings-v1', JSON.stringify({ notifications: true }));
     global.fetch = async () => answer();
     await app.render().send('Finished task');
+    assert.equal(app.render().messages.at(-1).generationId, app.render().completedGeneration);
+    assert.ok(app.render().completedGeneration);
     assert.equal(notices.length, 1); assert.equal(notices[0].op, 'notify'); assert.equal(notices[0].title, 'Finished task');
     global.fetch = async () => new Response('', { status: 500 });
-    await app.render().send('Failed task'); assert.equal(notices.length, 1);
+    await app.render().send('Failed task'); assert.equal(notices.length, 1); assert.equal(app.render().completedGeneration, '');
     localStorage.setItem('client-settings-v1', JSON.stringify({ notifications: false }));
     global.fetch = async () => answer();
     await app.render().send('Muted task'); assert.equal(notices.length, 1);
+    app.render().open('Finished task'); assert.equal(app.render().completedGeneration, '');
   } finally { app.restore(); }
 });
 

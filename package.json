@@ -31,7 +31,8 @@
     "ios:dev": "node scripts/mobile.mjs ios dev",
     "ios:build": "node scripts/mobile.mjs ios build",
     "sdk:server": "node server/sdk/main.mjs",
-    "test:sdk": "node --test tests/sdk-*.test.mjs"
+    "test:sdk": "node --test tests/sdk-*.test.mjs",
+    "release:android": "node scripts/publishAndroidRelease.mjs"
   },
   "dependencies": {
     "@openai/agents": "0.20.0",
@@ -40,9 +41,15 @@
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-http": "^2.8.3",
     "@tauri-apps/plugin-opener": "^2.7.2",
+    "katex": "0.18.2",
     "openai": "7.38.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "rehype-katex": "7.0.1",
+    "remark-gfm": "4.0.1",
+    "remark-math": "6.0.0",
+    "remark-parse": "11.0.0",
+    "unified": "11.0.5",
     "zod": "4.3.6"
   },
   "devDependencies": {

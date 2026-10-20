@@ -11,7 +11,7 @@ import { isNativeDesktop } from './nativeDesktop';
 import { changeConversationName } from './mobileConversationMetadata';
 import { logDiagnostic } from './diagnosticLog';
 
-export type MobileMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; timestamp?: number; attachments?: FileRef[]; agent?: AgentMessageState };
+export type MobileMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; timestamp?: number; generationId?: string; attachments?: FileRef[]; agent?: AgentMessageState };
 function read<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; } catch { return fallback; } }
 
 // UI-independent conversation state. Uses the same profile, transport and history formats as desktop.
@@ -23,6 +23,7 @@ export function useMobileConversation() {
   const [messages, setMessages] = useState<MobileMessage[]>([]);
   const [temporary, setTemporary] = useState(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const [completedGeneration, setCompletedGeneration] = useState('');
   const active = useRef<AbortController | null>(null);
   const endpoint = store.profiles.find(p => p.id === store.selectedId);
   useEffect(() => {
@@ -31,7 +32,7 @@ export function useMobileConversation() {
     return () => { window.removeEventListener('client-endpoints-changed', refresh); active.current?.abort(); active.current = null; };
   }, []);
   function stop() { active.current?.abort(); }
-  function reset(temp = false) { active.current?.abort(); active.current = null; setBusy(false); setError(''); setMessages([]); setTitle(''); setTemporary(temp); }
+  function reset(temp = false) { setCompletedGeneration(''); active.current?.abort(); active.current = null; setBusy(false); setError(''); setMessages([]); setTitle(''); setTemporary(temp); }
   function open(name: string) { reset(); setTitle(name); setMessages(content[name] || []); }
   function remove(name: string) {
     if (busy && title === name) { const message = 'Hentikan jawaban sebelum menghapus percakapan.'; setError(message); return message; }
@@ -54,16 +55,22 @@ export function useMobileConversation() {
     let name = title || base;
     if (!title) { let suffix = 2; while (titles.includes(name)) name = `${base} (${suffix++})`; }
     const controller = new AbortController(); active.current = controller;
+    const generationId = crypto.randomUUID(); setCompletedGeneration('');
     const releaseBackground = beginMobileBackgroundTask(crypto.randomUUID());
     const settings = loadSettings(), timeout = setTimeout(() => controller.abort('timeout'), settings.timeoutSeconds * 1000);
     setBusy(true); setError(''); setTitle(name); setMessages(next);
     const startedAt = Date.now(); logDiagnostic('chat', 'request-started', { count: attachments.length });
     let answer = '', reasoning = '', failed = false, agent: AgentMessageState | undefined;
+    let lastPersisted = -Infinity;
     let reported: { input?: number; output?: number } = {};
-    const publish = (items: MobileMessage[]) => {
+    const publish = (items: MobileMessage[], force = false) => {
       if (active.current !== controller) return;
       setMessages(items);
       if (!temporary) {
+        // Storage is synchronous. Persist at most four times/second while live,
+        // and always flush the initial/final state, including failures/stops.
+        if (!force && Date.now() - lastPersisted < 250) return;
+        lastPersisted = Date.now();
         // Read on each publication so another window's saved chats are preserved.
         const all = { ...read<Record<string, MobileMessage[]>>('desktop-chat-content', {}), [name]: items };
         const names = [name, ...read<string[]>('desktop-titles', []).filter(value => value !== name)];
@@ -71,8 +78,8 @@ export function useMobileConversation() {
         catch { setError('Penyimpanan percakapan penuh.'); }
       }
     };
-    const current = (): MobileMessage[] => answer || reasoning || agent?.active || agent?.items.length || agent?.sources.length || agent?.notice ? [...next, { role: 'assistant', text: answer, reasoning, agent, timestamp: Date.now() }] : next;
-    publish(next);
+    const current = (): MobileMessage[] => answer || reasoning || agent?.active || agent?.items.length || agent?.sources.length || agent?.notice ? [...next, { role: 'assistant', text: answer, reasoning, agent, generationId, timestamp: Date.now() }] : next;
+    publish(next, true);
     try {
       const hydrated = await resolveMessageFiles(next, controller.signal);
       await streamMainChat(endpoint, key, endpoint.model, prepareChatMessages(hydrated, settings, { suppressMemories: temporary && !personalization.memories, suppressInstructions: temporary && !personalization.instructions }), controller.signal, (value, thought) => {
@@ -86,9 +93,9 @@ export function useMobileConversation() {
       releaseBackground(); clearTimeout(timeout);
       logDiagnostic('chat', 'request-finished', { code: controller.signal.aborted ? 'interrupted' : failed ? 'failed' : 'completed', durationMs: Date.now() - startedAt }, failed ? 'error' : 'info');
       try { recordUsage({ provider: endpoint.name, model: endpoint.model, source: 'chat', status: controller.signal.aborted ? 'interrupted' : failed ? 'failed' : 'completed', ...reported }); } catch { /* Usage is optional. */ }
-      if (active.current === controller) { publish(current()); active.current = null; setBusy(false); onCompleted?.(!failed && !controller.signal.aborted ? answer : ''); }
+      if (active.current === controller) { publish(current(), true); if (!failed && !controller.signal.aborted && answer.trim()) setCompletedGeneration(generationId); active.current = null; setBusy(false); onCompleted?.(!failed && !controller.signal.aborted ? answer : ''); }
     }
     return true;
   }
-  return { store, endpoint, titles, title, messages, temporary, busy, error, reset, open, remove, rename, send, stop, answerText: (message: MobileMessage) => parseThinking(message.text, message.reasoning).content };
+  return { store, endpoint, titles, title, messages, temporary, busy, error, completedGeneration, reset, open, remove, rename, send, stop, answerText: (message: MobileMessage) => parseThinking(message.text, message.reasoning).content };
 }

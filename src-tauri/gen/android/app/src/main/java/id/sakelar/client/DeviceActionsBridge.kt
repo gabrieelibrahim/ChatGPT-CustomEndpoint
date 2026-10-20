@@ -19,7 +19,21 @@ class DeviceActionsBridge(private val activity: Activity) {
   private var pending: Export? = null
   private val worker = java.util.concurrent.Executors.newSingleThreadExecutor()
   private val prefs = activity.getSharedPreferences("supergpt-notifications", Activity.MODE_PRIVATE)
+  private var lastHapticTick = 0L
+  private var lastHapticComplete = 0L
   fun install(webView: WebView, origins: Set<String>) {
+    WebViewCompat.addWebMessageListener(webView, "SuperGPTHaptics", origins) { _, message, _, mainFrame, _ ->
+      if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING || message.data !in listOf("tick", "complete")) return@addWebMessageListener
+      activity.runOnUiThread {
+        val complete = message.data == "complete"; val now = android.os.SystemClock.elapsedRealtime()
+        val elapsed = now - if (complete) lastHapticComplete else lastHapticTick
+        if (activity.hasWindowFocus() && elapsed >= if (complete) 150 else 750) {
+          if (complete) lastHapticComplete = now else lastHapticTick = now
+          val kind = if (complete && Build.VERSION.SDK_INT >= 30) android.view.HapticFeedbackConstants.CONFIRM else if (complete) android.view.HapticFeedbackConstants.KEYBOARD_TAP else android.view.HapticFeedbackConstants.CLOCK_TICK
+          webView.performHapticFeedback(kind)
+        }
+      }
+    }
     WebViewCompat.addWebMessageListener(webView, "SuperGPTExport", origins) { _, message, _, mainFrame, reply ->
       if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
       val raw = message.data ?: return@addWebMessageListener

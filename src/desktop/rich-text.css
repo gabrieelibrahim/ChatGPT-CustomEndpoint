@@ -16,4 +16,9 @@ html[data-client-theme=light] .d-rich-text{color-scheme:light}
 .d-root .d-rich-text .d-rich-image-load,.d-mini-chat .d-rich-text .d-rich-image-load{display:inline-block;border:1px solid #555;border-radius:12px;padding:8px 12px;color:inherit;background:transparent;font:inherit;cursor:pointer}
 .d-rich-text :is(a,button):focus-visible{outline:2px solid var(--client-accent,#6ba5ff);outline-offset:3px}
 .d-rich-fallback{white-space:pre-wrap}
+.d-rich-loading{display:grid;gap:8px;padding:5px 0;min-height:2.5em}
+.d-rich-loading>span{display:block;width:85%;height:.7em;border-radius:5px;background:currentColor;opacity:.08}
+.d-rich-loading>span+span{width:60%}
+.d-rich-text>.d-rich-block+.d-rich-block{margin-top:1em}
+.d-rich-text .katex-display{max-width:100%;overflow-x:auto;overflow-y:hidden;padding:4px 0}
 .d-thinking-text .d-rich-text{font-size:inherit;line-height:inherit}

@@ -1,3 +1,4 @@
+import { safeAgentItem } from './agentItem';
 import { connectSdk } from '../chatkit/transport';
 import { loadSettings } from '../lib/clientSettings';
 import { streamEndpointChat, type ProviderMessage } from '../lib/endpointChat';
@@ -54,7 +55,7 @@ export async function streamMainChat(profile: EndpointProfile, key: string, mode
           onText([...texts.values()].filter(Boolean).join('\n\n')); publish();
         } else if (event.type === 'thread.item.updated' && event.update?.type === 'assistant_message.content_part.text_delta') {
           texts.set(event.item_id, (texts.get(event.item_id) || '') + event.update.delta); onText([...texts.values()].filter(Boolean).join('\n\n'));
-        } else if (item && ['widget', 'structured_input', 'generated_image'].includes(item.type)) { const at = state.items.findIndex(value => value.id === item.id); if (at < 0) state.items.push(item); else state.items[at] = item; publish(); }
+        } else if (item && ['widget', 'structured_input', 'generated_image'].includes(item.type)) { const safe = safeAgentItem(item); if (safe) { const at = state.items.findIndex(value => value.id === safe.id); if (at < 0 && state.items.length < 64) state.items.push(safe); else if (at >= 0) state.items[at] = safe; publish(); } }
         if (event.type === 'client_effect' && event.name === 'sdk.usage') { for (const key of ['input', 'output'] as const) if (typeof event.data?.[key] === 'number') usage[key] = (usage[key] || 0) + event.data[key]; onUsage?.({ ...usage }); }
       });
       if (!paused) { if (!finished) throw Error('Koneksi agen berakhir sebelum jawaban selesai.'); break; }
