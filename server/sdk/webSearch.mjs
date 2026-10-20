@@ -12,8 +12,8 @@ export function searchSources(result) {
   }
   return sources.slice(0, 10);
 }
-export async function searchWeb(query, signal, url = process.env.SUPERGPT_WEB_MCP_URL || 'https://mcp.exa.ai/mcp') {
-  const server = new MCPServerStreamableHttp({ name: 'web_search', url, clientSessionTimeoutSeconds: 25, timeout: 25000, logger: { debug() {}, info() {}, warn() {}, error() {} } });
+export async function searchWeb(query, signal, url = process.env.SUPERGPT_WEB_MCP_URL || 'https://mcp.exa.ai/mcp', timeoutSeconds = 25) {
+  const server = new MCPServerStreamableHttp({ name: 'web_search', url, clientSessionTimeoutSeconds: timeoutSeconds, timeout: timeoutSeconds * 1000, logger: { debug() {}, info() {}, warn() {}, error() {} } });
   const cancel = () => { void server.close().catch(() => {}); }; signal?.addEventListener('abort', cancel, { once: true });
   try {
     signal?.throwIfAborted(); await server.connect(); signal?.throwIfAborted();

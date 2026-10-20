@@ -20,7 +20,7 @@ class TaskForegroundService : Service() {
   companion object {
     private const val CHANNEL = "supergpt-active-requests"
     private const val NOTICE = 2416
-    private const val MAX_MS = 330000L
+    private const val MAX_MS = 3630000L
     private val tasks = Collections.synchronizedSet(mutableSetOf<String>())
     fun active() = tasks.isNotEmpty()
     fun begin(context: Context, id: String) {

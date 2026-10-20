@@ -32,6 +32,7 @@ class MainActivity : TauriActivity() {
   private val speechCapture by lazy { SpeechCaptureBridge(this) }
   private val audioCapture by lazy { AudioCaptureBridge(this) }
   private val fileOpen by lazy { FileOpenBridge(this) }
+  private val launch by lazy { LaunchBridge(this) }
   private var homeReply: androidx.webkit.JavaScriptReplyProxy? = null
   private fun openShortcut() {
     val title = intent?.getStringExtra("supergpt-chat-title") ?: return
@@ -62,7 +63,7 @@ class MainActivity : TauriActivity() {
   override fun onResume() { super.onResume(); speechCapture.onResume(); audioCapture.onResume() }
   override fun onPause() { speechCapture.onPause(); audioCapture.onPause(); super.onPause(); resumeTaskWebView() }
   override fun onStop() { speechCapture.onStop(); audioCapture.onStop(); super.onStop(); resumeTaskWebView() }
-  override fun onDestroy() { settingsBack.isEnabled = false; settingsBackReply = null; homeReply = null; speechCapture.destroy(); audioCapture.destroy(); fileOpen.destroy(); taskWebView = null; super.onDestroy() }
+  override fun onDestroy() { settingsBack.isEnabled = false; settingsBackReply = null; homeReply = null; launch.destroy(); speechCapture.destroy(); audioCapture.destroy(); fileOpen.destroy(); taskWebView = null; super.onDestroy() }
   override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     speechCapture.onPermissionResult(requestCode, grantResults)
@@ -100,6 +101,7 @@ class MainActivity : TauriActivity() {
     })
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    launch.install(mode() == "light" || (mode() == "system" && resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK != Configuration.UI_MODE_NIGHT_YES))
     onBackPressedDispatcher.addCallback(this, settingsBack)
     applySystemBars(mode())
   }
@@ -138,6 +140,7 @@ class MainActivity : TauriActivity() {
         }
       }
       EndpointVault.install(webView, origins)
+      launch.bind(webView, origins)
       speechCapture.install(webView, origins)
       audioCapture.install(webView, origins)
       fileOpen.install(webView, origins)

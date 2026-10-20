@@ -11,6 +11,8 @@ function fixture() {
   const endpoint = { id: 'mock', name: 'Local mock', baseUrl: 'http://127.0.0.1:19092/v1', model: 'test', models: ['test'], auth: 'none', protocol: 'openai-compatible' };
   global.window = new EventTarget();
   global.localStorage = storage({ 'client-endpoint-profiles-v1': JSON.stringify({ version: 1, profiles: [endpoint], selectedId: 'mock' }) });
+  // These tests isolate plain provider transport; function calling is covered by mcp-direct.test.mjs.
+  localStorage.setItem('supergpt-main-ai-v1', JSON.stringify({ enabled: false }));
   global.sessionStorage = storage();
   let cursor = 0; const cells = [], cleanups = [];
   const hooks = {

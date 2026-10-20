@@ -2,17 +2,17 @@
    The OS status bar remains outside these app-owned layouts. */
 .m-sidebar{width:80%;max-width:calc(100% - 56px);border-radius:0;padding:env(safe-area-inset-top) 24px calc(32px + env(safe-area-inset-bottom)) 32px;background:#212121;box-shadow:none}
 .m-sidebar header{height:70px;min-height:70px;margin:0;gap:0}
-.m-sidebar header strong{font-size:22px;font-weight:600;line-height:28px;letter-spacing:0}
+.m-sidebar header strong{font-size:22px;font-weight:500;line-height:28px;letter-spacing:0}
 .m-app .m-sidebar .m-sidebar-search,.m-app .m-sidebar .m-sidebar-account{width:46px;height:46px;min-height:46px;border-radius:50%;border:1px solid #4c4c4c;background:#303030;padding:9px;justify-content:center;margin-left:auto}
 .m-sidebar-search svg,.m-sidebar-account svg{width:28px!important;height:28px!important}
 .m-app .m-sidebar .m-sidebar-account{width:49px;height:49px;min-height:49px}
 .m-sidebar-scroll{flex:1;min-height:0;overflow:auto;scrollbar-width:none;margin-right:-8px;padding-right:8px;mask-image:linear-gradient(#000 96%,transparent)}
 .m-sidebar nav{padding:3px 0 0;border:0;display:grid}
-.m-app .m-sidebar nav button{height:49px;min-height:49px;padding:0;gap:16px;font-size:18px;font-weight:500;line-height:24px;white-space:nowrap}
+.m-app .m-sidebar nav button{height:49px;min-height:49px;padding:0;gap:16px;font-size:18px;font-weight:400;line-height:24px;white-space:nowrap}
 .m-sidebar nav button svg{width:21px!important;height:21px!important}
 .m-sidebar nav button:disabled{opacity:.45}
 .m-sidebar-history section{margin-top:29px}
-.m-sidebar-history h2{font-size:18px;line-height:24px;font-weight:600;margin:0 0 12px}
+.m-sidebar-history h2{font-size:18px;line-height:24px;font-weight:500;margin:0 0 12px}
 .m-app .m-sidebar-history button{display:flex;width:100%;min-height:49px;height:49px;font-size:18px;font-weight:400;line-height:24px;padding:0;gap:14px}
 .m-sidebar-history button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .m-sidebar-history button svg{width:21px!important;height:21px!important}
@@ -22,7 +22,7 @@
 .m-sidebar-skeleton-row>span{display:block;width:min(162px,100%);height:20px;border-radius:5px;background:linear-gradient(100deg,#303030 25%,#414141 45%,#303030 65%);background-size:250% 100%;animation:m-sidebar-shimmer 1.5s ease-in-out infinite}
 @keyframes m-sidebar-shimmer{from{background-position:100% 0}to{background-position:0 0}}
 .m-sidebar footer{display:flex;align-items:center;justify-content:space-between;padding-top:12px;background:#212121;gap:12px}
-.m-app .m-sidebar-new{height:49px;min-height:49px;background:var(--m-action,#2b6bca);border:1px solid #7096ff80;border-radius:28px;padding:0 20px;font-size:18px;line-height:24px;color:#fff;gap:9px;font-weight:500}
+.m-app .m-sidebar-new{height:49px;min-height:49px;background:var(--m-action,#2b6bca);border:1px solid #7096ff80;border-radius:28px;padding:0 20px;font-size:18px;line-height:24px;color:#fff;gap:9px;font-weight:400}
 .m-sidebar-new svg{width:23px!important;height:23px!important}
 .m-settings-screen,.m-library-screen{display:flex;flex:1;flex-direction:column;min-height:0;background:var(--m-bg)}
 .m-page-header{height:70px;min-height:70px;padding:12px 14px;display:grid;grid-template-columns:46px minmax(0,1fr) 46px;align-items:center;gap:12px;background:var(--m-bg);z-index:2}

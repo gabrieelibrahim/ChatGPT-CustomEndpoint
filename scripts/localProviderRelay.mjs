@@ -10,7 +10,7 @@ export function localProviderRelay() {
         const origin = req.headers.origin;
         if (req.method !== 'POST' || !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress) || !/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host) || origin !== 'http://' + host || req.headers['content-type'] !== 'application/json') { fail(403); return; }
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 120000);
+        const timer = setTimeout(() => controller.abort(), 3600000);
         res.on('close', () => { if (!res.writableEnded) controller.abort(); });
         try {
           const chunks = []; let size = 0;

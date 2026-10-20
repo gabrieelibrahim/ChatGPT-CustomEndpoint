@@ -1,0 +1,15 @@
+.m-mcp-body { display: block; padding-bottom: 32px; }
+.m-mcp-body h2 { font-size: 18px; font-weight: 500; margin: 26px 0 14px; }
+.m-mcp-card { background: var(--m-card, #2f2f2f); border: 1px solid var(--m-border, #444); border-radius: 20px; padding: 18px; margin-bottom: 12px; }
+.m-mcp-card h3 { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 500; margin: 0 0 10px; }
+.m-mcp-card p, .m-mcp-card small { color: var(--m-muted, #aaa); overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
+.m-mcp-card button, .m-mcp-custom { border: 1px solid var(--m-border, #555); border-radius: 24px; padding: 10px 15px; font-size: 14px; background: transparent; color: inherit; }
+.m-mcp-card button:disabled { opacity: .5; }
+.m-mcp-card details { font-size: 14px; margin: 14px 0; }
+.m-mcp-card ul { padding-left: 20px; overflow-wrap: anywhere; }
+.m-mcp-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.m-mcp-custom { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+.m-mcp-error { color: #e97979; font-size: 14px; line-height: 1.5; }
+html[data-theme=light] .m-mcp-card { background: #f7f7f8; border-color: #ddd; }
+html[data-theme=light] .m-mcp-card p, html[data-theme=light] .m-mcp-card small { color: #646464; }
+html[data-theme=light] .m-mcp-card button, html[data-theme=light] .m-mcp-custom { border-color: #ccc; }

@@ -55,7 +55,7 @@ export function captureRecordedSpeech(options: CaptureOptions): SpeechCapture {
     if (!active || processing) return;
     processing = true;
     clearTimeout(timer); stopping = true; options.onProcessing?.();
-    timer = setTimeout(() => fail('Transkripsi terlalu lama. Coba lagi.', 'timeout'), 120000);
+    timer = setTimeout(() => fail('Transkripsi terlalu lama. Coba lagi.', 'timeout'), loadSettings().timeoutSeconds * 1000);
     try { text = await transcribeAudio(blob, controller.signal, options.language); if (!active) return; active = false; cleanup(); resolve(text); logDiagnostic('speech', 'completed', { engine: 'endpoint', durationMs: Date.now() - startedAt }); options.onText(text); options.onEnd(text); }
     catch (error) { if (active) fail(error instanceof Error ? error.message : 'Transkripsi gagal. Cek Log di Pengaturan.', 'transcription-failed'); }
   }

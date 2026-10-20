@@ -23,7 +23,13 @@ export async function consumeAgentEvents(response: Response, signal: AbortSignal
 
 export async function streamMainChat(profile: EndpointProfile, key: string, model: string, messages: ProviderMessage[], signal: AbortSignal, onText: (text: string, reasoning?: string) => void, effort?: string, onUsage?: (usage: { input?: number; output?: number }) => void, onState?: (state: AgentMessageState) => void, temporary = false) {
   const config = loadMainAi();
-  if (!mainAgentAvailable(config)) return streamEndpointChat(profile, key, model, messages, signal, onText, effort, onUsage);
+  if (!config.enabled) return streamEndpointChat(profile, key, model, messages, signal, onText, effort, onUsage);
+  if (!mainAgentAvailable(config)) {
+    if (config.runtime === 'server') throw Error('Isi URL server AI atau pilih pemrosesan langsung di perangkat.');
+    if (config.api === 'responses') throw Error('Responses tools memerlukan server AI. Pilih Chat Completions untuk MCP langsung.');
+    const { streamDirectTools } = await import('./directTools');
+    return streamDirectTools(profile, key, model, messages, signal, onText, waitDecision, effort, onUsage, onState);
+  }
   const settings = loadSettings(), state: AgentMessageState = { active: true, pending: false, progress: 'Memproses…', sources: [], items: [] }, texts = new Map<string, string>();
   const publish = () => onState?.({ ...state, sources: [...state.sources], items: [...state.items] });
   const mergeSources = (sources: { title: string; url: string }[]) => { for (const source of sources) { try { const url = new URL(source.url); if (['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !state.sources.some(value => value.url === url.href)) state.sources.push({ title: String(source.title || url.hostname).slice(0, 240), url: url.href }); } catch { /* Invalid source. */ } } state.sources = state.sources.slice(0, 20); };

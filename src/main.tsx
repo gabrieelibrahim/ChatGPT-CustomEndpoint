@@ -27,6 +27,7 @@ void initializeMobileEndpointVault().finally(() => {
   createRoot(document.getElementById('root')!).render(<Shell/>);
   requestAnimationFrame(() => requestAnimationFrame(() => {
     window.dispatchEvent(new CustomEvent('client-ready'));
+    try { (window as unknown as { SuperGPTLaunch?: { postMessage(value: string): void } }).SuperGPTLaunch?.postMessage('ready'); } catch { /* Native launch has a bounded fallback. */ }
     document.getElementById('launch-splash')?.remove();
   }));
 });

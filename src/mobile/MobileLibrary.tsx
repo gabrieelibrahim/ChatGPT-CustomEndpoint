@@ -1,3 +1,4 @@
+import { MobileMcpConnections } from './MobileMcpConnections';
 import { useEffect, useState } from 'react';
 import { UIIcon as Icon } from '../components/UIIcon';
 import { type useClientData } from '../desktop/ClientCollections';
@@ -29,6 +30,7 @@ export function MobileLibrary({ page, store, titles, initialProject = '', backLa
     else store.setData(previous => ({ ...previous, documents: [...previous.documents, { id, title: title.trim(), text, updated: Date.now() }] }));
     setAdding(false); setTitle(''); setText(''); setDate('');
   }
+  if (heading === 'Plugin') return <MobileMcpConnections store={store} onClose={onClose} onNotice={onNotice} backLabel={backLabel}/>;
   return <div className="m-library-screen">
     <header className="m-page-header"><button className="m-page-back" aria-label={selected ? 'Back to projects' : backLabel} onClick={selected ? () => setSelected('') : onClose}><Icon name="arrow"/></button><h1>{selectedProject?.name || heading}</h1>{<button className="m-page-add" aria-label={'Tambah ' + heading} onClick={() => { setAdding(true); setEditing(''); setTitle(''); setText(''); }}><Icon name="plus"/></button>}</header>
     {page === 'spaces' && <div className="m-library-tabs">{['Disarankan', 'Favorit', 'Folder', 'Pages'].map(value => <button key={value} aria-pressed={tab === value} onClick={() => setTab(value)}>{value}</button>)}</div>}

@@ -28,14 +28,14 @@ export class SdkService {
     this.prune(); if (this.sessions.size >= 32) throw inputError('Terlalu banyak sesi SDK. Tunggu atau tutup sesi lama.');
     const session = { ...validateSession(input), token: token(), touched: Date.now() };
     this.sessions.set(session.token, session);
-    return { token: session.token, expiresIn: 1800, capabilities: { ...session.options, instructions: undefined, mcpCount: session.options.mcp ? this.mcpProfiles.length : 0 } };
+    return { token: session.token, expiresIn: Math.max(1800, session.options.timeoutSeconds + 60), capabilities: { ...session.options, instructions: undefined, mcpCount: session.options.mcp ? this.mcpProfiles.length : 0 } };
   }
-  prune() { for (const [key, session] of this.sessions) if (Date.now() - session.touched > 1800000) this.sessions.delete(key); }
+  prune() { for (const [key, session] of this.sessions) if (Date.now() - session.touched > Math.max(1800000, (session.options.timeoutSeconds + 60) * 1000)) this.sessions.delete(key); }
   session(key) { this.prune(); const session = this.sessions.get(key); if (!session) throw Object.assign(Error('Sesi SDK berakhir. Sambungkan lagi.'), { status: 401 }); session.touched = Date.now(); return session; }
   lock(session, threadId) {
     if (this.running.size >= 4) throw inputError('Empat respons SDK sedang berjalan. Tunggu salah satunya selesai.');
     const key = session.owner + ':' + threadId; if (this.running.has(key)) throw inputError('Obrolan ini masih menerima respons.');
-    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 300000); this.running.set(key, controller);
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), session.options.timeoutSeconds * 1000); this.running.set(key, controller);
     return { signal: controller.signal, release: () => { clearTimeout(timer); this.running.delete(key); } };
   }
   isRunning(session, threadId) { return this.running.has(session.owner + ':' + threadId); }
@@ -195,7 +195,7 @@ export function sdkHandler(service, { origins = [], remoteToken = '', publicOrig
       } catch { json({ error: 'Not found' }, 404); } return;
     }
     if (!local && !remote) { json({ error: 'Origin ditolak.' }, 403); return; }
-    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 300000);
+    const controller = new AbortController(); let timer = setTimeout(() => controller.abort(), 15000);
     res.on('close', () => { if (!res.writableEnded) controller.abort(); });
     try {
       const bearer = (req.headers.authorization || '').replace(/^Bearer /, '');
@@ -205,6 +205,7 @@ export function sdkHandler(service, { origins = [], remoteToken = '', publicOrig
         json(service.createSession(JSON.parse((await readBody(req, 128 * 1024)).toString()))); return;
       }
       const session = service.session(bearer); session.baseUrl = (remote ? publicOrigin : 'http://' + host) + '/__sdk';
+      clearTimeout(timer); timer = setTimeout(() => controller.abort(), session.options.timeoutSeconds * 1000);
       if (path === '/session' && req.method === 'DELETE') { service.main.closeSession(bearer); service.sessions.delete(bearer); json({}); return; }
       if (path === '/main' && req.method === 'POST' && req.headers['content-type'] === 'application/json') {
         const payload = JSON.parse((await readBody(req)).toString());
