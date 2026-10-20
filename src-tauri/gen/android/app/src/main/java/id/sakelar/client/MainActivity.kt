@@ -13,6 +13,10 @@ import androidx.webkit.WebViewFeature
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebMessageCompat
 import org.json.JSONObject
+import android.content.Intent
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
 
 class MainActivity : TauriActivity() {
   private var settingsBackReply: androidx.webkit.JavaScriptReplyProxy? = null
@@ -26,6 +30,15 @@ class MainActivity : TauriActivity() {
   }
   private var taskWebView: WebView? = null
   private val speechCapture by lazy { SpeechCaptureBridge(this) }
+  private val audioCapture by lazy { AudioCaptureBridge(this) }
+  private val fileOpen by lazy { FileOpenBridge(this) }
+  private var homeReply: androidx.webkit.JavaScriptReplyProxy? = null
+  private fun openShortcut() {
+    val title = intent?.getStringExtra("supergpt-chat-title") ?: return
+    val reply = homeReply ?: return
+    try { reply.postMessage(JSONObject().put("event", "open").put("title", title).toString()); intent.removeExtra("supergpt-chat-title") } catch (_: Exception) { }
+  }
+  override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); openShortcut() }
   private var pendingComposerKeyboard = false
   private fun showComposerKeyboard() {
     val webView = taskWebView ?: return
@@ -40,18 +53,20 @@ class MainActivity : TauriActivity() {
   override fun onWindowFocusChanged(hasFocus: Boolean) {
     super.onWindowFocusChanged(hasFocus)
     speechCapture.onWindowFocusChanged(hasFocus)
+    audioCapture.onWindowFocusChanged(hasFocus)
     if (hasFocus) showComposerKeyboard()
   }
   private fun resumeTaskWebView() {
     if (TaskForegroundService.active()) { taskWebView?.onResume(); taskWebView?.resumeTimers() }
   }
-  override fun onResume() { super.onResume(); speechCapture.onResume() }
-  override fun onPause() { speechCapture.onPause(); super.onPause(); resumeTaskWebView() }
-  override fun onStop() { speechCapture.onStop(); super.onStop(); resumeTaskWebView() }
-  override fun onDestroy() { settingsBack.isEnabled = false; settingsBackReply = null; speechCapture.destroy(); taskWebView = null; super.onDestroy() }
+  override fun onResume() { super.onResume(); speechCapture.onResume(); audioCapture.onResume() }
+  override fun onPause() { speechCapture.onPause(); audioCapture.onPause(); super.onPause(); resumeTaskWebView() }
+  override fun onStop() { speechCapture.onStop(); audioCapture.onStop(); super.onStop(); resumeTaskWebView() }
+  override fun onDestroy() { settingsBack.isEnabled = false; settingsBackReply = null; homeReply = null; speechCapture.destroy(); audioCapture.destroy(); fileOpen.destroy(); taskWebView = null; super.onDestroy() }
   override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     speechCapture.onPermissionResult(requestCode, grantResults)
+    audioCapture.onPermissionResult(requestCode, grantResults)
   }
   private val themePrefs by lazy { getSharedPreferences("supergpt-appearance", MODE_PRIVATE) }
   private fun mode() = themePrefs.getString("theme", "system") ?: "system"
@@ -96,7 +111,7 @@ class MainActivity : TauriActivity() {
 
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
-    settingsBack.isEnabled = false; settingsBackReply = null
+    settingsBack.isEnabled = false; settingsBackReply = null; homeReply = null
     taskWebView = webView
     webView.setBackgroundColor(if (mode() == "light" || (mode() == "system" && resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK != Configuration.UI_MODE_NIGHT_YES)) Color.WHITE else Color.BLACK)
     // CSS owns the palette. Prevent WebView from darkening explicit Light colors.
@@ -124,6 +139,42 @@ class MainActivity : TauriActivity() {
       }
       EndpointVault.install(webView, origins)
       speechCapture.install(webView, origins)
+      audioCapture.install(webView, origins)
+      fileOpen.install(webView, origins)
+      WebViewCompat.addWebMessageListener(webView, "SuperGPTShare", origins) { _, message, _, mainFrame, _ ->
+        if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
+        val text = message.data ?: return@addWebMessageListener
+        if (text.isBlank() || text.length > 200000) return@addWebMessageListener
+        runOnUiThread {
+          try { startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Bagikan")) }
+          catch (_: Exception) { android.widget.Toast.makeText(this, "Berbagi tidak tersedia.", android.widget.Toast.LENGTH_SHORT).show() }
+        }
+      }
+      WebViewCompat.addWebMessageListener(webView, "SuperGPTHome", origins) { _, message, _, mainFrame, reply ->
+        if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
+        val raw = message.data ?: return@addWebMessageListener
+        if (raw.length > 2048) return@addWebMessageListener
+        runOnUiThread {
+          try {
+            val request = JSONObject(raw)
+            if (request.optString("op") == "ready") { homeReply = reply; openShortcut() }
+            else if (request.optString("op") == "pin") {
+              val title = request.getString("title"); require(title.isNotBlank() && title.length <= 200)
+              var accepted = false
+              if (android.os.Build.VERSION.SDK_INT >= 26) {
+                val manager = getSystemService(ShortcutManager::class.java)
+                if (manager?.isRequestPinShortcutSupported == true) {
+                  val shortcutIntent = Intent(this, MainActivity::class.java).setAction(Intent.ACTION_VIEW).putExtra("supergpt-chat-title", title)
+                  val id = java.security.MessageDigest.getInstance("SHA-256").digest(title.toByteArray()).joinToString("") { "%02x".format(it) }
+                  val shortcut = ShortcutInfo.Builder(this, "chat-" + id).setShortLabel(title.take(40)).setLongLabel(title).setIcon(Icon.createWithResource(this, applicationInfo.icon)).setIntent(shortcutIntent).build()
+                  accepted = manager.requestPinShortcut(shortcut, null)
+                }
+              }
+              reply.postMessage(JSONObject().put("event", "pin").put("ok", accepted).toString())
+            }
+          } catch (_: Exception) { try { reply.postMessage(JSONObject().put("event", "pin").put("ok", false).toString()) } catch (_: Exception) { } }
+        }
+      }
       WebViewCompat.addWebMessageListener(webView, "SuperGPTTask", origins) { _, message, _, mainFrame, reply ->
         if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
         val raw = message.data ?: return@addWebMessageListener

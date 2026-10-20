@@ -153,6 +153,10 @@ class SpeechCaptureBridge(private val activity: Activity) {
         override fun onError(error: Int) {
           if (current !== session) return
           fail(session, when (error) {
+            SpeechRecognizer.ERROR_NETWORK -> "network"
+            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "network-timeout"
+            SpeechRecognizer.ERROR_AUDIO -> "audio-capture"
+            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "busy"
             SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "not-allowed"
             SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "no-speech"
             SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "language-unavailable"

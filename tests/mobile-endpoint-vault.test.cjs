@@ -52,7 +52,9 @@ test('native writes serialize, retain latest value, and surface persistence fail
     await assert.rejects(done, /Penyimpanan aman/);
     assert.equal(f.api.endpointVaultState(), 'error');
     assert.deepEqual(f.api.nativeEndpointKeys(), { endpoint: 'second' });
-    assert.equal(f.values.size, 0);
+    assert.deepEqual([...f.values.keys()], ['client-diagnostic-log-v1']);
+    assert.match(f.values.get('client-diagnostic-log-v1'), /endpoint-vault-failed/);
+    assert.doesNotMatch(f.values.get('client-diagnostic-log-v1'), /first|second/);
   } finally { f.restore(); }
 });
 

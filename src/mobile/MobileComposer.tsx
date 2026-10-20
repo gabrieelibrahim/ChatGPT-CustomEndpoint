@@ -1,4 +1,4 @@
-import { useLayoutEffect, type RefObject } from 'react';
+import { useLayoutEffect, type RefObject, type ReactNode } from 'react';
 import { UIIcon as Icon } from '../components/UIIcon';
 import { MobileControlIcon } from './MobileControlIcon';
 
@@ -7,6 +7,7 @@ type Props = {
   expanded: boolean; engaged: boolean; uploading: boolean; busy: boolean; hasFiles: boolean; idleSend: boolean;
   onChange: (value: string) => void; onFocus: () => void; onBlur: () => void;
   onAttach: () => void; onDictate: () => void; onSend: () => void; onStop: () => void; onVoice: () => void;
+  attachments?: ReactNode;
 };
 
 export function MobileComposer(props: Props) {
@@ -28,9 +29,10 @@ export function MobileComposer(props: Props) {
     document.fonts?.addEventListener('loadingdone', resize);
     el.addEventListener('transitionend', afterWidthChange);
     return () => { window.removeEventListener('resize', resize); document.fonts?.removeEventListener('loadingdone', resize); el.removeEventListener('transitionend', afterWidthChange); };
-  }, [input, value, expanded, engaged]);
+  }, [input, value, expanded, engaged, hasFiles]);
   const canSend = !!value.trim() || hasFiles;
-  return <div className="m-composer">
+  return <div className={`m-composer${hasFiles ? ' m-composer-files' : ''}`}>
+    {props.attachments}
     <button type="button" aria-label="Attach files" disabled={uploading || busy} onClick={props.onAttach}><Icon name="plus"/></button>
     <textarea ref={input} aria-label="Message" placeholder="Ask SuperGPT" rows={1} value={value} onFocus={props.onFocus} onBlur={props.onBlur} onChange={event => props.onChange(event.target.value)}/>
     <button type="button" aria-label="Dictate" onClick={props.onDictate}><MobileControlIcon name="mic"/></button>

@@ -6,13 +6,13 @@ export type ClientSettings = {
   sendShortcut: 'enter' | 'ctrl-enter'; autoArchiveDays: number; notifications: boolean; sound: boolean;
   timeoutSeconds: number; defaultEffort: number; efforts: number[]; pluginsEnabled: boolean; networkAccess: boolean;
   instructions: string; writingStyle: 'balanced' | 'concise' | 'detailed'; memoriesEnabled: boolean; memories: string[];
-  dictationLanguage: string; voice: string; voiceRate: number; voiceVolume: number; smartPunctuation: boolean;
+  dictationLanguage: string; dictationEngine: 'auto' | 'device' | 'endpoint'; transcriptionModel: string; voice: string; voiceRate: number; voiceVolume: number; smartPunctuation: boolean;
   pet: 'none' | 'cat' | 'fox' | 'owl'; petName: string; billingUrl: string; shortcuts: Record<ShortcutAction, string>;
 };
 export const settingsKey = 'client-settings-v1';
 export const defaultShortcuts: Record<ShortcutAction, string> = { new: 'Ctrl+N', search: 'Ctrl+K', sidebar: 'Ctrl+Shift+S', effort: 'Ctrl+Shift+M', settings: 'Ctrl+,', temporary: 'Ctrl+Shift+J', archive: 'Ctrl+Shift+A', voice: '', attach: '' };
 export function defaultSettings(): ClientSettings {
-  return { version: 1, theme: 'dark', accent: '#2b6bca', background: '#181818', foreground: '#efefef', uiSize: 20, contentSize: 20, codeSize: 14, font: 'system', codeFont: 'system', motion: 'system', translucent: false, fullWidth: false, suggestions: true, confirmClose: true, sendShortcut: 'enter', autoArchiveDays: 0, notifications: false, sound: false, timeoutSeconds: 120, defaultEffort: 2, efforts: [0, 1, 2, 3, 4, 5], pluginsEnabled: true, networkAccess: false, instructions: '', writingStyle: 'balanced', memoriesEnabled: false, memories: [], dictationLanguage: 'id-ID', voice: '', voiceRate: 1, voiceVolume: 1, smartPunctuation: false, pet: 'none', petName: 'Sakelar', billingUrl: '', shortcuts: { ...defaultShortcuts } };
+  return { version: 1, theme: 'dark', accent: '#2b6bca', background: '#181818', foreground: '#efefef', uiSize: 20, contentSize: 20, codeSize: 14, font: 'system', codeFont: 'system', motion: 'system', translucent: false, fullWidth: false, suggestions: true, confirmClose: true, sendShortcut: 'enter', autoArchiveDays: 0, notifications: false, sound: false, timeoutSeconds: 120, defaultEffort: 2, efforts: [0, 1, 2, 3, 4, 5], pluginsEnabled: true, networkAccess: false, instructions: '', writingStyle: 'balanced', memoriesEnabled: false, memories: [], dictationLanguage: 'id-ID', dictationEngine: 'auto', transcriptionModel: 'whisper-1', voice: '', voiceRate: 1, voiceVolume: 1, smartPunctuation: false, pet: 'none', petName: 'Sakelar', billingUrl: '', shortcuts: { ...defaultShortcuts } };
 }
 const choice = <T extends string>(value: unknown, values: readonly T[], fallback: T): T => values.includes(value as T) ? value as T : fallback;
 const number = (value: unknown, min: number, max: number, fallback: number) => typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
@@ -26,6 +26,8 @@ export function normalizeSettings(value: unknown): ClientSettings {
   if (Array.isArray(v.efforts)) { const efforts = [...new Set(v.efforts.filter((x): x is number => Number.isInteger(x) && x >= 0 && x <= 5))].sort(); if (efforts.length) d.efforts = efforts; }
   if (!d.efforts.includes(d.defaultEffort)) d.defaultEffort = d.efforts[0];
   d.instructions = text(v.instructions, 20000); d.petName = text(v.petName, 40, d.petName); d.voice = text(v.voice, 300); d.dictationLanguage = choice(v.dictationLanguage, ['auto', 'id-ID', 'en-US', 'en-GB', 'zh-CN', 'ja-JP', 'ar-SA'], d.dictationLanguage);
+  d.dictationEngine = choice(v.dictationEngine, ['auto', 'device', 'endpoint'], 'auto');
+  d.transcriptionModel = text(v.transcriptionModel, 160, 'whisper-1').trim() || 'whisper-1';
   if (Array.isArray(v.memories)) d.memories = v.memories.filter((x): x is string => typeof x === 'string' && !!x.trim()).map(x => x.trim().slice(0, 2000)).slice(0, 50);
   try { const url = new URL(text(v.billingUrl, 2048)); if (['https:', 'http:'].includes(url.protocol) && !url.username && !url.password) d.billingUrl = url.toString(); } catch { /* No portal configured. */ }
   if (v.shortcuts && typeof v.shortcuts === 'object') for (const key of Object.keys(defaultShortcuts) as ShortcutAction[]) { const binding = (v.shortcuts as Record<string, unknown>)[key]; if (typeof binding === 'string' && (binding === '' || /^(?:(?:Ctrl|Alt|Shift|Meta)\+)+[^+]{1,20}$/.test(binding))) d.shortcuts[key] = binding; }

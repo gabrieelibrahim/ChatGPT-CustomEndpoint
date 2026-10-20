@@ -21,10 +21,18 @@ export function localProviderRelay() {
           const httpAllowedHost = url.hostname === 'localhost' || /^127\.\d+\.\d+\.\d+$/.test(url.hostname) || url.hostname === '[::1]' || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+$/.test(url.hostname);
           if ((url.protocol !== 'https:' && !(httpAllowedHost && url.protocol === 'http:')) || url.username || url.password || url.search || url.hash || typeof payload.key !== 'string' || payload.key.length > 4096 || /[\r\n]/.test(payload.key)) { fail(400); return; }
           const chat = url.pathname.endsWith('/chat/completions');
-          if ((!chat && !url.pathname.endsWith('/models')) || (chat && (!payload.body || typeof payload.body !== 'object')) || (!chat && payload.body)) { fail(400); return; }
-          const upstream = await fetch(url, { method: chat ? 'POST' : 'GET', signal: controller.signal, redirect: 'error', headers: {
+          const audio = url.pathname.endsWith('/audio/transcriptions');
+          let form;
+          if (audio) {
+            const a = payload.audio;
+            if (!a || typeof a.data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(a.data) || a.data.length > 7 * 1024 * 1024 || !['audio/mp4', 'audio/webm', 'audio/ogg'].includes(a.type) || typeof a.model !== 'string' || !a.model.trim() || a.model.length > 160 || typeof a.language !== 'string' || !/^(?:[a-z]{2,3})?$/.test(a.language) || payload.body) { fail(400); return; }
+            const bytes = Buffer.from(a.data, 'base64'); if (!bytes.length || bytes.length > 5 * 1024 * 1024) { fail(413); return; }
+            form = new FormData(); form.append('file', new Blob([bytes], { type: a.type }), a.type === 'audio/webm' ? 'dictation.webm' : a.type === 'audio/ogg' ? 'dictation.ogg' : 'dictation.m4a'); form.append('model', a.model); form.append('response_format', 'json'); if (a.language) form.append(a.model === 'gpt-transcribe' ? 'languages[]' : 'language', a.language);
+          }
+          if ((!chat && !audio && !url.pathname.endsWith('/models')) || (chat && (!payload.body || typeof payload.body !== 'object')) || (!chat && !audio && (payload.body || payload.audio)) || (chat && payload.audio)) { fail(400); return; }
+          const upstream = await fetch(url, { method: chat || audio ? 'POST' : 'GET', signal: controller.signal, redirect: 'error', headers: {
             Accept: chat ? 'text/event-stream, application/json' : 'application/json', ...(payload.key ? { Authorization: 'Bearer ' + payload.key } : {}), ...(chat ? { 'Content-Type': 'application/json' } : {}),
-          }, ...(chat ? { body: JSON.stringify(payload.body) } : {}) });
+          }, ...(chat ? { body: JSON.stringify(payload.body) } : audio ? { body: form } : {}) });
           res.statusCode = upstream.status;
           res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/json');
           res.setHeader('X-Content-Type-Options', 'nosniff');

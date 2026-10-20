@@ -2,6 +2,9 @@ import type { ReactNode } from 'react';
 import { UIIcon } from '../components/UIIcon';
 
 const shapes: Record<string, ReactNode> = {
+  'chevron-right': <path d="m9 5 7 7-7 7"/>,
+  home: <><path d="m3 10 9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></>,
+  'folder-plus': <><path d="M20 10V7a2 2 0 0 0-2-2h-7l-2-2H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8M2 9h18M18 14v8M14 18h8"/></>,
   'document-file': <><rect x="4" y="2.5" width="16" height="19" rx="3"/><path d="M8 9h8M8 14h5"/></>,
   'video-file': <><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M2 9h20M9 3 5 9M16 3l-4 6M22 3l-3 6"/></>,
   'image-file': <><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8" cy="9" r="2"/><path d="m3 19 6-6 4 4 4-7 5 9"/></>,

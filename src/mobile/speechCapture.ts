@@ -1,3 +1,6 @@
+import { loadSettings } from '../lib/clientSettings';
+import { logDiagnostic } from '../lib/diagnosticLog';
+import { captureRecordedSpeech, hasEndpointRecorder, hasTranscriptionEndpoint } from './recordedSpeech';
 type RecognitionResult = { isFinal?: boolean; 0: { transcript: string } };
 type Recognition = {
   lang: string; continuous: boolean; interimResults: boolean;
@@ -8,7 +11,7 @@ type Recognition = {
   onresult: ((event: { results: ArrayLike<RecognitionResult> }) => void) | null;
 };
 export type SpeechCapture = { stop(): Promise<string>; cancel(): void };
-type CaptureOptions = {
+export type CaptureOptions = {
   language: string; continuous: boolean; onStart(): void;
   onText(text: string): void; onEnd(text: string): void; onError(message: string): void;
   onLevel?(level: number): void;
@@ -21,12 +24,16 @@ type NativeSpeechBridge = {
 const nativeListeners = new WeakMap<NativeSpeechBridge, Map<string, (value: Record<string, unknown>) => void>>();
 let nativeSequence = 0;
 function speechError(code: unknown) {
+  logDiagnostic('speech', 'failed', { engine: 'device', code: typeof code === 'string' ? code : 'unknown' }, 'error');
   if (code === 'not-allowed' || code === 'service-not-allowed') return 'Izin mikrofon ditolak. Izinkan mikrofon untuk menggunakan dikte.';
   if (code === 'no-speech') return 'Belum terdengar suara. Coba lagi.';
   if (code === 'unavailable') return 'Layanan dikte Android belum tersedia. Aktifkan layanan pengenalan suara perangkat.';
   if (code === 'interrupted') return 'Dikte dihentikan saat aplikasi ditinggalkan. Ketuk mikrofon untuk mulai lagi.';
   if (code === 'language-unavailable') return 'Bahasa dikte belum tersedia di layanan suara perangkat. Pilih bahasa lain di pengaturan.';
-  return 'Mikrofon belum dapat digunakan. Periksa koneksi dan izin perangkat.';
+  if (code === 'network' || code === 'network-timeout') return 'Layanan suara perangkat gagal terhubung. Pilih Custom Endpoint di Pengaturan → Suara, atau periksa jaringan layanan suara Android.';
+  if (code === 'busy') return 'Mikrofon atau layanan suara sedang sibuk. Tutup rekaman lain lalu coba lagi.';
+  if (code === 'audio-capture') return 'Mikrofon tidak dapat merekam. Periksa izin dan aplikasi lain yang memakai mikrofon.';
+  return `Dikte perangkat gagal (${typeof code === 'string' && /^[a-z-]+$/.test(code) ? code : 'unknown'}). Buka Log di Pengaturan atau pilih Custom Endpoint di Pengaturan → Suara.`;
 }
 function captureNativeSpeech(native: NativeSpeechBridge, options: CaptureOptions): SpeechCapture {
   let listeners = nativeListeners.get(native);
@@ -77,6 +84,9 @@ function captureNativeSpeech(native: NativeSpeechBridge, options: CaptureOptions
   };
 }
 export function captureSpeech(options: CaptureOptions): SpeechCapture {
+  const engine = loadSettings().dictationEngine;
+  if (engine === 'endpoint' || (engine === 'auto' && hasEndpointRecorder() && hasTranscriptionEndpoint())) return captureRecordedSpeech(options);
+  logDiagnostic('speech', 'requested', { engine: 'device' });
   const native = (window as unknown as { SuperGPTSpeech?: NativeSpeechBridge }).SuperGPTSpeech;
   if (native) return captureNativeSpeech(native, options);
   const scope = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };

@@ -5,7 +5,9 @@ import { speakText } from '../lib/clientSettings';
 
 export async function shareMobileResponse(text: string, onNotice: (text: string) => void) {
   try {
-    if (navigator.share) await navigator.share({ text });
+    const native = typeof window === 'undefined' ? undefined : (window as unknown as { SuperGPTShare?: { postMessage(value: string): void } }).SuperGPTShare;
+    if (native) { if (text.length > 200000) { onNotice('Percakapan terlalu panjang untuk dibagikan sekaligus. Bagikan respons secara terpisah.'); return; } native.postMessage(text); }
+    else if (navigator.share) await navigator.share({ text });
     else { await navigator.clipboard.writeText(text); onNotice('Teks disalin untuk dibagikan.'); }
   } catch (error) {
     if (!(error instanceof Error && error.name === 'AbortError')) onNotice('Berbagi belum tersedia. Coba salin teks.');

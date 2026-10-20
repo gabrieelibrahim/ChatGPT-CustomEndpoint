@@ -8,6 +8,7 @@ import { resolveMessageFiles, type FileRef } from './fileLibrary';
 import { providerErrorMessage } from './providerErrors';
 import { isNativeDesktop } from './nativeDesktop';
 import { changeConversationName } from './mobileConversationMetadata';
+import { logDiagnostic } from './diagnosticLog';
 
 export type MobileMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; timestamp?: number; attachments?: FileRef[]; agent?: AgentMessageState };
 function read<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; } catch { return fallback; } }
@@ -55,6 +56,7 @@ export function useMobileConversation() {
     const releaseBackground = beginMobileBackgroundTask(crypto.randomUUID());
     const settings = loadSettings(), timeout = setTimeout(() => controller.abort('timeout'), settings.timeoutSeconds * 1000);
     setBusy(true); setError(''); setTitle(name); setMessages(next);
+    const startedAt = Date.now(); logDiagnostic('chat', 'request-started', { count: attachments.length });
     let answer = '', reasoning = '', failed = false, agent: AgentMessageState | undefined;
     let reported: { input?: number; output?: number } = {};
     const publish = (items: MobileMessage[]) => {
@@ -80,6 +82,7 @@ export function useMobileConversation() {
       if (active.current === controller) setError(controller.signal.aborted ? controller.signal.reason === 'timeout' ? 'Penyedia terlalu lama merespons.' : 'Jawaban dihentikan.' : providerErrorMessage(failure, isNativeDesktop(), 'Jawaban gagal dimuat.'));
     } finally {
       releaseBackground(); clearTimeout(timeout);
+      logDiagnostic('chat', 'request-finished', { code: controller.signal.aborted ? 'interrupted' : failed ? 'failed' : 'completed', durationMs: Date.now() - startedAt }, failed ? 'error' : 'info');
       try { recordUsage({ provider: endpoint.name, model: endpoint.model, source: 'chat', status: controller.signal.aborted ? 'interrupted' : failed ? 'failed' : 'completed', ...reported }); } catch { /* Usage is optional. */ }
       if (active.current === controller) { publish(current()); active.current = null; setBusy(false); onCompleted?.(!failed && !controller.signal.aborted ? answer : ''); }
     }

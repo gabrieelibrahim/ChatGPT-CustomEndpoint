@@ -1,3 +1,4 @@
+import { logDiagnostic } from './diagnosticLog';
 // Android credentials live in an encrypted native vault; web previews stay session-only.
 type Bridge = { postMessage(value: string): void; addEventListener(type: 'message', handler: (event: MessageEvent) => void): void };
 type VaultWindow = Window & { SuperGPTEndpointVault?: Bridge };
@@ -17,6 +18,7 @@ export function usesNativeEndpointVault() {
 export function endpointVaultState() { return state; }
 function publish(next: EndpointVaultState) {
   state = next;
+  if (next === 'error') logDiagnostic('app', 'endpoint-vault-failed', { code: 'failed', native: true }, 'error');
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('client-endpoint-vault-changed'));
 }
 function validKeys(value: unknown): Keys {
