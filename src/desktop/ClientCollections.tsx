@@ -6,7 +6,7 @@ import { ImagesHub } from './ImagesHub';
 
 export type LocalDocument = { id: string; title: string; text: string; updated: number };
 export type LocalTask = { id: string; title: string; prompt: string; due: number; fired?: boolean };
-export type McpProfile = { id: string; name: string; kind: 'http' | 'stdio'; url: string; command: string; args: string[]; enabled: boolean; checkedAt?: number; toolNames?: string[] };
+export type McpProfile = { id: string; name: string; kind: 'http' | 'stdio'; url: string; command: string; args: string[]; enabled: boolean; checkedAt?: number; toolNames?: string[]; catalogId?: string };
 export type ClientData = { documents: LocalDocument[]; sites: { id: string; title: string; url: string }[]; tasks: LocalTask[]; mcp: McpProfile[]; skills: LocalDocument[]; notifications: { id: string; text: string; time: number }[] };
 const dataKey = 'client-local-features-v1';
 function load(): ClientData {
@@ -18,7 +18,7 @@ function load(): ClientData {
       skills: item => typeof item.title === 'string' && typeof item.text === 'string' && Number.isFinite(item.updated),
       tasks: item => typeof item.title === 'string' && typeof item.prompt === 'string' && Number.isFinite(item.due),
       sites: item => { try { const url = new URL(item.url); return typeof item.title === 'string' && ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password; } catch { return false; } },
-      mcp: item => typeof item.name === 'string' && ['http', 'stdio'].includes(item.kind) && typeof item.url === 'string' && typeof item.command === 'string' && (item.checkedAt === undefined || Number.isFinite(item.checkedAt)) && (item.toolNames === undefined || Array.isArray(item.toolNames) && item.toolNames.length <= 128 && item.toolNames.every((name: unknown) => typeof name === 'string' && name.length <= 160)) && Array.isArray(item.args) && item.args.every((arg: unknown) => typeof arg === 'string'),
+      mcp: item => typeof item.name === 'string' && ['http', 'stdio'].includes(item.kind) && typeof item.url === 'string' && typeof item.command === 'string' && (item.catalogId === undefined || typeof item.catalogId === 'string') && (item.checkedAt === undefined || Number.isFinite(item.checkedAt)) && (item.toolNames === undefined || Array.isArray(item.toolNames) && item.toolNames.length <= 128 && item.toolNames.every((name: unknown) => typeof name === 'string' && name.length <= 160)) && Array.isArray(item.args) && item.args.every((arg: unknown) => typeof arg === 'string'),
       notifications: item => typeof item.text === 'string' && Number.isFinite(item.time),
     };
     for (const key of Object.keys(empty)) if (Array.isArray(data?.[key])) (empty as Record<string, unknown>)[key] = data[key].filter((item: { id?: unknown }) => item && typeof item.id === 'string' && validators[key](item)).slice(-100);

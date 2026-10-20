@@ -6,7 +6,7 @@ export function settingsDirection(from: string, to: string) {
   return depth(to) <= depth(from) ? 'back' : 'forward';
 }
 
-export function MobilePageTransition({ identity, active, children }: { identity: string; active: boolean; children: ReactNode }) {
+export function MobilePageTransition({ identity, active, children, directionHint }: { identity: string; active: boolean; children: ReactNode; directionHint?: 'forward' | 'back' }) {
   const last = useRef<Page>({ identity, children, active });
   const [leaving, setLeaving] = useState<Page | null>(null);
   const [direction, setDirection] = useState('forward');
@@ -16,7 +16,7 @@ export function MobilePageTransition({ identity, active, children }: { identity:
     // scroll offset and prepared data while fading out. Never remount a snapshot.
     const reduced = document.documentElement.dataset.reduceMotion === 'true' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     setLeaving(active && last.current.active && !reduced ? last.current : null);
-    setDirection(settingsDirection(last.current.identity, identity));
+    setDirection(directionHint || settingsDirection(last.current.identity, identity));
   }
   last.current = { identity, children, active };
   useEffect(() => {

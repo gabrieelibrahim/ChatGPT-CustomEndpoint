@@ -136,10 +136,11 @@ export function MobileApp() {
     if (sheet) { setSheet(''); return; }
     if (drawer) { setDrawer(false); return; }
     if (chatSearch !== null) { setChatSearch(null); return; }
+    if (page === 'plugins') { if (window.dispatchEvent(new Event('client-settings-back', { cancelable: true }))) navigate(returnPage); return; }
     backFromSettings();
   };
   const inSettings = page === 'settings' || (page !== 'chat' && returnPage === 'settings');
-  useEffect(() => inSettings || sheet || drawer || speechMode || mediaPreview || chatSearch !== null ? bindSettingsBack(() => settingsBack.current()) : undefined, [inSettings, sheet, drawer, speechMode, mediaPreview, chatSearch !== null]);
+  useEffect(() => inSettings || page === 'plugins' || sheet || drawer || speechMode || mediaPreview || chatSearch !== null ? bindSettingsBack(() => settingsBack.current()) : undefined, [inSettings, page === 'plugins', sheet, drawer, speechMode, mediaPreview, chatSearch !== null]);
   function temporaryChat() { const temp = !chat.temporary; newChat(temp); if (temp && localStorage.getItem('client-temporary-intro-v1') !== 'seen') setSheet('temporary'); }
   async function send() {
     if (uploading || chat.busy || (!draft.trim() && !files.length)) return;
@@ -180,7 +181,7 @@ export function MobileApp() {
         <div className="m-header-pill"><Button icon="edit" label="New chat" onClick={() => newChat()}/><Button icon="dots" label="Conversation options" onClick={() => setSheet('conversation')}/></div>
       </header>}
       {page === 'endpoints' ? <div className="m-endpoints d-mobile"><EndpointSettings onSaved={() => { setNotice('Endpoint tersimpan.'); navigate(returnPage); }} onNotice={setNotice}/></div> : page === 'settings' ? <MobileSettings screen={settingsScreen} onScreen={setSettingsScreen} profile={profile} settings={preferences.settings} provider={chat.endpoint?.name} model={chat.endpoint?.model} titles={chat.titles} archived={archived} update={preferences.update} onProfile={setProfile} onEndpoint={() => navigate('endpoints')} onModels={() => setSheet('models')} onPlugins={() => navigate('plugins')} onOpen={openChat} onArchive={archive} onNotice={setNotice} onClose={() => navigate('chat')} onSignOut={() => { try { chat.stop(); signOutMobileProfile(); newChat(); setName(''); setProfile(null); } catch { setNotice('Profil belum dapat dilepas.'); } }}/>
-      : page !== 'chat' ? <MobileLibrary backLabel={returnPage === 'settings' ? 'Back to Settings' : 'Back to chat'} page={page} store={clientData} titles={chat.titles} initialProject={searchProject} onClose={() => { setSearchProject(''); navigate(returnPage); }} onOpen={openChat} onDraft={text => { newChat(); setDraft(text); }} onNotice={setNotice}/> : <>
+      : page !== 'chat' ? <MobileLibrary onLibrary={navigate} backLabel={returnPage === 'settings' ? 'Back to Settings' : 'Back to chat'} page={page} store={clientData} titles={chat.titles} initialProject={searchProject} onClose={() => { setSearchProject(''); navigate(returnPage); }} onOpen={openChat} onDraft={text => { newChat(); setDraft(text); }} onNotice={setNotice}/> : <>
         {chatSearch !== null && <div className="m-chat-search"><Icon name="search" size={20}/><input autoFocus aria-label="Cari di chat" placeholder="Cari di chat" value={chatSearch} onChange={event => { setChatSearch(event.target.value); setSearchHit(0); }}/><span>{matches.length ? (searchHit % matches.length) + 1 : 0}/{matches.length}</span><button aria-label="Hasil berikutnya" disabled={!matches.length} onClick={() => setSearchHit(value => value + 1)}><Icon name="down" size={18}/></button><button aria-label="Tutup pencarian chat" onClick={() => setChatSearch(null)}><Icon name="close" size={20}/></button></div>}
         <div className="m-messages" ref={scroll} onScroll={() => { const el = scroll.current; if (el) setAboveBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 40); }}>
           <div className="m-message-stack" ref={streamContent}>
