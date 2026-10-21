@@ -29,6 +29,7 @@
     "android:build": "node scripts/mobile.mjs android build --apk --target aarch64",
     "android:build:debug": "node scripts/mobile.mjs android build --apk --target aarch64 --debug",
     "android:signing:init": "node scripts/setupAndroidSigning.mjs",
+    "test:android-release": "node scripts/androidStartupSmoke.mjs",
     "ios:init": "node scripts/mobile.mjs ios init",
     "ios:dev": "node scripts/mobile.mjs ios dev",
     "ios:build": "node scripts/mobile.mjs ios build",

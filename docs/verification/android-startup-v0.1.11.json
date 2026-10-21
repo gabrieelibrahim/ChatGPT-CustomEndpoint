@@ -1,0 +1,65 @@
+{
+  "version": "0.1.11",
+  "artifact": "SuperGPT.apk",
+  "bytes": 22708816,
+  "sha256": "db6bb3bab973c446845a465e2c31f499726d1b4ed21237f8b3bc330bbe5581d2",
+  "certificate": "7544dc65194da6bb8b0bb8c86005759e91707f7dc0a6f8ddb53eb907bf7a7737",
+  "metadata": [
+    "package: name='id.sakelar.client' versionCode='1011' versionName='0.1.11' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'",
+    "sdkVersion:'24'",
+    "targetSdkVersion:'36'",
+    "application-label:'SuperGPT'",
+    "native-code: 'arm64-v8a'"
+  ],
+  "signatureVerified": true,
+  "alignmentVerified": true,
+  "archive": {
+    "files": 942,
+    "privateFiles": 0,
+    "nativeLibraries": [
+      "lib/arm64-v8a/libapp_lib.so"
+    ]
+  },
+  "environment": {
+    "androidApi": 32,
+    "systemImage": "Google APIs x86_64",
+    "apkArchitecture": "arm64-v8a",
+    "execution": "ARM64 translation",
+    "physicalSamsungTested": false
+  },
+  "coldStarts": [
+    {
+      "testedAt": "2026-10-21T05:55:42.497Z",
+      "processAlive": true,
+      "uiRendered": true,
+      "passed": true,
+      "sha256": "db6bb3bab973c446845a465e2c31f499726d1b4ed21237f8b3bc330bbe5581d2"
+    },
+    {
+      "testedAt": "2026-10-21T05:56:32.304Z",
+      "processAlive": true,
+      "uiRendered": true,
+      "passed": true,
+      "sha256": "db6bb3bab973c446845a465e2c31f499726d1b4ed21237f8b3bc330bbe5581d2"
+    },
+    {
+      "testedAt": "2026-10-21T05:57:00.185Z",
+      "processAlive": true,
+      "uiRendered": true,
+      "passed": true,
+      "sha256": "db6bb3bab973c446845a465e2c31f499726d1b4ed21237f8b3bc330bbe5581d2"
+    }
+  ],
+  "homeResume": {
+    "sameProcess": true,
+    "passed": true,
+    "failure": "",
+    "testedAt": "2026-10-21T05:57:28.020Z"
+  },
+  "automatedTests": {
+    "passed": 212,
+    "failed": 0
+  },
+  "originalApk": "b092824e865f9da4da3735470aefbbd4e16cbb01ee863a40b2ea3f2bcece9ef1",
+  "originalCrashReproduced": true
+}

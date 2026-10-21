@@ -24,10 +24,16 @@ export function validateApkSignature(certificateReport, fingerprint) {
   const digests = [...certificateReport.matchAll(/^Signer #\d+ certificate SHA-256 digest: ([a-fA-F0-9:]+)\s*$/gm)].map(match => match[1].replaceAll(':', '').toLowerCase());
   if (digests.length !== 1 || digests[0] !== fingerprint || /certificate DN:.*Android Debug/i.test(certificateReport)) throw Error('APK is not signed by the permanent SuperGPT release key.');
 }
+export function validateStartupReport(report, apkSha256) {
+  if (report.packageName !== 'id.sakelar.client' || report.sha256 !== apkSha256 || report.passed !== true || report.processAlive !== true || report.uiRendered !== true || report.failure) {
+    throw Error('A successful Android startup report for this exact final APK is required. Run npm run test:android-release first.');
+  }
+}
 function main() {
   const args = process.argv.slice(2), value = key => args[args.indexOf(key) + 1];
-  if (!args.includes('--tag') || !args.includes('--apk') || !args.includes('--notes')) throw Error('Usage: node scripts/publishAndroidRelease.mjs --tag v1.2.0 --apk path --notes release.md [--dry-run]');
+  if (!args.includes('--tag') || !args.includes('--apk') || !args.includes('--notes') || !args.includes('--startup-report')) throw Error('Usage: node scripts/publishAndroidRelease.mjs --tag v1.2.0 --apk path --notes release.md --startup-report report.json [--dry-run]');
   const tag = value('--tag'), source = resolve(value('--apk')), notes = resolve(value('--notes'));
+  validateStartupReport(JSON.parse(readFileSync(resolve(value('--startup-report')), 'utf8')), createHash('sha256').update(readFileSync(source)).digest('hex'));
   const root = fileURLToPath(new URL('../', import.meta.url));
   const env = join(root, '.env.mobile.local'); if (existsSync(env)) process.loadEnvFile(env);
   const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT; if (!sdk) throw Error('ANDROID_HOME is required for APK verification.');

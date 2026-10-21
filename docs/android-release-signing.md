@@ -17,7 +17,9 @@ The production package is `id.sakelar.client`, signed with a dedicated **SuperGP
 
 `npm run android:build` now builds a **release** APK. `npm run android:build:debug` is explicitly for development and is not publishable. Gradle validates the permanent certificate and signs/verifies a local challenge with its private key before release assembly/signing. Missing or mismatched signing information fails closed; it does not fall back to the debug keystore.
 
-Publication continues through `npm run release:android -- --tag vX.Y.Z --apk <built-apk> --notes <notes-file>`. It checks production package identity, version/tag agreement, ARM64 support, absence of the Android debuggable flag, valid APK signatures and the pinned release certificate before publishing. The public asset remains exactly `SuperGPT.apk`; GitHub release flags remain `--prerelease=false --latest`.
+Publication continues through `npm run release:android -- --tag vX.Y.Z --apk <built-apk> --notes <notes-file> --startup-report <report.json>`. It checks production package identity, version/tag agreement, ARM64 support, absence of the Android debuggable flag, valid APK signatures and the pinned release certificate before publishing. The public asset remains exactly `SuperGPT.apk`; GitHub release flags remain `--prerelease=false --latest`.
+
+Before publication, run `npm run test:android-release -- --serial <adb-device-serial> --apk <final-apk> --output <local-report-directory>`. This installs with `-r` and preserves app data, then requires a surviving process, a foreground activity, rendered chat/settings controls and no startup crash. If this is the test device's first install, complete the local name/welcome screen first and rerun; the test intentionally rejects a splash or empty WebView. Pass the generated `report.json` to publication. A report for another APK hash or a failed run is rejected. Never use a debug/source-only run in place of this packaged release check.
 
 The keystore is for the sideloaded/GitHub APK. No Google Play account or Play App Signing configuration was changed.
 

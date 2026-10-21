@@ -25,7 +25,7 @@ Direct, exact declarations: `unified@11.0.5`, `remark-parse@11.0.0`, `remark-gfm
 - Before installation, verify byte length, SHA-256, matching package identity, higher Android version code, tag/version-name agreement and the installed signing certificate. Missing digests or different signing keys fail closed.
 - Automatic installation is attempted on Android 12+ only with installation permission, while the app is in the background and no chat task is active. Android may still require user action. The UI then offers the system installer. Installation sessions are correlated, abandoned on failure and recovered after interruption.
 - Settings allow automatic checking, downloading, installation attempts and Wi-Fi-only downloads to be controlled separately. Browser previews explicitly show that Android installation is unavailable.
-- Future release command: `npm run release:android -- --tag vX.Y.Z --apk <built-apk> --notes <release-notes>`. It checks APK metadata/signature, prepares `SuperGPT.apk` and `SHA256SUMS.txt`, requires an existing tag, publishes with `--prerelease=false --latest`, and verifies the uploaded asset digest. Add `--dry-run` to verify/prepare without publication. Publication still requires user authorization.
+- Future release command: `npm run release:android -- --tag vX.Y.Z --apk <built-apk> --notes <release-notes> --startup-report <report.json>`. It checks APK metadata/signature, prepares `SuperGPT.apk` and `SHA256SUMS.txt`, requires an existing tag, publishes with `--prerelease=false --latest`, and verifies the uploaded asset digest. Add `--dry-run` to verify/prepare without publication. Publication still requires user authorization.
 
 ### Streaming and haptics
 

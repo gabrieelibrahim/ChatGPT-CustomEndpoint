@@ -99,6 +99,9 @@ android {
             isJniDebuggable = false
             isMinifyEnabled = true
             proguardFiles(
+                // Required platform rules preserve enum reflection and other
+                // runtime entry points used by Tauri/Jackson in release builds.
+                getDefaultProguardFile("proguard-android-optimize.txt"),
                 *fileTree(".") {
                   include("**/*.pro")
                   exclude("build/**")
