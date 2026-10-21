@@ -43,21 +43,38 @@ test('vision hydration generates image data only for supported image types', asy
   assert.deepEqual(resolved[0].images, ['data:image/png;base64,' + Buffer.from('image-bytes').toString('base64')]); assert.equal(resolved[0].text, 'Describe');
 });
 
-test('missing, unsupported or excessive attachments fail before sending', async () => {
+test('missing and unsupported attachments still fail before sending', async () => {
   const signal = new AbortController().signal;
   await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: [{ id: 'missing', name: 'missing.txt' }] }], signal), /tidak ditemukan/);
   const binary = await saveLibraryFile(new File(['pdf'], 'file.pdf', { type: 'application/pdf' }));
   await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: [binary] }], signal), /belum didukung/);
-  const text = await saveLibraryFile(new File(['x'.repeat(512 * 1024 + 1)], 'large.txt', { type: 'text/plain' }));
-  await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: [text] }], signal), /512 KB/);
+});
+
+test('attachment count and earlier turns are forwarded without truncation', async () => {
+  const signal = new AbortController().signal;
   const image = await saveLibraryFile(new File(['tiny'], 'image.png', { type: 'image/png' }));
   assert.equal((await resolveMessageFiles([{ role: 'user', text: '', attachments: Array(8).fill(image) }], signal))[0].images.length, 8);
-  const largeImage = await saveLibraryFile(new File(['x'.repeat(1024 * 1024 + 1)], 'large.png', { type: 'image/png' }));
-  assert.equal((await resolveMessageFiles([{ role: 'user', text: '', attachments: [largeImage] }], signal))[0].images.length, 1);
   const history = Array.from({ length: 7 }, () => ({ role: 'user', text: '', attachments: [image] }));
   assert.equal((await resolveMessageFiles(history, signal)).length, 7);
-  await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: Array(22).fill(largeImage) }], signal), /28 MB/);
-  await assert.rejects(saveLibraryFile(new File(['x'.repeat(10 * 1024 * 1024 + 1)], 'huge.txt')), /10 MB/);
+});
+
+test('local library and hydration accept images beyond the former file and history byte limits', async () => {
+  const bytes = new Uint8Array(22 * 1024 * 1024 + 1); bytes[bytes.length - 1] = 255;
+  const ref = await saveLibraryFile(new File([bytes], 'large.png', { type: 'image/png' }));
+  const resolved = await resolveMessageFiles([{ role: 'user', text: 'Describe', attachments: [ref] }], new AbortController().signal);
+  const image = resolved[0].images[0].split(',')[1];
+  assert.ok(image.length > 28 * 1024 * 1024);
+  const decoded = Buffer.from(image, 'base64'); assert.equal(decoded.length, bytes.length); assert.equal(decoded.at(-1), 255);
+});
+
+test('large text is included in full and video files have no local storage size ceiling', async () => {
+  const text = 'x'.repeat(512 * 1024 + 1) + 'end-marker';
+  const ref = await saveLibraryFile(new File([text], 'large.txt', { type: 'text/plain' }));
+  const [resolved] = await resolveMessageFiles([{ role: 'user', text: '', attachments: [ref] }], new AbortController().signal);
+  assert.ok(resolved.text.includes(text));
+  const video = await saveLibraryFile(new File([new Uint8Array(11 * 1024 * 1024)], 'large.mp4', { type: 'video/mp4' }));
+  const stored = (await libraryFiles()).find(file => file.id === video.id);
+  assert.equal(stored.size, 11 * 1024 * 1024); assert.equal(stored.blob.type, 'video/mp4');
 });
 
 test('aborted attachment resolution does not prepare provider context', async () => {

@@ -214,8 +214,8 @@ export function codexAgentBridge({ findRuntime = findCodexRuntime, createSession
         if (!allowedAgentRequest(req)) { json(403, { error: 'Local origin required.' }); return; }
         let session, requestKey = '';
         try {
-          const chunks = []; let size = 0;
-          for await (const chunk of req) { size += chunk.length; if (size > 32 * 1024 * 1024) { json(413, { error: 'Permintaan terlalu besar.' }); return; } chunks.push(chunk); }
+          const chunks = [];
+          for await (const chunk of req) chunks.push(chunk);
           const payload = JSON.parse(Buffer.concat(chunks).toString('utf8'));
           if (typeof payload.key === 'string') requestKey = payload.key;
           if (payload.action === 'status') { json(200, { available: !!(await findRuntime()), platform: process.platform }); return; }
@@ -248,7 +248,7 @@ export function codexAgentBridge({ findRuntime = findCodexRuntime, createSession
           if (payload.action !== 'turn' || typeof payload.text !== 'string' || !payload.text.trim() || payload.text.length > 100000) throw Error('Pesan agent tidak valid.');
           if (session.busy) { json(409, { error: 'Agent masih bekerja.' }); return; }
           const images = payload.images || [];
-          if (!Array.isArray(images) || images.some(url => typeof url !== 'string' || url.length > 14 * 1024 * 1024 || !/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(url))) throw Error('Input gambar tidak valid.');
+          if (!Array.isArray(images) || images.some(url => typeof url !== 'string' || !/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(url))) throw Error('Input gambar tidak valid.');
           res.setHeader('Content-Type', 'application/x-ndjson'); res.flushHeaders();
           const sink = event => { if (!res.destroyed) res.write(JSON.stringify(event) + '\n'); if (event.type === 'done') res.end(); };
           res.once('close', () => { if (!res.writableEnded) { session.sink = null; void session.interrupt().catch(() => session.close()); } });

@@ -35,7 +35,7 @@ export class SdkStore {
   }
   save(owner, data) {
     const path = join(this.directory(owner), 'store.json');
-    const json = JSON.stringify(data); if (Buffer.byteLength(json) > 64 * 1024 * 1024) throw inputError('Penyimpanan teks server mencapai 64 MB. Ekspor lalu hapus obrolan lama.');
+    const json = JSON.stringify(data);
     writeFileSync(path + '.tmp', json, { mode: 0o600 }); renameSync(path + '.tmp', path);
   }
   thread(owner, threadId) {
@@ -61,14 +61,14 @@ export class SdkStore {
   }
   upload(owner, fileId, bytes) {
     const data = this.load(owner), file = data.files.find(file => file.id === fileId);
-    if (!file || bytes.length !== file.size || bytes.length > 10 * 1024 * 1024) throw inputError('Ukuran unggahan tidak sesuai.');
+    if (!file || bytes.length !== file.size) throw inputError('Ukuran unggahan tidak sesuai.');
     writeFileSync(join(this.directory(owner), file.id), bytes, { mode: 0o600 }); file.uploaded = true; this.save(owner, data);
   }
   generatedImage(owner, threadId, base64, baseUrl) {
     if (typeof base64 !== 'string' || !/^[a-zA-Z0-9+/=]+$/.test(base64) || base64.length > 14 * 1024 * 1024) throw inputError('Gambar hasil model terlalu besar atau tidak valid.');
     const bytes = Buffer.from(base64, 'base64');
     if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) throw inputError('Format hasil gambar belum didukung. Gunakan keluaran PNG.');
-    const data = this.load(owner); if (data.files.length >= 200) throw inputError('Batas lampiran tercapai.');
+    const data = this.load(owner);
     const file = { type: 'image', id: id('atc'), name: 'SuperGPT.png', mime_type: 'image/png', size: bytes.length, uploaded: false, thread_id: threadId, previewToken: id('img') };
     file.preview_url = baseUrl + '/files/' + file.id + '/' + file.previewToken + '/' + owner;
     data.files.push(file); this.save(owner, data); this.upload(owner, file.id, bytes); return file;

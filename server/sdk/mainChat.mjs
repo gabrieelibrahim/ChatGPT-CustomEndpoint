@@ -38,7 +38,7 @@ export class MainChatService {
       if (this.runs.size >= 32) throw inputError('Terlalu banyak permintaan aktif.');
       if (!Array.isArray(payload.messages) || !payload.messages.length || payload.messages.length > 500) throw inputError('Riwayat pesan tidak valid.');
       const history = payload.messages.map(message => {
-        if (!['user', 'assistant'].includes(message.role) || typeof message.text !== 'string' || message.text.length > 200000) throw inputError('Pesan tidak valid.');
+        if (!['user', 'assistant'].includes(message.role) || typeof message.text !== 'string') throw inputError('Pesan tidak valid.');
         const images = message.images || []; if (!Array.isArray(images) || images.some(value => typeof value !== 'string' || !/^data:image\/(png|jpeg|webp|gif);base64,[a-zA-Z0-9+/=]+$/.test(value))) throw inputError('Gambar tidak valid.');
         return { role: message.role, content: images.length ? [{ type: 'input_text', text: message.text }, ...images.map(image => ({ type: 'input_image', image, detail: 'auto' }))] : message.text };
       });

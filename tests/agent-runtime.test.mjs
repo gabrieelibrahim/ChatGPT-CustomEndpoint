@@ -76,8 +76,8 @@ test('stop during turn/start waits for turn identity then interrupts the correct
 
 test('HTTP transport rejects foreign origins, streams turns and isolates session capabilities', async () => {
   const cwd = await mkdtemp(join(tmpdir(), 'sakelar-agent-test-'));
-  let middleware; const server = createServer((req, res) => middleware(req, res)); let stopped = false;
-  const plugin = codexAgentBridge({ findRuntime: async () => '/fake/codex', createSession: async options => ({ id: 'private-session-capability', threadId: 'thread', closed: false, busy: false, touched: Date.now(), clean: value => value, options, close: async () => {}, interrupt: async () => { stopped = true; }, approve: () => {}, turn: async (text, sink) => { sink({ type: 'text', itemId: 'answer', delta: 'Answer: ' + text }); sink({ type: 'done', status: 'completed' }); } }) });
+  let middleware; const server = createServer((req, res) => middleware(req, res)); let stopped = false, receivedImages;
+  const plugin = codexAgentBridge({ findRuntime: async () => '/fake/codex', createSession: async options => ({ id: 'private-session-capability', threadId: 'thread', closed: false, busy: false, touched: Date.now(), clean: value => value, options, close: async () => {}, interrupt: async () => { stopped = true; }, approve: () => {}, turn: async (text, sink, _effort, _planOnly, images) => { receivedImages = images; sink({ type: 'text', itemId: 'answer', delta: 'Answer: ' + text }); sink({ type: 'done', status: 'completed' }); } }) });
   plugin.configureServer({ httpServer: server, middlewares: { use(path, handler) { middleware = handler; } } });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const url = 'http://127.0.0.1:' + server.address().port;
@@ -90,6 +90,9 @@ test('HTTP transport rejects foreign origins, streams turns and isolates session
     assert.equal((await request({ action: 'stop', sessionId: 'not-this-session' })).status, 404);
     const output = await (await request({ action: 'turn', sessionId: connection.sessionId, text: 'test' })).text();
     assert.match(output, /Answer: test/); assert.match(output, /"type":"done"/);
+    const image = 'data:image/png;base64,' + 'A'.repeat(33 * 1024 * 1024);
+    const media = await request({ action: 'turn', sessionId: connection.sessionId, text: 'large media', images: [image] });
+    assert.equal(media.status, 200); await media.text(); assert.deepEqual(receivedImages, [image]);
     await request({ action: 'stop', sessionId: connection.sessionId }); assert.equal(stopped, true);
     await request({ action: 'close', sessionId: connection.sessionId });
     assert.equal((await request({ action: 'turn', sessionId: connection.sessionId, text: 'late' })).status, 404);
