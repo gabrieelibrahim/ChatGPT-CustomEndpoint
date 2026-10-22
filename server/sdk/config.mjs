@@ -12,7 +12,7 @@ export function loadMcpProfiles() {
     if (!profile || !/^[a-zA-Z0-9_-]{1,64}$/.test(profile.name) || names.has(profile.name)) throw inputError('Nama server MCP tidak valid atau duplikat.');
     names.add(profile.name); const headers = profile.headers || {};
     if (!headers || typeof headers !== 'object' || Array.isArray(headers) || Object.entries(headers).some(([key, value]) => !/^[a-zA-Z0-9-]+$/.test(key) || typeof value !== 'string' || value.length > 4096 || /[\r\n]/.test(value))) throw inputError('Header MCP tidak valid.');
-    return { name: profile.name, url: safeUrl(profile.url), headers };
+    return { name: profile.name, url: safeUrl(profile.url), googleWrite: profile.googleWrite === true, headers };
   });
 }
 export function safeUrl(value) {
@@ -35,7 +35,7 @@ export function validateSession(input) {
     if (typeof profile?.name !== 'string' || !profile.name.trim() || profile.name.length > 80) throw inputError('Nama MCP tidak valid.');
     const token = profile.token || '';
     if (typeof token !== 'string' || token.length > 4096 || /[\r\n]/.test(token)) throw inputError('Token MCP tidak valid.');
-    return { name: 'plugin_' + index + '_' + profile.name.replace(/[^a-zA-Z0-9_]/g, '_'), url: safeUrl(profile.url), headers: token ? { Authorization: 'Bearer ' + token } : {} };
+    return { name: 'plugin_' + index + '_' + profile.name.replace(/[^a-zA-Z0-9_]/g, '_'), url: safeUrl(profile.url), googleWrite: profile.googleWrite === true, headers: token ? { Authorization: 'Bearer ' + token } : {} };
   }) : [];
   return { owner: input.owner, provider: { baseUrl: safeUrl(p.baseUrl), model: p.model, models, key: p.key }, options, mcpProfiles };
 }

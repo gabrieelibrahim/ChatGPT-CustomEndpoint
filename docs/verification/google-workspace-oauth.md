@@ -2,6 +2,8 @@
 
 2026-10-22, Asia/Jakarta. Starting commit `78b8e47`.
 
+**Historical checkpoint:** the official remote MCP preview design below has been replaced by the embedded SuperGPT Google API MCP transport. Current registration and scope requirements are in [google-workspace-registration.md](../google-workspace-registration.md). Previous mocked-test results below do not verify the new adapter or a real Google account.
+
 ## Source behavior
 
 - `shared/googleWorkspace.json` defines all nine currently documented official Google Workspace MCP services and per-service read/write scopes. Source catalog entries are OAuth integrations rather than custom-server placeholders. Google Tasks/Photos/YouTube and other products outside this list are not implemented by this change.

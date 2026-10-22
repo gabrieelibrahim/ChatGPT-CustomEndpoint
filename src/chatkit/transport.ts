@@ -3,7 +3,7 @@ import type { ClientSettings } from '../lib/clientSettings';
 import { sdkOwner, sdkServer, type SdkConfig } from './config';
 
 export type SdkConnection = { apiUrl: string; fetch: typeof fetch; request: <T>(path: string, body?: unknown) => Promise<T>; close: () => Promise<void> };
-export async function connectSdk(config: SdkConfig, endpoint: EndpointProfile, key: string, serverToken: string, settings: ClientSettings, extra: { signal?: AbortSignal; mcp?: { name: string; url: string; token?: string }[]; reasoningEffort?: string } = {}): Promise<SdkConnection> {
+export async function connectSdk(config: SdkConfig, endpoint: EndpointProfile, key: string, serverToken: string, settings: ClientSettings, extra: { signal?: AbortSignal; mcp?: { name: string; url: string; token?: string; googleWrite?: boolean }[]; reasoningEffort?: string } = {}): Promise<SdkConnection> {
   const origin = sdkServer(config.server), base = origin + '/__sdk';
   let token = '', renewing: Promise<void> | null = null, closed = false;
   const authorize = async () => {

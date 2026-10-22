@@ -54,7 +54,8 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
   }, [path.length, menu, busy]);
   function configure(plugin?: PluginTemplate, profile?: McpProfile, prompt = '') {
     if (busy) return;
-    setName(profile?.name || plugin?.name || ''); setUrl(profile?.url || plugin?.url || ''); setToken(profile ? mcpToken(profile.id) : ''); setPendingPrompt(prompt);
+    const selectedUrl = profile?.url || plugin?.url || '';
+    setName(profile?.name || plugin?.name || ''); setUrl(googleService(selectedUrl)?.url || selectedUrl); setToken(profile ? mcpToken(profile.id) : ''); setPendingPrompt(prompt);
     setAuth(['google', 'oauth'].includes(profile?.auth || plugin?.auth || '') ? 'oauth' : 'token'); setClientId(''); setProgress(''); setGoogleWrite(profile?.googleWrite === true); setGoogleMode('auto');
     push({ kind: 'connection', plugin, profileId: profile?.id });
   }
@@ -70,7 +71,7 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
       const receiveProgress = (value: string) => { if (mounted.current) setProgress(value); };
       const accessToken = isGoogle && google ? await loginGoogleConnection(id, google.id, { write: googleWrite, mode: googleMode, server: googleServer, serverToken: googleToken }, controller.signal, receiveProgress) : auth === 'oauth' ? await loginMcpOAuth(id, target, controller.signal, clientId, receiveProgress) : token;
       setProgress('Memeriksa koneksi dan daftar tool…');
-      connection = await connectMcp({ url: target, token: accessToken }, controller.signal); controller.signal.throwIfAborted();
+      connection = await connectMcp({ url: target, token: accessToken, googleWrite: isGoogle && googleWrite }, controller.signal); controller.signal.throwIfAborted();
       if (isGoogle) { mcpToken(id, ''); saveGoogleBroker(googleServer, googleToken); }
       else if (auth === 'oauth') mcpToken(id, '');
       else { await clearMcpOAuth(id); mcpToken(id, token); }
@@ -135,10 +136,10 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
       : view.kind === 'detail' && view.plugin ? <Suspense fallback={<MobilePluginSkeleton/>}><PluginDetail plugin={view.plugin} profile={selectedProfile} onExample={text => example(view.plugin!, text)} onOpen={() => view.plugin!.auth === 'builtin' ? builtin(view.plugin!) : configure(view.plugin, selectedProfile)}/></Suspense>
       : <form className="m-plugin-connect-form" onSubmit={event => { event.preventDefault(); void connect(); }}>
         {view.plugin && <div className="m-plugin-connect-title"><PluginIcon {...view.plugin}/><h2>{view.plugin.name}</h2></div>}
-        {isGoogle ? <p>Hubungkan akun Google ke {google!.name}, lalu periksa tools yang tersedia. Layanan MCP Google saat ini memerlukan akses Developer Preview dan pendaftaran SuperGPT pada Google Cloud.</p> : auth === 'oauth' ? <p>Masuk melalui browser resmi penyedia dan pilih izin akunmu. Setelah login, SuperGPT akan memeriksa tools yang tersedia.</p> : <p>{view.plugin?.auth === 'public' ? 'Server publik sudah diisi. Kami akan memeriksa koneksi dan tools sebelum menambahkannya.' : view.plugin?.auth === 'token' ? 'Masukkan bearer token untuk server resmi ini. Token hanya dikirim ke URL yang tertera.' : 'Layanan ini memerlukan URL server MCP. Isi server yang kamu gunakan, lalu pilih metode masuk yang didukungnya.'}</p>}
+        {isGoogle ? <p>Hubungkan akun Google milikmu ke {google!.name}. SuperGPT akan memeriksa akses melalui API Google. Tidak perlu berlangganan Workspace untuk layanan yang mendukung akun pribadi; akses Chat/Classroom tetap mengikuti akun dan peranmu.</p> : auth === 'oauth' ? <p>Masuk melalui browser resmi penyedia dan pilih izin akunmu. Setelah login, SuperGPT akan memeriksa tools yang tersedia.</p> : <p>{view.plugin?.auth === 'public' ? 'Server publik sudah diisi. Kami akan memeriksa koneksi dan tools sebelum menambahkannya.' : view.plugin?.auth === 'token' ? 'Masukkan bearer token untuk server resmi ini. Token hanya dikirim ke URL yang tertera.' : 'Layanan ini memerlukan URL server MCP. Isi server yang kamu gunakan, lalu pilih metode masuk yang didukungnya.'}</p>}
         {view.plugin?.docs && <a href={view.plugin.docs} target="_blank" rel="noreferrer">Petunjuk koneksi resmi <Icon name="window" size={16}/></a>}
         <label>Nama<input required maxLength={80} disabled={busy} value={name} onChange={event => setName(event.target.value)}/></label>
-        <label>URL server MCP<input required type="url" disabled={busy || view.plugin?.provider === 'google'} placeholder="https://server.example/mcp" value={url} onChange={event => setUrl(event.target.value)}/></label>
+        {!isGoogle && <label>URL server MCP<input required type="url" disabled={busy} placeholder="https://server.example/mcp" value={url} onChange={event => setUrl(event.target.value)}/></label>}
         {isGoogle ? <>
           <label>Akses yang diminta<select disabled={busy} value={googleWrite ? 'write' : 'read'} onChange={event => setGoogleWrite(event.target.value === 'write')}><option value="read">Baca data layanan ini</option>{!!google?.writeScopes.length && <option value="write">Baca dan izinkan perubahan</option>}</select></label>
           <p className="m-plugin-form-caption">Izin ditinjau di layar Google. Izin akun yang pernah diberikan dapat tetap berlaku; setiap tindakan tool tetap meminta persetujuan di chat.</p>

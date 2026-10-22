@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { id, now } from './store.mjs';
 import { safeUrl, inputError } from './config.mjs';
 import { searchWeb } from './webSearch.mjs';
+import { googleApiMcpFetch, googleApiService } from '../../shared/googleApiMcp.mjs';
 
 // No prompts, keys or tool outputs are exported to OpenAI tracing implicitly.
 setTracingDisabled(true);
@@ -22,7 +23,7 @@ export function calculate(expression) {
 export const card = (title, text, buttons = []) => ({ type: 'Card', children: [{ type: 'Text', value: title, weight: 'semibold' }, { type: 'Text', value: text }, ...buttons.map(([label, type, payload]) => ({ type: 'Button', label, onClickAction: { type, payload } }))] });
 
 export async function buildAgent({ session, store, thread, emit, mcpProfiles = [] }) {
-  const tools = [], servers = [], sources = [];
+  const tools = [], servers = [], sources = [], googleTransports = [];
   const widget = async value => {
     const item = { id: id('wit'), thread_id: thread.id, created_at: now(), type: 'widget', widget: value };
     thread.items.push(item); store.putThread(session.owner, thread); await emit({ type: 'thread.item.done', item });
@@ -65,7 +66,11 @@ export async function buildAgent({ session, store, thread, emit, mcpProfiles = [
   if (session.options.vectorStores.length) tools.push(fileSearchTool(session.options.vectorStores));
   try {
     if (session.options.mcp) for (const profile of mcpProfiles.slice(0, 16)) {
-      const server = new MCPServerStreamableHttp({ name: profile.name, url: safeUrl(profile.url), requestInit: { headers: profile.headers || {} }, clientSessionTimeoutSeconds: session.options.timeoutSeconds, timeout: session.options.timeoutSeconds * 1000, fetch: (url, init) => fetch(url, { ...init, redirect: 'error' }), logger: { debug() {}, info() {}, warn() {}, error() {} } });
+      const serviceId = googleApiService(profile.url);
+      const transport = serviceId ? googleApiMcpFetch({ serviceId, token: /^Bearer (.+)$/.exec(profile.headers?.Authorization || '')?.[1] || '', write: profile.googleWrite === true }) : (url, init) => fetch(url, { ...init, redirect: 'error' });
+      if (serviceId) googleTransports.push(transport);
+      if (!serviceId && /googleapis\.com\/mcp\//.test(profile.url)) throw Error('Hubungkan ulang koneksi Google lama melalui katalog Google API SuperGPT.');
+      const server = new MCPServerStreamableHttp({ name: profile.name, url: safeUrl(profile.url), requestInit: { headers: profile.headers || {} }, clientSessionTimeoutSeconds: session.options.timeoutSeconds, timeout: session.options.timeoutSeconds * 1000, fetch: transport, logger: { debug() {}, info() {}, warn() {}, error() {} } });
       servers.push(server); await server.connect();
     }
     if (servers.length) {
@@ -82,8 +87,8 @@ export async function buildAgent({ session, store, thread, emit, mcpProfiles = [
     const client = new OpenAI({ apiKey: session.provider.key || 'no-auth', baseURL: session.provider.baseUrl, maxRetries: 0, timeout: session.options.timeoutSeconds * 1000, fetch: (url, options) => { const headers = new Headers(options?.headers); if (!session.provider.key) headers.delete('Authorization'); return fetch(url, { ...options, headers, redirect: 'error' }); } });
     const provider = new OpenAIProvider({ openAIClient: client, useResponses: session.options.api === 'responses', strictFeatureValidation: true });
     const runner = new Runner({ modelProvider: provider, tracingDisabled: true, traceIncludeSensitiveData: false, workflowName: 'SuperGPT' });
-    return { agent, runner, sources, widget, close: async () => { await provider.close(); await Promise.allSettled(servers.map(server => server.close())); } };
-  } catch (error) { await Promise.allSettled(servers.map(server => server.close())); throw error; }
+    return { agent, runner, sources, widget, close: async () => { for (const transport of googleTransports) transport.close(); await provider.close(); await Promise.allSettled(servers.map(server => server.close())); } };
+  } catch (error) { for (const transport of googleTransports) transport.close(); await Promise.allSettled(servers.map(server => server.close())); throw error; }
 }
 
 export async function runAgent({ session, store, thread, emit, signal, mcpProfiles, approval, trackActivities = false }) {

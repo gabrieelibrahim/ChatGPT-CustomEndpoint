@@ -3,7 +3,7 @@ export const googleWorkspace = services;
 export type GoogleWorkspaceService = typeof services[number];
 export const googleIdentityScope = 'https://www.googleapis.com/auth/userinfo.email';
 export function googleService(value: string): GoogleWorkspaceService | undefined {
-  return services.find(service => service.id === value || service.url === value.replace(/\/+$/, ''));
+  return services.find(service => service.id === value || service.url === value.replace(/\/+$/, '') || service.legacyUrl === value.replace(/\/+$/, ''));
 }
 export function googleScopes(service: GoogleWorkspaceService, write = false) {
   return [...new Set([...service.readScopes, ...(write ? service.writeScopes : []), googleIdentityScope])];
@@ -13,6 +13,7 @@ export function googleScopeGranted(scope: string, granted: string[]) {
   const classroomRead = 'https://www.googleapis.com/auth/classroom.coursework.students.readonly';
   const classroomCanonical = 'https://www.googleapis.com/auth/classroom.student-submissions.students.readonly';
   if (scope === classroomRead && granted.includes(classroomCanonical)) return true;
+  if (scope === classroomCanonical && (granted.includes(classroomRead) || granted.includes('https://www.googleapis.com/auth/classroom.coursework.students'))) return true;
   if (scope === googleIdentityScope && granted.includes('email')) return true;
   if (scope === 'https://www.googleapis.com/auth/userinfo.profile' && granted.includes('profile')) return true;
   if (granted.includes(scope)) return true;

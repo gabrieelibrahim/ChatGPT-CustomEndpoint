@@ -1,6 +1,6 @@
 # SuperGPT: Google OAuth dan iPhone/iPad
 
-22 Oktober 2026. Proyek Google Cloud dan client Android sudah dikonfigurasi pada sesi pemilik. Belum ada server OAuth HTTPS yang dideploy, build iOS, atau pengujian iPhone nyata dari pekerjaan ini. Akses MCP resmi masih menunggu akun Google Workspace dan persetujuan Developer Preview; akun Gmail pribadi tidak diterima oleh formulir program. Rincian terkini: [pendaftaran Google Workspace](google-workspace-registration.md).
+22 Oktober 2026. Proyek Google Cloud dan client Android sudah dikonfigurasi pada sesi pemilik. Belum ada server OAuth HTTPS yang dideploy, build iOS, atau pengujian iPhone nyata dari pekerjaan ini. Penghubung Google sekarang memakai API REST umum melalui MCP terintegrasi SuperGPT; tidak membutuhkan pendaftaran Developer Preview atau langganan Workspace untuk layanan yang mendukung akun pribadi. Rincian terkini: [pendaftaran Google Workspace](google-workspace-registration.md).
 
 ## Mulai sekarang: daftar proyek Google
 
@@ -9,8 +9,8 @@
 3. Pastikan proyek SuperGPT terpilih pada pemilih proyek di bagian atas. Buka **Google Auth Platform**, lalu **Get started** bila ditampilkan.
 4. Isi **App name: SuperGPT**, email dukungan milikmu, dan email kontak pengembang. Pilih Audience **External** untuk akun pribadi. Selesaikan form dan persyaratan Google.
 5. Pada **Audience**, gunakan status **Testing** untuk tahap pengembangan. Tambahkan alamat Google milikmu pada **Test users**. Belum perlu menerbitkan aplikasi untuk umum. Ikuti persyaratan yang muncul pada akun/proyekmu; nama menu dapat berubah.
-6. Google Workspace MCP memerlukan akses [Developer Preview](https://developers.google.com/workspace/preview). Ikuti pendaftaran dan persetujuan yang diminta. Membuat OAuth client saja belum memberikan akses MCP.
-7. Pada **APIs & Services → Library**, aktifkan layanan produk dan MCP yang akan dipakai sesuai [panduan Google](https://developers.google.com/workspace/guides/configure-mcp-servers). Mulai dari satu layanan untuk mengurangi setup awal, misalnya Calendar; aktifkan layanan lain ketika dibutuhkan.
+6. Tidak perlu mendaftar Developer Preview. Akun pengguna memberi izin sendiri melalui OAuth; dukungan layanan dan peran akun tetap mengikuti Google.
+7. Pada **APIs & Services → Library**, aktifkan API produk yang akan dipakai sesuai [panduan pendaftaran SuperGPT](google-workspace-registration.md). Layanan MCP preview tidak diperlukan. Mulai dari satu layanan untuk mengurangi setup awal, misalnya Calendar; aktifkan layanan lain ketika dibutuhkan.
 8. Pada **Google Auth Platform → Data Access**, tambahkan scope layanan pilihanmu dari `shared/googleWorkspace.json`, beserta `https://www.googleapis.com/auth/userinfo.email`. Mulai dengan scope baca. Izin tambahan diminta ketika kamu memilih akses tulis.
 
 Project ID boleh dibagikan ke chat. Jangan mengirim client secret, API key model, token server, refresh token, atau private signing key.
@@ -25,16 +25,16 @@ Pada **Clients → Create client → Android**, daftarkan package `id.sakelar.cl
 69:AA:92:74:18:6D:DF:41:39:25:70:9D:F6:BF:21:04:BF:56:B6:F8
 ```
 
-Ikuti persyaratan **Use this client for an AI-powered agent**. Jika opsi yang diperlukan tidak tersedia untuk client Android, gunakan server OAuth. Fingerprint ini milik APK release yang sudah ada, bukan sertifikat debug.
+Pendaftaran client ini untuk API Google umum, tanpa syarat preview MCP. Fingerprint ini milik APK release yang sudah ada, bukan sertifikat debug.
 
 ### Server OAuth untuk iOS, web, dan alternatif Android
 
 Jalur iOS yang disiapkan memakai **Web application client pada server**, bukan client Google tipe iOS. Aplikasi membuka login di browser sistem; kode ditukar oleh server. Secret dan refresh token Google tetap pada server.
 
 1. Tentukan domain server HTTPS milikmu dahulu. Jangan mendaftarkan domain contoh sebagai alamat aplikasi nyata.
-2. Buat client **Web application** pada proyek yang sama. Tandai **Use this client for an AI-powered agent** sesuai ketentuan Google.
+2. Buat client **Web application** pada proyek yang sama. Gunakan client untuk broker OAuth API Google umum; tidak memerlukan akses preview MCP.
 3. Tambahkan **Authorized redirect URI** tepat `https://DOMAIN-KAMU/__google/callback`.
-4. Simpan Client ID dan Client secret secara privat pada server. Ikuti seluruh variabel dan pengaturan HTTPS di [panduan pendaftaran](google-workspace-registration.md#2b-server-oauth-untuk-web-ios-atau-alternatif-android).
+4. Simpan Client ID dan Client secret secara privat pada server. Ikuti seluruh variabel dan pengaturan HTTPS di [panduan pendaftaran](google-workspace-registration.md#3-webios-broker-oauth).
 5. Setelah server siap, `/__google/config` harus memberi `ready: true`. Di SuperGPT pilih Plugin → layanan Google → Koneksi Google → **Server OAuth SuperGPT**, lalu isi alamat server dan token akses server.
 6. Selesaikan login di browser dan kembali ke SuperGPT. Tunggu initialize dan tools/list sebelum dianggap terhubung. Ulangi login jika sesi aplikasi hilang.
 

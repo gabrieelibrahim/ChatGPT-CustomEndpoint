@@ -27,16 +27,33 @@ class GoogleAuthorizationBridge(private val activity: Activity) {
     private const val EMAIL_SCOPE = "https://www.googleapis.com/auth/userinfo.email"
     // Deliberately bounded to shared/googleWorkspace.json, plus account binding.
     private val ALLOWED_SCOPES = setOf(
-      "gmail.readonly", "gmail.compose", "gmail.modify", "drive.readonly", "drive.file",
-      "documents.readonly", "documents", "spreadsheets.readonly", "spreadsheets",
-      "presentations.readonly", "presentations", "calendar.calendarlist.readonly",
-      "calendar.events.readonly", "calendar.events.freebusy", "calendar.events",
-      "chat.spaces.readonly", "chat.memberships.readonly", "chat.messages.readonly",
-      "chat.messages.create", "chat.users.readstate", "contacts.readonly", "userinfo.profile",
-      "userinfo.email", "classroom.courses.readonly", "classroom.rosters.readonly",
-      "classroom.coursework.students.readonly", "classroom.courseworkmaterials.readonly",
-      "classroom.topics.readonly", "classroom.announcements.readonly", "classroom.announcements",
-      "classroom.coursework.students", "classroom.courseworkmaterials", "classroom.topics"
+      "calendar.calendarlist.readonly",
+      "calendar.events",
+      "calendar.events.freebusy",
+      "calendar.events.readonly",
+      "chat.messages.create",
+      "chat.messages.readonly",
+      "chat.spaces.readonly",
+      "classroom.announcements",
+      "classroom.announcements.readonly",
+      "classroom.courses.readonly",
+      "classroom.courseworkmaterials.readonly",
+      "classroom.rosters.readonly",
+      "classroom.student-submissions.students.readonly",
+      "classroom.topics.readonly",
+      "contacts.readonly",
+      "documents",
+      "documents.readonly",
+      "drive.file",
+      "drive.readonly",
+      "gmail.compose",
+      "gmail.modify",
+      "gmail.readonly",
+      "presentations",
+      "presentations.readonly",
+      "spreadsheets",
+      "spreadsheets.readonly",
+      "userinfo.email"
     ).map { "https://www.googleapis.com/auth/$it" }.toSet()
   }
   private data class Pending(
@@ -78,6 +95,7 @@ class GoogleAuthorizationBridge(private val activity: Activity) {
     if (scope in granted) return true
     // Google canonicalizes this legacy Classroom read scope after consent.
     if (scope == "https://www.googleapis.com/auth/classroom.coursework.students.readonly" && "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly" in granted) return true
+    if (scope == "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly" && ("https://www.googleapis.com/auth/classroom.coursework.students.readonly" in granted || "https://www.googleapis.com/auth/classroom.coursework.students" in granted)) return true
     if (scope == EMAIL_SCOPE && "email" in granted) return true
     if (scope == "https://www.googleapis.com/auth/userinfo.profile" && "profile" in granted) return true
     if (scope.endsWith(".readonly") && scope.removeSuffix(".readonly") in granted) return true

@@ -1,92 +1,72 @@
-# Pendaftaran Google Workspace MCP untuk SuperGPT
+# Google OAuth dan MCP Google API SuperGPT
 
-Tanggal: 22 Oktober 2026, Asia/Jakarta. Source disiapkan. Pada sesi konfigurasi pemilik, proyek dan client Android sudah dibuat, API produk dan MCP diaktifkan, scope disimpan, serta Chat MCP dikonfigurasi. Identitas proyek pribadi disimpan di catatan lokal, bukan source. Belum compile atau rilis.
+22 Oktober 2026. Implementasi memakai MCP terintegrasi milik SuperGPT yang memanggil API REST Google resmi. Tidak memakai server MCP Google Developer Preview. Pengguna memilih akun Google masing-masing dan memberi izin layanan; tidak perlu satu akun bersama atau langganan Workspace untuk layanan yang mendukung akun pribadi.
 
-**Penghalang akses MCP:** [formulir Developer Preview resmi](https://developers.google.com/workspace/preview) mensyaratkan email dalam domain Google Workspace dan tidak menerima Gmail, service account, atau Google Group. Pemilik saat ini belum memiliki akun Workspace. API berstatus Enabled dan OAuth client terdaftar belum membuktikan akses MCP. Pendaftaran serta persetujuan Google masih diperlukan sebelum uji koneksi nyata; source tetap dapat disiapkan untuk compile. Jangan membeli Workspace hanya dengan asumsi bahwa akses preview pasti disetujui.
+## Status source
 
-## Layanan yang disiapkan
+- Shared transport: `shared/googleApiMcp.mjs`. JSON-RPC MCP initialize, tools/list, tools/call; Android/perangkat memakai transport dalam memori, server agent memakai adapter Streamable HTTP dalam memori.
+- Alamat `https://google.supergpt.invalid/mcp/<service>` adalah identitas internal yang ditangani aplikasi, bukan domain server yang perlu didaftarkan/dideploy. Token tidak dikirim ke alamat tersebut. API tujuan dibatasi ke host dan route Google pada source.
+- Koneksi diuji dengan satu permintaan baca minimal ke API produk sebelum ditampilkan aktif. Hasil pemeriksaan tidak membuktikan semua file, semua metode, atau semua peran akun dapat diakses.
+- Entri Google lama perlu dihubungkan ulang. Kredensial yang terikat ke resource preview tidak dipindahkan diam-diam; endpoint preview lama ditolak.
+- OAuth Android, scope Data Access, API produk dan Chat app telah disiapkan pada proyek pemilik. Identitas proyek pribadi disimpan di catatan lokal.
+- Belum compile, menguji login/operasi akun nyata, deploy broker web/iOS, atau rilis. Keberhasilan TypeScript bukan bukti Kotlin/Gradle maupun koneksi nyata.
 
-| Layanan | Endpoint MCP resmi |
-| --- | --- |
-| Gmail | `https://gmailmcp.googleapis.com/mcp/v1` |
-| Google Drive | `https://drivemcp.googleapis.com/mcp/v1` |
-| Google Docs | `https://docsmcp.googleapis.com/mcp/v1` |
-| Google Sheets | `https://sheetsmcp.googleapis.com/mcp/v1` |
-| Google Slides | `https://slidesmcp.googleapis.com/mcp/v1` |
-| Google Calendar | `https://calendarmcp.googleapis.com/mcp/v1` |
-| Google Chat | `https://chatmcp.googleapis.com/mcp/v1` |
-| Google Contacts / People | `https://people.googleapis.com/mcp/v1` |
-| Google Classroom | `https://classroommcp.googleapis.com/mcp/v1` |
+## Kemampuan yang diimplementasikan
 
-Google saat ini menempatkan layanan tersebut dalam Developer Preview. Pastikan akun/proyek mendapat akses [Google Workspace Developer Preview](https://developers.google.com/workspace/preview), lalu ikuti [konfigurasi MCP resmi](https://developers.google.com/workspace/guides/configure-mcp-servers). Google Tasks, Photos, YouTube, Maps, dan layanan Google lain di luar tabel tidak otomatis didukung oleh implementasi ini.
+| Layanan | Baca | Tulis bila dipilih |
+| --- | --- | --- |
+| Gmail | Cari, baca pesan/MIME, daftar label | Draf email dan ubah label; tidak mengirim email |
+| Drive | Cari/metadata, baca file teks UTF-8, ekspor Workspace ke teks/CSV | Buat folder, ubah nama/deskripsi file yang diizinkan melalui drive.file |
+| Docs | Cari dan baca struktur/isi termasuk tabs | Buat dokumen, batchUpdate termasuk perubahan/penghapusan isi |
+| Sheets | Cari, metadata spreadsheet, baca rentang sel | Buat spreadsheet, tulis nilai RAW/USER_ENTERED |
+| Slides | Cari dan baca presentasi | Buat presentasi, batchUpdate |
+| Calendar | Daftar kalender/acara dan freebusy | Buat acara; sendUpdates menentukan pengiriman undangan |
+| Chat | Daftar spaces/pesan | Kirim pesan teks sebagai pengguna |
+| Contacts | Daftar/cari kontak pribadi | Tidak ada |
+| Classroom | Kelas, tugas, materi, pengumuman, topik dan siswa | Buat pengumuman sesuai peran guru |
 
-Kemampuan aktual mengikuti `tools/list` setelah login. Gmail MCP mendukung pencarian/baca, draf, dan label; jangan menganggap adanya izin email berarti tool mengirim email tersedia. Contacts/People yang disiapkan berorientasi baca/pencarian. Pilihan baca/tulis meminta scope terkait, dan setiap panggilan tool tetap memerlukan persetujuan di chat. Scope lama yang sudah diberikan Google dapat tetap berlaku; memilih baca tidak mencabut seluruh izin Google yang pernah diberikan.
+Setiap panggilan tool tetap meminta persetujuan argumen di chat. Mode baca tidak mendaftarkan tool tulis meskipun akun pernah memberi scope lebih luas. Tidak ada retry otomatis permintaan API, terutama tulis; kegagalan jaringan tidak membuktikan tindakan belum diterima. Pagination diberikan melalui nextPageToken, bukan mengambil semua data diam-diam. Respons dibatasi 2 MB dan argumen tool 64 KB; gunakan pencarian/rentang lebih kecil. API/provider/device tetap mempunyai kuota dan batasnya sendiri.
 
-## 1. Buat proyek dan aktifkan layanan
+Drive `drive.file` tidak memberi akses tulis seluruh file lama. File harus dibuat atau dibuka/diizinkan untuk aplikasi; Picker untuk memilih file lama belum disediakan. PDF/binary Drive tidak diekstrak oleh tool baca teks. Docs/Slides batchUpdate mengikuti schema API Google dan argumennya ditampilkan saat persetujuan. Operasi yang tidak tercantum belum diimplementasikan.
 
-1. Buka [Google Cloud Console](https://console.cloud.google.com/projectcreate), buat proyek khusus SuperGPT, dan simpan Project ID.
-2. Ikuti petunjuk akses Developer Preview. Buat OAuth consent screen melalui Google Auth Platform → Branding/Audience. Isi nama SuperGPT, email dukungan dan kontak; gunakan Internal hanya jika sesuai organisasi Workspace, atau External dengan akun penguji saat masih testing.
-3. Aktifkan API produk: Gmail, Drive, Docs, Sheets, Slides, Google Calendar, Google Chat, People dan Classroom. Aktifkan juga MCP services yang dicantumkan di panduan Google, yaitu `gmailmcp.googleapis.com`, `drivemcp.googleapis.com`, `docsmcp.googleapis.com`, `sheetsmcp.googleapis.com`, `slidesmcp.googleapis.com`, `calendarmcp.googleapis.com`, `chatmcp.googleapis.com`, `people.googleapis.com`, `classroommcp.googleapis.com`.
-4. Untuk Google Chat, konfigurasi Chat app sesuai panduan Google. Workspace admin dapat membatasi aplikasi, scope dan layanan; akun tetap membutuhkan akses ke data yang dipilih.
-5. Tambahkan scope layanan yang akan diuji pada Data Access. Daftar tepat source ada di `shared/googleWorkspace.json`; semua login menambahkan `userinfo.email` untuk mengikat koneksi ke akun yang sama. Mulai dengan baca, lalu pilih baca/tulis bila diperlukan. Jangan meminta seluruh scope metadata secara otomatis.
-6. Sebelum penggunaan publik, selesaikan verifikasi Google yang sesuai. Scope sensitif/restricted seperti akses Gmail dan Drive dapat memerlukan verifikasi dan, pada kondisi tertentu, security assessment. Mode Testing membatasi akun dan umur refresh token. Lihat [verifikasi OAuth](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification) dan [kebijakan user data](https://developers.google.com/terms/api-services-user-data-policy).
+Chat/Classroom tergantung dukungan produk, akun, organisasi, peran, keanggotaan dan kebijakan admin. Memakai API umum menghapus ketergantungan preview MCP; tidak mengubah aturan produk Google. Classroom membatasi beberapa perubahan ke proyek yang membuat resource, dan perubahan di luar peran pengguna tetap ditolak Google.
 
-## 2A. Otorisasi langsung di Android
+## 1. Google Cloud dan consent
 
-Source memakai Google Identity `AuthorizationClient` dan Google-owned consent UI, tanpa client secret pada APK. Setelah izin diberikan, akses diperoleh kembali secara silent untuk akun tersimpan; bila Google memerlukan consent lagi, pengguna diminta menghubungkan ulang plugin.
+1. Pakai proyek Google Cloud khusus aplikasi. Konfigurasi Google Auth Platform Branding, kontak dukungan dan pengembang.
+2. Gunakan Audience External. Saat Testing, hanya akun yang ditambahkan pada Test users dapat memberi izin. Untuk publik, lengkapi branding, domain/privacy policy dan verifikasi Google sesuai scope.
+3. Aktifkan API produk: Gmail API, Drive API, Docs API, Sheets API, Slides API, Calendar API, Chat API, People API dan Classroom API. Layanan MCP preview tidak diperlukan; aktivasi lama tidak digunakan oleh source baru.
+4. Scope yang diminta source ada di `shared/googleWorkspace.json`, ditambah userinfo.email untuk mengikat akun. Mulai dengan mode baca. Tulis diminta saat pengguna memilihnya. Daftar scope di console boleh memuat pilihan yang lebih banyak; itu bukan pemberian akses akun.
+5. Google Chat tetap memerlukan Chat app: name Chat MCP, avatar `https://developers.google.com/chat/images/quickstart-app-avatar.png`, description Chat MCP server, interactive features off, error logging on.
+6. Tidak perlu mendaftar Developer Preview untuk penghubung ini. Tidak perlu membeli Workspace hanya untuk memakai Gmail/Drive pribadi.
 
-1. Google Auth Platform → Clients → Create client → Android.
-2. Isi package produksi **`id.sakelar.client`** dan SHA-1 sertifikat release permanen:
+Lihat [Google OAuth](https://developers.google.com/identity/protocols/oauth2), [verifikasi sensitive scopes](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification) dan [restricted scopes](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification). Gmail/Drive dapat memerlukan verifikasi/security assessment sesuai pemrosesan dan penggunaan data. Mode Testing belum merupakan akses publik tanpa batas.
 
-   ```text
-   69:AA:92:74:18:6D:DF:41:39:25:70:9D:F6:BF:21:04:BF:56:B6:F8
-   ```
+## 2. Android
 
-   Fingerprint dibaca dari APK v0.1.11 yang sudah ada, tanpa membangun APK baru. SHA-256 sertifikat cocok dengan pin repo: `7544dc65194da6bb8b0bb8c86005759e91707f7dc0a6f8ddb53eb907bf7a7737`. Tidak ada private key/password yang dibaca atau diganti.
-3. Daftarkan consent/scopes pada proyek yang sama. Centang **Use this client for an AI-powered agent** untuk akses MCP resmi. Opsi ini tersedia pada client Android dan sudah dipilih pada sesi konfigurasi pemilik. Otorisasi akun Google saja belum membuktikan MCP akan menerima client tersebut.
-4. Versi debug memakai package terpisah dan sertifikat berbeda; jangan mengganti signing key produksi untuk menyelesaikan pendaftaran debug.
-5. Pengujian perangkat membutuhkan Google Play services, akun yang diizinkan, dan future build yang mendapat izin pengguna. Google memblokir loopback OAuth untuk client tipe Android; source Android Google ini menggunakan Google Identity, bukan callback loopback generik.
+Google Identity AuthorizationClient membuka pemilih akun dan consent Google. Package produksi **id.sakelar.client**, SHA-1 release permanen:
 
-Lihat [otorisasi Android](https://developer.android.com/identity/authorization) dan [pembatasan loopback Google](https://developers.google.com/identity/protocols/oauth2/resources/loopback-migration).
+```
+69:AA:92:74:18:6D:DF:41:39:25:70:9D:F6:BF:21:04:BF:56:B6:F8
+```
 
-## 2B. Server OAuth untuk web, iOS, atau alternatif Android
+Client Android pemilik sudah dibuat dengan package/sertifikat tersebut. Client ID dikenali Google Identity melalui pendaftaran package/signature; pengguna tidak mengetik client ID atau secret. Penandaan AI-powered agent yang sudah dipilih tidak dijadikan syarat penghubung API ini. APK tetap memakai sertifikat release yang dipin; jangan mengganti key untuk memperbaiki OAuth. Debug memakai package dan sertifikat berbeda.
 
-Pada iPhone/iPad gunakan jalur server ini; Google Identity dan vault native Android tidak tersedia di iOS. Koneksi iOS disimpan selama sesi aplikasi, belum memakai Keychain.
+Silent authorization terikat email terverifikasi akun sebelumnya; bila perlu consent lagi, koneksi meminta hubungkan ulang. Tidak menyimpan client secret atau refresh token di APK. Metadata koneksi disimpan dengan vault Android Keystore. Access token hanya berada dalam memori; tiap chat memperoleh token lewat jalur yang sudah ada. Bila token habis dalam chat panjang, sambungkan ulang dan tinjau hasil sebelum mengulangi operasi tulis.
 
-Gunakan server SuperGPT yang kamu kendalikan. Secret OAuth Google serta refresh token berada pada server; aplikasi hanya menyimpan koneksi opaque dan meminta access token saat membutuhkan MCP.
+## 3. Web/iOS: broker OAuth
 
-1. Siapkan origin HTTPS server, misalnya `https://supergpt.example`. Domain contoh ini harus diganti dengan domain nyata yang kamu kelola.
-2. Buat OAuth client tipe **Web application**, tandai **Use this client for an AI-powered agent** sesuai Google, lalu daftarkan redirect URI tepat:
+Source broker tersedia pada `server/google/oauthBroker.mjs`, terhubung ke `server/sdk/main.mjs`. Belum dideploy. iOS memerlukan broker ini karena bridge Google Identity Android tidak tersedia. iOS/web menyimpan koneksi selama sesi, belum Keychain iOS.
 
-   ```text
-   https://DOMAIN-SERVER-KAMU/__google/callback
-   ```
+1. Tentukan origin HTTPS nyata yang kamu kelola. Buat OAuth client Web application untuk broker. Redirect URI tepat `https://DOMAIN-SERVER/__google/callback`. Tidak perlu menandai client sebagai preview MCP.
+2. Pasang env privat: SUPERGPT_PUBLIC_ORIGIN, SUPERGPT_GOOGLE_CLIENT_ID, SUPERGPT_GOOGLE_CLIENT_SECRET, SUPERGPT_GOOGLE_TOKEN_KEY (32 byte base64 AES-GCM), SUPERGPT_SERVER_TOKEN, SUPERGPT_ALLOWED_ORIGINS dan SUPERGPT_SDK_DATA. Secret/kunci/refresh token tidak boleh masuk Git/APK atau log.
+3. Reverse proxy `/__google/*` ke Node, gunakan HTTPS dan jangan log query callback/Authorization/body token. `GET /__google/config` harus menunjukkan ready true.
+4. Di plugin pilih Server OAuth SuperGPT dan atur origin/token server. Endpoint model/API key tetap terpisah. Broker menggunakan state, PKCE, offline consent, proof polling dan penyimpanan refresh token terenkripsi.
+5. Mode agent perangkat memanggil API Google dari perangkat. Mode agent server mengirim access token ke server AI yang dipilih pengguna dan server itu memanggil Google. Pakai server tepercaya; data hasil tool juga dapat diteruskan ke endpoint model yang dipilih saat menjawab.
+6. Penghapusan koneksi membersihkan sesi lokal/server sesuai mode; bukan klaim mencabut seluruh grant proyek pada akun Google. Pengguna bisa mencabut akses dari pengaturan akun Google.
 
-3. Simpan konfigurasi server pada environment pribadi, di luar Git/APK:
+## 4. Sesudah pengguna meminta compile
 
-   | Variabel | Nilai yang perlu dipasang |
-   | --- | --- |
-   | `SUPERGPT_PUBLIC_ORIGIN` | Origin HTTPS server yang terdaftar |
-   | `SUPERGPT_GOOGLE_CLIENT_ID` | Client ID Web application SuperGPT |
-   | `SUPERGPT_GOOGLE_CLIENT_SECRET` | Secret client web, server saja |
-   | `SUPERGPT_GOOGLE_TOKEN_KEY` | Kunci acak 32 byte dalam base64 untuk AES-GCM; simpan backup secara aman |
-   | `SUPERGPT_SERVER_TOKEN` | Token akses server yang kuat |
-   | `SUPERGPT_ALLOWED_ORIGINS` | Origin browser SuperGPT yang diizinkan, dipisah koma |
-   | `SUPERGPT_SDK_DATA` | Direktori privat server untuk data terenkripsi |
+Build APK memakai identitas release permanen, lalu uji pemilihan akun sendiri, partial consent/penolakan, read-only, operasi tulis dengan persetujuan, restart, refresh, pembatalan dan penghapusan koneksi. Uji paling sedikit satu pembacaan tiap API yang akan diklaim aktif. SDK server harus diperbarui bersama aplikasi agar memahami transport internal baru. Tidak boleh menyatakan koneksi nyata berhasil sebelum hasil runtime tersedia.
 
-4. Reverse proxy HTTPS harus meneruskan `/__google/*` ke server Node, mempertahankan Host publik. Jangan mencatat query callback OAuth, Authorization headers atau body token ke log. Route ini sudah dihubungkan ke `server/sdk/main.mjs` dan Vite preview development melalui `scripts/sdkBridge.mjs`. Google OAuth belum dideploy dalam tugas ini.
-5. Di plugin Google pilih **Koneksi Google → Server OAuth SuperGPT**, isi origin server dan token akses server. Ini terpisah dari endpoint model/API key chat. Client secret tidak diisi di aplikasi.
-6. `GET /__google/config` harus mengembalikan `ready: true`. Jika konfigurasi server belum lengkap, aplikasi menunjukkan belum dikonfigurasi dan tidak menandai plugin aktif. Development loopback hanya untuk pengujian lokal eksplisit, bukan pengganti HTTPS produksi.
-7. Server meminta `access_type=offline`, PKCE dan consent Google; result polling memerlukan proof acak dari aplikasi. Refresh token disimpan terenkripsi; token tidak dikirim melalui URL. Menutup login/menghapus koneksi tidak mengklaim mencabut seluruh grant Google proyek.
-
-Lihat [Google OAuth web-server](https://developers.google.com/identity/protocols/oauth2/web-server). Google tidak menggunakan dynamic registration seperti sebagian MCP server lain: aplikasi SuperGPT harus memiliki client sendiri.
-
-## 3. Pemeriksaan setelah pendaftaran dan izin build
-
-- Pastikan callback/client/scopes/preview benar, compile hanya setelah pengguna meminta, lalu masuk dari Plugin → layanan Google → Lanjutkan dengan Google.
-- Uji akun yang dipilih, penolakan sebagian scope, login ulang, restart aplikasi, pembatalan, penghapusan koneksi, dan sign-out. Status terhubung mensyaratkan MCP initialize dan tools/list berhasil.
-- Uji satu operasi baca yang dipilih pengguna; untuk menulis, tampilkan argumen tindakan lalu minta persetujuan melalui mekanisme chat yang sudah ada.
-- Uji web broker menggunakan HTTPS sungguhan, CORS origin yang tepat, refresh sesudah access token berakhir, dan pemulihan server dengan kunci enkripsi yang sama.
-- Sampai langkah tersebut dilakukan, jangan menyatakan akun Google nyata sudah terhubung atau semua tool Google berhasil berjalan.
-
-Panduan mulai dari nol dan pilihan iPhone tanpa Mac: [Google OAuth dan iOS](ios-and-google-setup.md).
+Referensi implementasi: [Drive files](https://developers.google.com/workspace/drive/api/reference/rest/v3/files), [Gmail drafts](https://developers.google.com/workspace/gmail/api/guides/drafts), [Docs batchUpdate](https://developers.google.com/workspace/docs/api/reference/rest/v1/documents/batchUpdate), [Sheets values](https://developers.google.com/workspace/sheets/api/guides/values), [Slides batchUpdate](https://developers.google.com/workspace/slides/api/reference/rest/v1/presentations/batchUpdate), [Calendar events](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert), [Chat messages](https://developers.google.com/workspace/chat/api/reference/rest/v1/spaces.messages/create), [People connections](https://developers.google.com/people/api/rest/v1/people.connections/list), [Classroom course work](https://developers.google.com/workspace/classroom/reference/rest/v1/courses.courseWork/list).
