@@ -29,6 +29,9 @@ fun signingValue(key: String): String = releaseSigning.getProperty(key)?.takeIf 
     ?: error("Release signing is incomplete. Restore the permanent keystore/properties, or run npm run android:signing:init for the first setup.")
 
 val verifyReleaseSigningIdentity = tasks.register("verifyReleaseSigningIdentity") {
+    // The action reads the private signing configuration at execution time.
+    // Keep this verification mandatory without serializing script/secret state.
+    notCompatibleWithConfigurationCache("Release certificate verification reads private signing configuration at execution time")
     doLast {
         check(releaseSigningFile.isFile) { "Permanent release signing credentials are missing. Never substitute the debug key." }
         val identityFile = file("../../../../config/android-release-signing.json")
