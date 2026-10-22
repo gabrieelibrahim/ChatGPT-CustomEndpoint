@@ -1,3 +1,5 @@
+import {SakelarConnect} from './SakelarConnect';
+import {sakelarBaseUrl,type SakelarConnection} from '../lib/sakelarConnect';
 import { ClientAlert, ClientBadge, ClientButton, ClientInput, ClientSwitch } from '../components/SDKPrimitives';
 import { useEffect, useRef, useState } from 'react';
 import { UIIcon as I } from '../components/UIIcon';
@@ -87,11 +89,24 @@ export function EndpointSettings({ setup = false, onSaved, onBack, onNotice }: {
       setError(message); notify(message);
     } finally { if (request.current === controller) { request.current = null; if (timeout.current) clearTimeout(timeout.current); timeout.current = null; setTesting(false); } }
   }
+  async function acceptSakelar(connection:SakelarConnection) {
+    // Re-read at completion: another window may have edited endpoints during browser login.
+    const previous=loadEndpointStore(),previousKeys=loadEndpointKeys(previous.profiles);
+    if(previous.profiles.length>=50)throw Error('Hapus satu profil endpoint sebelum menghubungkan Sakelar.');
+    const id=crypto.randomUUID();
+    const profile:EndpointProfile={id,name:'Sakelar',baseUrl:sakelarBaseUrl,model:connection.models[0],models:connection.models,protocol:'openai-compatible',auth:'bearer',sendReasoning:false};
+    const next={...previous,profiles:[...previous.profiles,profile],selectedId:id},nextKeys={...previousKeys,[id]:connection.apiKey};
+    saveEndpointStore(next,nextKeys);
+    setStore(next);setKeys(nextKeys);setDraft({...profile,key:connection.apiKey,auth:true});setRevealed(false);setError('');
+    try{await flushEndpointKeyPersistence();setNotice('Sakelar terhubung. API key berlaku sampai '+new Date(connection.expiresAt).toLocaleDateString('id-ID')+'.');}
+    catch{setNotice('Sakelar aktif untuk sesi ini, tetapi penyimpanan aman belum selesai. Simpan ulang sebelum menutup aplikasi.');}
+    notify('Endpoint Sakelar sudah dipilih.');onSaved?.();
+  }
   const editing = store.profiles.find(profile => profile.id === draft.id);
   const matchingModels = draft.models.filter(model => model.toLowerCase().includes(modelQuery.toLowerCase()));
   return <section className={'d-endpoint-page' + (setup ? '' : ' d-endpoint-settings')} aria-labelledby={setup ? undefined : 'endpoint-heading'} aria-label={setup ? 'Custom Endpoint' : undefined}>
     {!setup && <header><div><h1 id="endpoint-heading">Custom Endpoint</h1><p>Hubungkan AI pilihanmu.</p></div><ClientButton color="primary" variant="solid" className="d-endpoint-primary" onClick={() => edit()}><I name="plus" size={20}/>Tambah endpoint</ClientButton></header>}
-    <div className="d-endpoint-layout">{!setup && <aside className="d-endpoint-profiles" aria-label="Endpoint tersimpan"><h2>Endpoint tersimpan <span>{store.profiles.length}</span></h2>
+    <SakelarConnect onConnected={acceptSakelar} disabled={saving||testing}/><div className="d-endpoint-layout">{!setup && <aside className="d-endpoint-profiles" aria-label="Endpoint tersimpan"><h2>Endpoint tersimpan <span>{store.profiles.length}</span></h2>
       {!store.profiles.length && <div className="d-endpoint-empty"><I name="globe" size={30}/><b>Belum ada endpoint</b><p>Tambahkan koneksi pertamamu di bawah.</p></div>}
       {store.profiles.map(profile => <div key={profile.id} className={'d-endpoint-card ' + (draft.id === profile.id ? 'd-is-editing' : '')}>
         <button className="d-endpoint-open" onClick={() => edit(profile)}><span className="d-endpoint-mark"><I name="globe" size={22}/></span><span><b>{profile.name}</b><small>{new URL(profile.baseUrl).host}</small></span>{store.selectedId === profile.id && <ClientBadge>Pilihan</ClientBadge>}</button>
