@@ -1,5 +1,9 @@
 import {isNativeDesktop} from './nativeDesktop';
 import {discoverEndpointModels} from './endpointProfiles';
+import {logDiagnostic} from './diagnosticLog';
+
+// Native plugins reject with plain strings, not Error objects.
+const reason=(error:unknown)=>error instanceof Error?error.message:typeof error==='string'?error:'';
 
 export const sakelarOrigin='https://app.sakelar.web.id';
 export const sakelarBaseUrl='https://api.sakelar.web.id/v1';
@@ -84,7 +88,14 @@ export async function connectSakelar(signal:AbortSignal,progress:(message:string
   savePending(pending);
   progress('Membuka browser. Login Google di Sakelar, cocokkan kode, lalu pilih Izinkan. SuperGPT terbuka lagi dan selesai sendiri.',start.userCode,target);
   deadline.throwIfAborted();
-  if(popup)popup.location.href=target;else await openSakelarBrowser(target);
+  logDiagnostic('app','sakelar-connect-started',{});
+  if(popup)popup.location.href=target;
+  else{
+   // Android's opener can report a failure even though the browser opened. Never abandon the connection over it:
+   // keep waiting, and the "Buka lagi browser Sakelar" button opens the page by hand if it really did not open.
+   try{await openSakelarBrowser(target)}
+   catch(error){logDiagnostic('app','sakelar-browser-open-failed',{error:reason(error).slice(0,120)},'error');progress('Jika browser Sakelar belum terbuka, tekan "Buka lagi browser Sakelar".',start.userCode,target)}
+  }
  }catch(error){
   popup?.close();
   if(pending)await finish(pending,deadline,error);
@@ -123,11 +134,13 @@ async function poll(pending:PendingSakelar,deadline:AbortSignal,progress:(messag
    catch(error){
     // A dropped request (app just resumed, network switching) is retried until the 10-minute code expires.
     deadline.throwIfAborted();
+    logDiagnostic('app','sakelar-token-request-failed',{error:reason(error).slice(0,120),attempt:failures+1},'error');
     if(++failures===2)progress('Menunggu jaringan untuk menyelesaikan koneksi Sakelar…',pending.userCode,pending.browserUrl);
     continue;
    }
    if(failures>=2)progress('Menunggu persetujuan di browser Sakelar…',pending.userCode,pending.browserUrl);
    failures=0;
+   if(response.status!==202)logDiagnostic('app','sakelar-token-answer',{status:response.status});
    if(response.status===202){await response.body?.cancel();continue;}
    if(!response.ok){await response.body?.cancel();throw Error(response.status===403?'Koneksi ditolak atau akun tidak tersedia.':response.status===429?'Batas percobaan Sakelar tercapai. Mulai lagi nanti.':'Kode koneksi sudah berakhir atau hasilnya belum terkonfirmasi. Mulai lagi dari SuperGPT.');}
    const value=await json(response);
@@ -136,7 +149,7 @@ async function poll(pending:PendingSakelar,deadline:AbortSignal,progress:(messag
    const models=await discoverEndpointModels(sakelarBaseUrl,value.apiKey,deadline);
    if(!models.length)throw Error('Belum ada model yang dapat dipakai akun ini. Periksa akses model Sakelar lalu hubungkan lagi.');
    deadline.throwIfAborted();await commit({apiKey:value.apiKey,keyId:value.keyId,expiresAt:value.expiresAt,models});
-   clearPending();progress('Sakelar terhubung. Endpoint dan model sudah terisi.');return;
+   clearPending();logDiagnostic('app','sakelar-connected',{models:models.length});progress('Sakelar terhubung. Endpoint dan model sudah terisi.');return;
   }
  }catch(error){await finish(pending,deadline,error);throw error;}
 }
@@ -145,5 +158,14 @@ async function poll(pending:PendingSakelar,deadline:AbortSignal,progress:(messag
 async function finish(pending:PendingSakelar,deadline:AbortSignal,failure:unknown){
  if(deadline.aborted&&deadline.reason===KEEP_PENDING)return;
  clearPending();
- await request('cancel',AbortSignal.timeout(5000),{deviceCode:pending.deviceCode,verifier:pending.verifier}).then(async r=>{await r.body?.cancel();if(!r.ok)throw Error('cleanup_failed');}).catch(()=>{throw Error((failure instanceof Error?failure.message+' ':'')+'Pembersihan koneksi belum terkonfirmasi. Jika ada key SuperGPT baru pada konsol Sakelar, cabut key tersebut sebelum mencoba lagi.');});
+ logDiagnostic('app','sakelar-connect-failed',{error:reason(failure).slice(0,120)},'error');
+ // Cancel from the foreground: requests made while Android keeps the app behind another app can fail.
+ await foreground(AbortSignal.timeout(120000)).catch(()=>{});
+ for(let attempt=0;attempt<3;attempt++){
+  try{const r=await request('cancel',AbortSignal.timeout(8000),{deviceCode:pending.deviceCode,verifier:pending.verifier});await r.body?.cancel();if(r.ok||r.status===410)return;}
+  catch{/* retried below */}
+  await new Promise(resolve=>setTimeout(resolve,1500));
+ }
+ const why=reason(failure);
+ throw Error((why?why+' ':'')+'Pembersihan koneksi belum terkonfirmasi. Jika ada key SuperGPT baru pada konsol Sakelar, cabut key tersebut sebelum mencoba lagi.');
 }

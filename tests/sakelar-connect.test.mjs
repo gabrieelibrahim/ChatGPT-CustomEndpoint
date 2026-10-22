@@ -90,3 +90,24 @@ test('requests wait for the app to be in front, and a dropped request is retried
   assert.ok(!calls.includes('/api/supergpt/cancel'), 'a dropped request never cancels the connection');
   assert.equal(connect.pendingSakelar(), null);
 });
+
+test('on Android a failed browser open does not abandon the connection (the plugin rejects with a plain string)', async t => {
+  const native = await build({ entryPoints: ['src/lib/sakelarConnect.ts'], bundle: true, write: false, platform: 'node', format: 'esm', plugins: [{ name: 'tauri-stubs', setup(b) {
+    b.onResolve({ filter: /^@tauri-apps\/plugin-(opener|http)$/ }, args => ({ path: args.path, namespace: 'stub' }));
+    b.onLoad({ filter: /opener/, namespace: 'stub' }, () => ({ contents: 'export async function openUrl(){ globalThis.__opened = (globalThis.__opened || 0) + 1; throw "Activity not found"; }' }));
+    b.onLoad({ filter: /http/, namespace: 'stub' }, () => ({ contents: 'export const fetch = (...a) => globalThis.fetch(...a);' }));
+  } }] });
+  const app = await import('data:text/javascript;base64,' + Buffer.from(native.outputFiles[0].text).toString('base64'));
+  const { calls } = fixture(t, { pendingPolls: 1 });
+  window.__TAURI_INTERNALS__ = {};
+  // The native path calls api.sakelar.web.id/auth/supergpt/...; route it to the same fake.
+  const fake = globalThis.fetch;
+  globalThis.fetch = (url, init) => fake(String(url).replace('https://api.sakelar.web.id/auth/supergpt/', 'https://app.sakelar.web.id/api/supergpt/'), init);
+  const committed = [], messages = [];
+  await app.connectSakelar(new AbortController().signal, message => messages.push(message), async value => { committed.push(value); });
+  assert.equal(globalThis.__opened, 1);
+  assert.equal(committed.length, 1, 'connected despite the opener error');
+  assert.ok(!calls.includes('/api/supergpt/cancel'));
+  assert.ok(messages.some(m => m.includes('Buka lagi browser Sakelar')));
+  delete globalThis.__opened;
+});
