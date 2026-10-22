@@ -50,7 +50,7 @@ export class MainChatService {
     run.busy = true; run.touched = Date.now();
     try {
       await emit({ type: 'main.run', id: run.thread.id });
-      await runAgent({ session, store: run.store, thread: run.thread, emit, signal, mcpProfiles, approval });
+      await runAgent({ session, store: run.store, thread: run.thread, emit, signal, mcpProfiles, approval, trackActivities: true });
       if (run.thread.pending) await emit({ type: 'main.paused', id: run.thread.id }); else { await emit({ type: 'main.done', id: run.thread.id }); this.runs.delete(run.thread.id); }
     } catch (error) { this.runs.delete(run.thread.id); throw error; }
     finally { run.busy = false; }
