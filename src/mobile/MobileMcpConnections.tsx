@@ -9,6 +9,7 @@ import { loadSettings, saveSettings } from '../lib/clientSettings';
 import { MobilePageTransition } from './MobilePageTransition';
 import { MobilePluginSkeleton } from './MobilePluginSkeleton';
 import { PluginIcon } from './PluginIcon';
+import { clearMcpOAuth, loginMcpOAuth } from '../mcp/oauth';
 import './mcp-connections.css';
 const PluginDetail = lazy(() => import('./MobilePluginDetail'));
 type View = { kind: 'catalog' | 'installed' | 'category' | 'detail' | 'connection'; plugin?: PluginTemplate; profileId?: string; category?: string };
@@ -23,6 +24,7 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
   const [query, setQuery] = useState(''), [menu, setMenu] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [name, setName] = useState(''), [url, setUrl] = useState(''), [token, setToken] = useState(''), [pendingPrompt, setPendingPrompt] = useState('');
   const [ai, setAi] = useState(loadMainAi);
+  const [auth, setAuth] = useState<'oauth' | 'token'>('token'), [clientId, setClientId] = useState(''), [progress, setProgress] = useState('');
   const request = useRef<AbortController | null>(null), mounted = useRef(true), scroll = useRef<HTMLDivElement>(null), offsets = useRef(new Map<string, number>());
   const view = path[path.length - 1], pageId = identity(view);
   const selectedProfile = store.data.mcp.find(item => item.id === view.profileId || !!view.plugin && (item.catalogId === view.plugin.id || sameUrl(item.url, view.plugin.url)));
@@ -46,20 +48,25 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
   function configure(plugin?: PluginTemplate, profile?: McpProfile, prompt = '') {
     if (busy) return;
     setName(profile?.name || plugin?.name || ''); setUrl(profile?.url || plugin?.url || ''); setToken(profile ? mcpToken(profile.id) : ''); setPendingPrompt(prompt);
+    setAuth((profile?.auth || plugin?.auth) === 'oauth' ? 'oauth' : 'token'); setClientId(''); setProgress('');
     push({ kind: 'connection', plugin, profileId: profile?.id });
   }
   async function connect() {
     if (request.current) return;
     const id = selectedProfile?.id || crypto.randomUUID(), controller = new AbortController(); request.current = controller; setBusy(true); setError('');
-    const timer = setTimeout(() => controller.abort(Error('Pemeriksaan koneksi melewati 30 detik.')), 30000);
+    const timer = setTimeout(() => controller.abort(Error(auth === 'oauth' ? 'Login melewati 5 menit. Silakan ulangi.' : 'Pemeriksaan koneksi melewati 30 detik.')), auth === 'oauth' ? 300000 : 30000);
     let connection: McpConnection | undefined;
     try {
       if (store.data.mcp.filter(item => item.enabled && item.id !== id).length >= 8) throw Error('Maksimal 8 koneksi aktif. Nonaktifkan salah satu terlebih dahulu.');
       if (!name.trim()) throw Error('Isi nama koneksi.');
-      const target = mcpUrl(url); connection = await connectMcp({ url: target, token }, controller.signal); controller.signal.throwIfAborted();
-      mcpToken(id, token);
+      const target = mcpUrl(url);
+      const accessToken = auth === 'oauth' ? await loginMcpOAuth(id, target, controller.signal, clientId, value => { if (mounted.current) setProgress(value); }) : token;
+      setProgress('Memeriksa koneksi dan daftar tool…');
+      connection = await connectMcp({ url: target, token: accessToken }, controller.signal); controller.signal.throwIfAborted();
+      if (auth === 'oauth') mcpToken(id, '');
+      else { await clearMcpOAuth(id); mcpToken(id, token); }
       const catalogId = view.plugin && pluginCatalog.some(item => item.id === view.plugin?.id) ? view.plugin.id : undefined;
-      const verified: McpProfile = { id, name: name.trim().slice(0, 80), kind: 'http', url: target, command: '', args: [], enabled: true, checkedAt: Date.now(), toolNames: connection.tools.map(tool => tool.name), catalogId };
+      const verified: McpProfile = { id, name: name.trim().slice(0, 80), kind: 'http', url: target, command: '', args: [], enabled: true, checkedAt: Date.now(), toolNames: connection.tools.map(tool => tool.name), catalogId, auth: auth === 'oauth' ? 'oauth' : token ? 'token' : 'public' };
       // Preferences/credentials must be available before advertising the connection as active.
       const nextAi = { ...loadMainAi(), enabled: true, mcp: true }; saveMainAi(nextAi); saveSettings({ ...loadSettings(), pluginsEnabled: true }); setAi(nextAi);
       store.setData(previous => ({ ...previous, mcp: [...previous.mcp.filter(item => item.id !== id), verified] }));
@@ -67,7 +74,7 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
       setPath(previous => previous.length > 1 ? previous.slice(0, -1) : [{ kind: 'installed' }]);
       onNotice('Terhubung · ' + connection.tools.length + ' tool tersedia untuk chat berikutnya.');
       if (pendingPrompt) { setPendingPrompt(''); onDraft?.('@' + name.trim() + ' ' + pendingPrompt); }
-    } catch (failure) { if (mounted.current && !controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'MCP belum dapat dihubungkan.'); else if (mounted.current && controller.signal.reason instanceof Error && controller.signal.reason.message.includes('30 detik')) setError(controller.signal.reason.message); }
+    } catch (failure) { if (auth === 'oauth' && !selectedProfile) await clearMcpOAuth(id).catch(() => {}); if (mounted.current) setError(controller.signal.aborted ? controller.signal.reason instanceof Error ? controller.signal.reason.message : 'Koneksi dibatalkan.' : failure instanceof Error ? failure.message : 'MCP belum dapat dihubungkan.'); }
     finally { clearTimeout(timer); await connection?.close(); if (request.current === controller) { request.current = null; if (mounted.current) setBusy(false); } }
   }
   function existing(plugin: PluginTemplate) { return store.data.mcp.find(profile => profile.catalogId === plugin.id || sameUrl(profile.url, plugin.url)); }
@@ -84,7 +91,7 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
   }
   function row(plugin: PluginTemplate) {
     const profile = existing(plugin);
-    return <div className="m-plugin-catalog-row" key={plugin.id}><button className="m-plugin-row-open" onClick={() => details(plugin, profile)}><PluginIcon {...plugin}/><span><strong>{plugin.name}</strong><small>{plugin.description}</small></span></button><button className="m-plugin-row-add" aria-label={(profile ? 'Atur ' : 'Tambahkan ') + plugin.name} onClick={() => profile ? details(plugin, profile) : configure(plugin)}><Icon name={profile ? 'dots' : 'plus'} size={22}/></button></div>;
+    return <div className="m-plugin-catalog-row" key={plugin.id}><button className="m-plugin-row-open" onClick={() => details(plugin, profile)}><PluginIcon {...plugin}/><span><strong>{plugin.name}</strong><small>{plugin.description}</small><small>{profile ? profile.enabled ? 'Terhubung' : 'Nonaktif' : plugin.auth === 'oauth' ? 'Masuk dengan OAuth' : plugin.auth === 'custom' ? 'Perlu server MCP' : plugin.auth === 'public' ? 'Akses publik' : 'Perlu token'}</small></span></button><button className="m-plugin-row-add" aria-label={(profile ? 'Atur ' : 'Tambahkan ') + plugin.name} onClick={() => profile ? details(plugin, profile) : configure(plugin)}><Icon name={profile ? 'dots' : 'plus'} size={22}/></button></div>;
   }
   const title = view.kind === 'detail' ? view.plugin!.name : view.kind === 'connection' ? 'Koneksi plugin' : view.kind === 'category' ? view.category! : 'Plugin';
   async function share() {
@@ -110,17 +117,17 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
       : view.kind === 'detail' && view.plugin ? <Suspense fallback={<MobilePluginSkeleton/>}><PluginDetail plugin={view.plugin} profile={selectedProfile} onExample={text => example(view.plugin!, text)} onOpen={() => view.plugin!.auth === 'builtin' ? builtin(view.plugin!) : configure(view.plugin, selectedProfile)}/></Suspense>
       : <form className="m-plugin-connect-form" onSubmit={event => { event.preventDefault(); void connect(); }}>
         {view.plugin && <div className="m-plugin-connect-title"><PluginIcon {...view.plugin}/><h2>{view.plugin.name}</h2></div>}
-        {view.plugin?.auth === 'oauth' ? <p>Layanan ini meminta OAuth. Login otomatis belum tersedia. Kamu bisa memakai gateway MCP milikmu yang sudah mengelola login, atau membaca petunjuk resmi di bawah.</p> : <p>{view.plugin?.auth === 'public' ? 'Server publik sudah diisi. Kami akan memeriksa koneksi dan tools sebelum menambahkannya.' : view.plugin?.auth === 'token' ? 'Masukkan bearer token untuk server resmi ini. Token hanya dikirim ke URL yang tertera.' : 'Masukkan URL server MCP untuk layanan ini. Entri katalog belum berarti layanan sudah tersambung.'}</p>}
+        {auth === 'oauth' ? <p>Masuk melalui browser resmi penyedia dan pilih izin akunmu. Setelah login, SuperGPT akan memeriksa tools yang tersedia.</p> : <p>{view.plugin?.auth === 'public' ? 'Server publik sudah diisi. Kami akan memeriksa koneksi dan tools sebelum menambahkannya.' : view.plugin?.auth === 'token' ? 'Masukkan bearer token untuk server resmi ini. Token hanya dikirim ke URL yang tertera.' : 'Layanan ini memerlukan URL server MCP. Isi server yang kamu gunakan, lalu pilih metode masuk yang didukungnya.'}</p>}
         {view.plugin?.docs && <a href={view.plugin.docs} target="_blank" rel="noreferrer">Petunjuk koneksi resmi <Icon name="window" size={16}/></a>}
         <label>Nama<input required maxLength={80} disabled={busy} value={name} onChange={event => setName(event.target.value)}/></label>
         <label>URL server MCP<input required type="url" disabled={busy} placeholder="https://server.example/mcp" value={url} onChange={event => setUrl(event.target.value)}/></label>
-        <label>Bearer token (opsional)<input type="password" disabled={busy} autoComplete="off" maxLength={4096} value={token} onChange={event => setToken(event.target.value)}/></label>
-        <p className="m-plugin-form-caption">Token disimpan selama sesi aplikasi. Setelah terhubung, model Custom Endpoint dapat memakai tools dengan persetujuanmu. Mendukung MCP Streamable HTTP.</p>
+        <label>Metode masuk<select disabled={busy} value={auth} onChange={event => { setAuth(event.target.value as 'oauth' | 'token'); setToken(''); setError(''); }}><option value="oauth">Masuk dengan OAuth</option><option value="token">Token / tanpa login</option></select></label>
+        {auth === 'oauth' ? <><details><summary>Pengaturan aplikasi OAuth</summary><label>Client ID (jika diwajibkan penyedia)<input disabled={busy} value={clientId} maxLength={2048} onChange={event => setClientId(event.target.value)}/></label><p>Kosongkan untuk pendaftaran otomatis jika penyedia mendukungnya. Sebagian layanan memerlukan aplikasi SuperGPT didaftarkan atau disetujui terlebih dahulu.</p></details><p className="m-plugin-form-caption">Login dibuka di browser. Sesi OAuth disimpan terenkripsi di Android, atau selama sesi tab pada web. Izin mengikuti akun dan penyedia.</p></> : <><label>Bearer token (opsional)<input type="password" disabled={busy} autoComplete="off" maxLength={4096} value={token} onChange={event => setToken(event.target.value)}/></label><p className="m-plugin-form-caption">Token disimpan selama sesi aplikasi. Setelah terhubung, model Custom Endpoint dapat memakai tools dengan persetujuanmu. Mendukung MCP Streamable HTTP.</p></>}
         {error && <p role="alert" className="m-plugin-error">{error}</p>}
-        {busy && <div role="status" className="m-plugin-connecting"><span/>Memeriksa koneksi dan daftar tool…</div>}
-        <button className="m-plugin-primary" disabled={busy}>{busy ? 'Memeriksa…' : 'Uji & sambungkan'}</button>
+        {busy && <div role="status" className="m-plugin-connecting"><span/>{progress || 'Memeriksa koneksi dan daftar tool…'}</div>}
+        <button className="m-plugin-primary" disabled={busy}>{busy ? auth === 'oauth' ? 'Menghubungkan…' : 'Memeriksa…' : auth === 'oauth' ? 'Masuk & sambungkan' : 'Uji & sambungkan'}</button>
         {busy && <button type="button" onClick={() => request.current?.abort()}>Batalkan pemeriksaan</button>}
-        {selectedProfile && <div className="m-plugin-connection-actions"><button type="button" disabled={busy} onClick={() => store.setData(previous => ({ ...previous, mcp: previous.mcp.map(item => item.id === selectedProfile.id ? { ...item, enabled: false } : item) }))}>Nonaktifkan</button><button type="button" disabled={busy} onClick={() => { mcpToken(selectedProfile.id, ''); store.setData(previous => ({ ...previous, mcp: previous.mcp.filter(item => item.id !== selectedProfile.id) })); setDirection('back'); setPath([{ kind: 'installed' }]); }}>Hapus koneksi</button></div>}
+        {selectedProfile && <div className="m-plugin-connection-actions"><button type="button" disabled={busy} onClick={() => store.setData(previous => ({ ...previous, mcp: previous.mcp.map(item => item.id === selectedProfile.id ? { ...item, enabled: false } : item) }))}>Nonaktifkan</button><button type="button" disabled={busy} onClick={() => { void clearMcpOAuth(selectedProfile.id).then(() => { mcpToken(selectedProfile.id, ''); store.setData(previous => ({ ...previous, mcp: previous.mcp.filter(item => item.id !== selectedProfile.id) })); setDirection('back'); setPath([{ kind: 'installed' }]); }).catch(() => setError('Sesi OAuth belum dapat dihapus. Coba lagi.')); }}>Hapus koneksi</button></div>}
       </form>}
     </div>
     {(view.kind === 'catalog' || view.kind === 'category') && <footer className="m-plugin-search-footer"><label><Icon name="search" size={22}/><input aria-label="Cari plugin" placeholder="Cari plugin" value={query} onChange={event => { setQuery(event.target.value); if (scroll.current) scroll.current.scrollTop = 0; }}/>{query && <button aria-label="Hapus pencarian plugin" onClick={() => setQuery('')}><Icon name="close" size={18}/></button>}</label></footer>}

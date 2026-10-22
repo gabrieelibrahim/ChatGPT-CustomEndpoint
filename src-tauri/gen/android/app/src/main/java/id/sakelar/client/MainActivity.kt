@@ -34,6 +34,7 @@ class MainActivity : TauriActivity() {
   private val fileOpen by lazy { FileOpenBridge(this) }
   private val deviceActions by lazy { DeviceActionsBridge(this) }
   private val updates by lazy { UpdateBridge(this) }
+  private val mcpOAuth by lazy { McpOAuthBridge(this) }
   private val launch by lazy { LaunchBridge(this) }
   private var homeReply: androidx.webkit.JavaScriptReplyProxy? = null
   private fun openShortcut() {
@@ -70,7 +71,7 @@ class MainActivity : TauriActivity() {
   override fun onResume() { super.onResume(); speechCapture.onResume(); audioCapture.onResume(); try { ReleaseUpdater.resume(applicationContext) } catch (_: Exception) { } }
   override fun onPause() { speechCapture.onPause(); audioCapture.onPause(); super.onPause(); resumeTaskWebView() }
   override fun onStop() { speechCapture.onStop(); audioCapture.onStop(); super.onStop(); resumeTaskWebView(); ReleaseUpdater.background(applicationContext) }
-  override fun onDestroy() { settingsBack.isEnabled = false; settingsBackReply = null; homeReply = null; launch.destroy(); speechCapture.destroy(); audioCapture.destroy(); fileOpen.destroy(); deviceActions.destroy(); updates.destroy(); keyboardObserver?.let { taskWebView?.viewTreeObserver?.removeOnGlobalLayoutListener(it) }; keyboardObserver = null; taskWebView = null; super.onDestroy() }
+  override fun onDestroy() { settingsBack.isEnabled = false; settingsBackReply = null; homeReply = null; launch.destroy(); speechCapture.destroy(); audioCapture.destroy(); fileOpen.destroy(); deviceActions.destroy(); updates.destroy(); mcpOAuth.close(); keyboardObserver?.let { taskWebView?.viewTreeObserver?.removeOnGlobalLayoutListener(it) }; keyboardObserver = null; taskWebView = null; super.onDestroy() }
   override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     speechCapture.onPermissionResult(requestCode, grantResults)
@@ -162,6 +163,7 @@ class MainActivity : TauriActivity() {
         }
       }
       EndpointVault.install(webView, origins)
+      mcpOAuth.install(webView, origins)
       launch.bind(webView, origins)
       speechCapture.install(webView, origins)
       audioCapture.install(webView, origins)

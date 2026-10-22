@@ -47,7 +47,7 @@ async function turn(response: Response, signal: AbortSignal, text: (answer: stri
 
 export async function streamDirectTools(profile: EndpointProfile, key: string, model: string, messages: ProviderMessage[], signal: AbortSignal, onText: (text: string, reasoning?: string) => void, wait: Wait, effort?: string, onUsage?: (value: { input?: number; output?: number }) => void, onState?: (value: AgentMessageState) => void) {
   const config = loadMainAi(), settings = loadSettings();
-  const profiles = config.mcp && settings.pluginsEnabled ? mainMcpProfiles() : [];
+  const profiles = config.mcp && settings.pluginsEnabled ? await mainMcpProfiles(signal) : [];
   const web = config.web && config.webSearch === 'exa';
   if (!profiles.length && !web) return streamEndpointChat(profile, key, model, messages, signal, onText, effort, onUsage);
   if (profile.auth === 'bearer' && !key.trim()) throw Error('Masukkan API key di Custom Endpoint.');

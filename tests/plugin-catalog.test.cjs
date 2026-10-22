@@ -76,3 +76,10 @@ test('adding a custom MCP never overwrites an unrelated legacy profile, and cred
   assert.equal(sessionStorage.getItem('supergpt-mcp-token:' + added.id), 'fixture-secret'); assert.ok(!JSON.stringify(app.store.data).includes('fixture-secret'));
   assert.ok(requests.every(request => request.url === 'https://new.example/mcp')); assert.ok(app.notices[0].includes('Terhubung'));
 });
+
+test('OAuth plugin offers browser login and optional Client ID without requesting a bearer token', t => {
+  const app = fixture(t); app.button('Tambahkan Notion').props.onClick(); app.render();
+  assert.ok(text(app.tree).includes('Masuk melalui browser resmi')); assert.ok(app.button('Masuk & sambungkan'));
+  assert.equal(nodes(app.tree, item => item.type === 'label' && text(item).startsWith('Bearer token')).length, 0);
+  assert.ok(app.field('Client ID')); assert.deepEqual(app.store.data.mcp, []);
+});
