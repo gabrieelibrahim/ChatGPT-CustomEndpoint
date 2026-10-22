@@ -40,6 +40,13 @@
                 <!-- AndroidTV support -->
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
+            <!-- Sakelar's consent page opens supergpt://sakelar/... after approval; singleTask brings the waiting app back. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="supergpt" android:host="sakelar" />
+            </intent-filter>
         </activity>
 
         <service android:name=".TaskForegroundService" android:exported="false" android:foregroundServiceType="dataSync" android:stopWithTask="false" />

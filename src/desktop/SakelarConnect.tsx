@@ -1,14 +1,18 @@
 import {useEffect,useRef,useState} from 'react';
 import {ClientButton} from '../components/SDKPrimitives';
-import {connectSakelar,openSakelarBrowser,type SakelarConnection} from '../lib/sakelarConnect';
+import {KEEP_PENDING,connectSakelar,openSakelarBrowser,resumeSakelar,type SakelarConnection} from '../lib/sakelarConnect';
 export function SakelarConnect({onConnected,disabled=false}:{onConnected:(value:SakelarConnection)=>Promise<void>;disabled?:boolean}){
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[code,setCode]=useState(''),[browserUrl,setBrowserUrl]=useState('');
  const active=useRef<AbortController|null>(null);
- useEffect(()=>()=>{active.current?.abort();active.current=null;},[]);
- async function start(){
+ // Leaving this screen keeps a started connection; it resumes here, e.g. after Android recreated the app.
+ useEffect(()=>{void run(true);return()=>{active.current?.abort(KEEP_PENDING);active.current=null;};},[]);
+ const start=()=>run(false);
+ async function run(resume:boolean){
   if(active.current)return;
-  const controller=new AbortController();active.current=controller;setBusy(true);setMessage('');setCode('');setBrowserUrl('');
-  try{await connectSakelar(controller.signal,(text,nextCode,nextUrl)=>{if(active.current===controller){setMessage(text);if(nextCode)setCode(nextCode);if(nextUrl)setBrowserUrl(nextUrl);}},onConnected);}
+  const controller=new AbortController();active.current=controller;
+  if(!resume){setBusy(true);setMessage('');setCode('');setBrowserUrl('');}
+  const progress=(text:string,nextCode?:string,nextUrl?:string)=>{if(active.current===controller){setBusy(true);setMessage(text);if(nextCode)setCode(nextCode);if(nextUrl)setBrowserUrl(nextUrl);}};
+  try{if(resume){if(!await resumeSakelar(controller.signal,progress,onConnected))return;}else await connectSakelar(controller.signal,progress,onConnected);}
   catch(e){if(active.current===controller)setMessage(e instanceof Error&&e.name!=='AbortError'?e.message:controller.signal.aborted?'Koneksi dibatalkan.':'Koneksi Sakelar gagal.');}
   finally{if(active.current===controller){active.current=null;setBusy(false);setCode('');setBrowserUrl('');}}
  }

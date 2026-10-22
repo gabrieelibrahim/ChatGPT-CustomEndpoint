@@ -38,9 +38,28 @@ async function json(response:Response){
  finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
 }
 function delay(signal:AbortSignal,ms:number){return new Promise<void>((resolve,reject)=>{
- const abort=()=>{clearTimeout(timer);signal.removeEventListener('abort',abort);reject(Error('Koneksi Sakelar dibatalkan.'));};
- const timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},ms);signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
+ // Returning from the browser checks at once instead of waiting out the interval.
+ const visible=()=>{if(document.visibilityState==='visible')done()};
+ const cleanup=()=>{clearTimeout(timer);signal.removeEventListener('abort',abort);document.removeEventListener('visibilitychange',visible)};
+ const done=()=>{cleanup();resolve()};
+ const abort=()=>{cleanup();reject(Error('Koneksi Sakelar dibatalkan.'));};
+ const timer=setTimeout(done,ms);signal.addEventListener('abort',abort,{once:true});document.addEventListener('visibilitychange',visible);if(signal.aborted)abort();
 });}
+// A started connection survives the trip to the browser: Android may pause or recreate the WebView while the
+// browser is in front. Only this device's short-lived proof is kept (10 minutes), never a key.
+const PENDING='supergpt.sakelar.pending';
+export type PendingSakelar={deviceCode:string;verifier:string;userCode:string;browserUrl:string;expiresAt:number};
+function savePending(value:PendingSakelar){try{localStorage.setItem(PENDING,JSON.stringify(value))}catch{}}
+function clearPending(){try{localStorage.removeItem(PENDING)}catch{}}
+export function pendingSakelar():PendingSakelar|null{
+ try{
+  const v=JSON.parse(localStorage.getItem(PENDING)||'null');
+  if(!v||!pattern.test(v.deviceCode)||!pattern.test(v.verifier)||typeof v.userCode!=='string'||typeof v.browserUrl!=='string'||!(v.expiresAt>Date.now())){clearPending();return null}
+  return v;
+ }catch{return null}
+}
+/** Aborting with this reason (the screen closed, the app went away) keeps the started connection to resume later. */
+export const KEEP_PENDING='keep_pending';
 // Browser login remains at Sakelar. SuperGPT receives only its own key after explicit consent.
 export async function connectSakelar(signal:AbortSignal,progress:(message:string,code?:string,browserUrl?:string)=>void,commit:(connection:SakelarConnection)=>Promise<void>){
  signal.throwIfAborted();
@@ -49,22 +68,42 @@ export async function connectSakelar(signal:AbortSignal,progress:(message:string
  if(popup)popup.opener=null;
  if(!native&&!popup)throw Error('Izinkan jendela login Sakelar, lalu coba lagi.');
  const deadline=AbortSignal.any([signal,AbortSignal.timeout(600000)]);
- let deviceCode='',verifier='',completed=false,failure:unknown;
+ let pending:PendingSakelar|undefined;
  try{
   progress('Menyiapkan login browser Sakelar…');
-  verifier=random();
+  const verifier=random();
   const challenge=btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   const startResponse=await request('start',deadline,{challenge}),start=await json(startResponse);
   if(!startResponse.ok)throw connectionError(startResponse,start);
   if(typeof start.deviceCode!=='string'||!pattern.test(start.deviceCode))throw Error('Respons koneksi Sakelar tidak valid.');
-  deviceCode=start.deviceCode;
   if(typeof start.userCode!=='string'||!/^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/.test(start.userCode)||start.expiresIn!==600||start.interval!==3)throw Error('Kode koneksi Sakelar tidak valid.');
   if(typeof start.verificationUri!=='string')throw Error('Tujuan login Sakelar tidak sesuai.');
   const target=verifiedBrowserUrl(start.verificationUri);
   if(new URL(target).searchParams.get('code')!==start.userCode)throw Error('Kode login Sakelar tidak sesuai.');
-  progress('Membuka browser. Login Google di Sakelar, cocokkan kode, lalu pilih Izinkan koneksi SuperGPT. Setelah itu kembali ke aplikasi.',start.userCode,target);
+  pending={deviceCode:start.deviceCode,verifier,userCode:start.userCode,browserUrl:target,expiresAt:Date.now()+590000};
+  savePending(pending);
+  progress('Membuka browser. Login Google di Sakelar, cocokkan kode, lalu pilih Izinkan. SuperGPT terbuka lagi dan selesai sendiri.',start.userCode,target);
   deadline.throwIfAborted();
   if(popup)popup.location.href=target;else await openSakelarBrowser(target);
+ }catch(error){
+  popup?.close();
+  if(pending)await finish(pending,deadline,error);
+  throw error;
+ }
+ try{await poll(pending,deadline,progress,commit)}finally{popup?.close()}
+}
+/** Continues a connection started before the app was paused or restarted. Returns false when there is none. */
+export async function resumeSakelar(signal:AbortSignal,progress:(message:string,code?:string,browserUrl?:string)=>void,commit:(connection:SakelarConnection)=>Promise<void>){
+ const pending=pendingSakelar();
+ if(!pending)return false;
+ const deadline=AbortSignal.any([signal,AbortSignal.timeout(Math.max(1000,pending.expiresAt-Date.now()))]);
+ progress('Menunggu persetujuan di browser Sakelar…',pending.userCode,pending.browserUrl);
+ await poll(pending,deadline,progress,commit);
+ return true;
+}
+async function poll(pending:PendingSakelar,deadline:AbortSignal,progress:(message:string,code?:string,browserUrl?:string)=>void,commit:(connection:SakelarConnection)=>Promise<void>){
+ const {deviceCode,verifier}=pending;
+ try{
   for(;;){
    await delay(deadline,3000);deadline.throwIfAborted();
    // Closing the browser after consent is a normal way to return to the app.
@@ -77,10 +116,14 @@ export async function connectSakelar(signal:AbortSignal,progress:(message:string
    const models=await discoverEndpointModels(sakelarBaseUrl,value.apiKey,deadline);
    if(!models.length)throw Error('Belum ada model yang dapat dipakai akun ini. Periksa akses model Sakelar lalu hubungkan lagi.');
    deadline.throwIfAborted();await commit({apiKey:value.apiKey,keyId:value.keyId,expiresAt:value.expiresAt,models});
-   completed=true;progress('Sakelar terhubung. Endpoint dan model sudah terisi.');return;
+   clearPending();progress('Sakelar terhubung. Endpoint dan model sudah terisi.');return;
   }
- }catch(error){failure=error;throw error;}finally{
-  popup?.close();
-  if(!completed&&deviceCode&&verifier)await request('cancel',AbortSignal.timeout(5000),{deviceCode,verifier}).then(async r=>{await r.body?.cancel();if(!r.ok)throw Error('cleanup_failed');}).catch(()=>{throw Error((failure instanceof Error?failure.message+' ':'')+'Pembersihan koneksi belum terkonfirmasi. Jika ada key SuperGPT baru pada konsol Sakelar, cabut key tersebut sebelum mencoba lagi.');});
- }
+ }catch(error){await finish(pending,deadline,error);throw error;}
+}
+/** A connection that will not complete is cancelled with its proof (revoking a key already issued), unless the
+ * screen only went away and the connection should resume. */
+async function finish(pending:PendingSakelar,deadline:AbortSignal,failure:unknown){
+ if(deadline.aborted&&deadline.reason===KEEP_PENDING)return;
+ clearPending();
+ await request('cancel',AbortSignal.timeout(5000),{deviceCode:pending.deviceCode,verifier:pending.verifier}).then(async r=>{await r.body?.cancel();if(!r.ok)throw Error('cleanup_failed');}).catch(()=>{throw Error((failure instanceof Error?failure.message+' ':'')+'Pembersihan koneksi belum terkonfirmasi. Jika ada key SuperGPT baru pada konsol Sakelar, cabut key tersebut sebelum mencoba lagi.');});
 }
