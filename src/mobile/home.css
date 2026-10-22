@@ -43,3 +43,4 @@ html[data-client-theme=light] .m-home-header .m-round{background:var(--m-field);
 html[data-client-theme=light] .m-home-header .m-mode{background:#ddd}
 html[data-client-theme=light] .m-suggestions button,html[data-client-theme=light] .m-temporary-home p,html[data-client-theme=light] .m-temporary-home .m-learn-more{color:#666}
 @media(max-width:340px){.m-home-header .m-mode{width:156px}.m-app .m-suggestions button{font-size:16px}}
+.m-suggestion-mark{width:21px;height:21px;flex:none;border-radius:5px;background:#fff;padding:2px;box-sizing:border-box;object-fit:contain}

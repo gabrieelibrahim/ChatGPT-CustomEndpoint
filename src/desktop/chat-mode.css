@@ -20,3 +20,4 @@
 .d-root.d-chat-mode .d-home-suggestions>button{gap:18px;padding-left:0;padding-right:0;font-size:20px;line-height:30px;min-height:60px}
 .d-root .d-temporary{position:absolute;right:17px;top:90px;width:32px;height:42px;border-radius:50%;color:#eee;z-index:4}
 .d-root .d-temporary svg{width:24px;height:24px}
+.d-suggestion-mark{width:22px;height:22px;flex:none;border-radius:5px;background:#fff;padding:2px;box-sizing:border-box;object-fit:contain}

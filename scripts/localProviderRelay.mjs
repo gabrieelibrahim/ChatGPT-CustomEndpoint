@@ -29,7 +29,7 @@ export function localProviderRelay() {
             const bytes = Buffer.from(a.data, 'base64'); if (!bytes.length || bytes.length > 5 * 1024 * 1024) { fail(413); return; }
             form = new FormData(); form.append('file', new Blob([bytes], { type: a.type }), a.type === 'audio/webm' ? 'dictation.webm' : a.type === 'audio/ogg' ? 'dictation.ogg' : 'dictation.m4a'); form.append('model', a.model); form.append('response_format', 'json'); if (a.language) form.append(a.model === 'gpt-transcribe' ? 'languages[]' : 'language', a.language);
           }
-          if ((!chat && !audio && !url.pathname.endsWith('/models')) || (chat && (!payload.body || typeof payload.body !== 'object')) || (!chat && !audio && (payload.body || payload.audio)) || (chat && payload.audio)) { fail(400); return; }
+          if ((!chat && !audio && !url.pathname.endsWith('/models') && !url.pathname.endsWith('/account')) || (chat && (!payload.body || typeof payload.body !== 'object')) || (!chat && !audio && (payload.body || payload.audio)) || (chat && payload.audio)) { fail(400); return; }
           const upstream = await fetch(url, { method: chat || audio ? 'POST' : 'GET', signal: controller.signal, redirect: 'error', headers: {
             Accept: chat ? 'text/event-stream, application/json' : 'application/json', ...(payload.key ? { Authorization: 'Bearer ' + payload.key } : {}), ...(chat ? { 'Content-Type': 'application/json' } : {}),
           }, ...(chat ? { body: JSON.stringify(payload.body) } : audio ? { body: form } : {}) });

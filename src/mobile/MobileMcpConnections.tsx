@@ -31,7 +31,7 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
   const [auth, setAuth] = useState<'oauth' | 'token'>('token'), [clientId, setClientId] = useState(''), [progress, setProgress] = useState('');
   const [googleWrite, setGoogleWrite] = useState(false), [googleMode, setGoogleMode] = useState<'auto' | 'native' | 'broker'>('auto');
   const [googleServer, setGoogleServer] = useState(() => loadGoogleBroker().server), [googleToken, setGoogleToken] = useState(googleBrokerToken);
-  const request = useRef<AbortController | null>(null), mounted = useRef(true), scroll = useRef<HTMLDivElement>(null), offsets = useRef(new Map<string, number>());
+  const autoStart = useRef(false), request = useRef<AbortController | null>(null), mounted = useRef(true), scroll = useRef<HTMLDivElement>(null), offsets = useRef(new Map<string, number>());
   const view = path[path.length - 1], pageId = identity(view);
   const selectedProfile = store.data.mcp.find(item => item.id === view.profileId || !!view.plugin && (item.catalogId === view.plugin.id || sameUrl(item.url, view.plugin.url)));
   const google = googleService(url), isGoogle = !!google && (view.plugin?.provider === 'google' || auth === 'oauth' || selectedProfile?.auth === 'google');
@@ -57,8 +57,12 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
     const selectedUrl = profile?.url || plugin?.url || '';
     setName(profile?.name || plugin?.name || ''); setUrl(googleService(selectedUrl)?.url || selectedUrl); setToken(profile ? mcpToken(profile.id) : ''); setPendingPrompt(prompt);
     setAuth(['google', 'oauth'].includes(profile?.auth || plugin?.auth || '') ? 'oauth' : 'token'); setClientId(''); setProgress(''); setGoogleWrite(profile?.googleWrite === true); setGoogleMode('auto');
+    // On Android a new Google plugin goes straight to Google's own account chooser; the form stays as the fallback
+    // and for changing an existing connection.
+    autoStart.current = plugin?.provider === 'google' && !profile && hasNativeGoogleAuth();
     push({ kind: 'connection', plugin, profileId: profile?.id });
   }
+  useEffect(() => { if (view.kind === 'connection' && autoStart.current) { autoStart.current = false; void connect(); } }, [pageId]);
   async function connect() {
     if (request.current) return;
     const id = selectedProfile?.id || crypto.randomUUID(), controller = new AbortController(); request.current = controller; setBusy(true); setError('');
@@ -126,12 +130,12 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
     </header>
     {menu && <><button className="m-plugin-menu-dismiss" aria-label="Tutup pilihan halaman" onClick={() => setMenu(false)}/><div className="m-plugin-page-menu" role="menu"><button role="menuitem" onClick={() => push({ kind: 'catalog' })}>Semua plugin</button><button role="menuitem" onClick={() => push({ kind: 'installed' })}>Ditambahkan</button><button role="menuitem" onClick={() => configure()}>Server MCP sendiri</button></div></>}
     <div className="m-plugin-body" ref={element => { if (element) scroll.current = element; }} key={pageId}>
-      {view.kind === 'installed' ? <><h2 className="m-plugin-installed-label">Ditambahkan</h2><section className="m-plugin-installed-card">{installed.map(({ plugin, profile }) => <button key={profile?.id || plugin.id} onClick={() => details(plugin, profile)}><PluginIcon {...plugin}/><span>{profile?.name || plugin.name}</span>{profile && !profile.enabled && <small>Nonaktif</small>}</button>)}</section><button className="m-plugin-explore" onClick={() => push({ kind: 'catalog' })}><Icon name="settings-plugins" size={24}/><span>Jelajahi plugin</span></button><button className="m-plugin-own-link" onClick={() => configure()}>Tambahkan MCP sendiri</button></>
+      {view.kind === 'installed' ? <><h2 className="m-plugin-installed-label">Ditambahkan</h2><section className="m-plugin-installed-card">{installed.map(({ plugin, profile }) => <button key={profile?.id || plugin.id} onClick={() => details(plugin, profile)}><PluginIcon {...plugin}/><span>{profile?.name || plugin.name}</span>{profile && !profile.enabled && <small>Nonaktif</small>}</button>)}</section><button className="m-plugin-explore" onClick={() => push({ kind: 'catalog' })}><Icon name="settings-plugins" size={24}/><span>Jelajahi plugin</span></button><button className="m-plugin-own-link" onClick={() => configure()}><Icon name="plus" size={22}/><span>Tambahkan MCP sendiri</span></button></>
       : view.kind === 'catalog' || view.kind === 'category' ? <>
         {!query && view.kind === 'catalog' && <section className="m-plugin-installed-strip"><button className="m-plugin-section-title" onClick={() => push({ kind: 'installed' })}>Sudah Terinstal<Icon name="chevron-right" size={15}/></button><div>{installed.slice(0, installed.length > 6 ? 5 : 6).map(({ plugin, profile }) => <button aria-label={'Buka ' + (profile?.name || plugin.name)} key={profile?.id || plugin.id} onClick={() => details(plugin, profile)}><PluginIcon {...plugin}/></button>)}{installed.length > 6 && <button className="m-plugin-overflow-count" aria-label={'Lihat semua ' + installed.length + ' plugin yang ditambahkan'} onClick={() => push({ kind: 'installed' })}>+{installed.length - 5}</button>}</div></section>}
         {query || view.kind === 'category' ? <section className="m-plugin-category"><h2>{query ? 'Hasil pencarian' : view.category}</h2>{filterPlugins(query, view.category).map(row)}{!filterPlugins(query, view.category).length && <p className="m-plugin-empty">Tidak ada plugin yang cocok.</p>}</section>
         : pluginCategories.map(category => <section className="m-plugin-category" key={category}><button className="m-plugin-section-title" onClick={() => push({ kind: 'category', category })}>{category}<Icon name="chevron-right" size={15}/></button>{filterPlugins('', category).slice(0, 4).map(row)}</section>)}
-        <button className="m-plugin-own-link" onClick={() => configure()}>Tambahkan MCP sendiri</button>
+        <button className="m-plugin-own-link" onClick={() => configure()}><Icon name="plus" size={22}/><span>Tambahkan MCP sendiri</span></button>
       </>
       : view.kind === 'detail' && view.plugin ? <Suspense fallback={<MobilePluginSkeleton/>}><PluginDetail plugin={view.plugin} profile={selectedProfile} onExample={text => example(view.plugin!, text)} onOpen={() => view.plugin!.auth === 'builtin' ? builtin(view.plugin!) : configure(view.plugin, selectedProfile)}/></Suspense>
       : <form className="m-plugin-connect-form" onSubmit={event => { event.preventDefault(); void connect(); }}>

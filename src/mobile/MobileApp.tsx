@@ -1,5 +1,4 @@
-import workflow from '../../shared/workflows.json';
-import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { UIIcon as Icon } from '../components/UIIcon';
 import { AgentMessageExtras } from '../agent/AgentMessageExtras';
 import { MobileStreamingReply } from './MobileStreamingReply';
@@ -35,6 +34,8 @@ import { useClientData } from '../desktop/ClientCollections';
 import { smartPunctuation } from '../lib/clientSettings';
 import { endpointVaultState } from '../lib/mobileEndpointVault';
 import { signOutMobileProfile } from '../lib/mobileProfile';
+import { pickStarters } from '../lib/homeStarters';
+import { pluginMark } from './PluginIcon';
 
 function Button({ icon, label, onClick, children, ...props }: { icon?: string; label: string; onClick: () => void; children?: ReactNode; disabled?: boolean; className?: string; 'aria-pressed'?: boolean }) {
   return <button type="button" aria-label={label} onClick={onClick} {...props}>{icon && <Icon name={icon} size={22}/ >}{children}</button>;
@@ -169,6 +170,8 @@ export function MobileApp() {
   const matches = chatSearch?.trim() ? chat.messages.flatMap((message, index) => message.text.toLocaleLowerCase().includes(chatSearch.trim().toLocaleLowerCase()) ? [index] : []) : [];
   useEffect(() => { if (matches.length) { setAboveBottom(true); scroll.current?.querySelectorAll<HTMLElement>('article.m-message')[matches[searchHit % matches.length]]?.scrollIntoView({ block: 'center', behavior: 'smooth' }); } }, [chatSearch, searchHit]);
   const home = !chat.messages.length;
+  // A new set each time an empty chat opens; plugin starters only for plugins that are connected.
+  const starters = useMemo(() => pickStarters(clientData.data.mcp, Date.now()), [home, clientData.data.mcp]);
   let pinned: string[] = [];
   try { const value = JSON.parse(localStorage.getItem('desktop-pinned') || '[]'); if (Array.isArray(value)) pinned = value.filter(title => typeof title === 'string'); } catch { /* Empty lists are safe. */ }
 
@@ -202,7 +205,7 @@ export function MobileApp() {
         </div>
         <footer ref={footer} className={`m-footer${home ? ' m-footer-home' : ''}${composerState.focused || composerState.keyboardOpen ? ' m-composer-engaged' : ''}${composerState.phase === 'first-focus' ? ' m-composer-expanded' : ''}`}>
           {aboveBottom && <Button icon="arrow" label="Scroll to latest" className="m-to-bottom" onClick={() => { setAboveBottom(false); scroll.current?.scrollTo({ top: scroll.current.scrollHeight, behavior: 'smooth' }); }}/ >}
-          {home && !files.length && !chat.temporary && preferences.settings.suggestions && <div className="m-suggestions">{workflow.starters.map(({ label: value, prompt }) => <button key={value} onClick={() => { setDraft(prompt); textarea.current?.focus(); }}><Icon name="plugin" size={20}/><span>{value}</span></button>)}</div>}
+          {home && !files.length && !chat.temporary && preferences.settings.suggestions && <div className="m-suggestions">{starters.map(({ label: value, prompt, plugin, icon }) => <button key={value} onClick={() => { setDraft(prompt); textarea.current?.focus(); }}>{plugin && pluginMark(plugin) ? <img className="m-suggestion-mark" src={pluginMark(plugin)} alt=""/> : <Icon name={icon || 'plugin'} size={20}/>}<span>{value}</span></button>)}</div>}
           {chat.error && <div className="m-error" role="alert">{chat.error}<div><button onClick={() => navigate('endpoints')}>Pengaturan</button>{!chat.busy && chat.messages.at(-1)?.role === 'user' && <button onClick={() => void chat.send('', [], true, requestContext)}>Coba lagi</button>}</div></div>}
           {speechMode === 'dictation' ? <MobileSpeech mode="dictation" onClose={closeSpeech} onDictation={value => { setDraft(previous => (previous + ' ' + value).trim()); setSpeechMode(''); }} onReply={voiceReply}/> : <MobileComposer input={textarea} value={draft} expanded={composerState.phase === 'first-focus'} engaged={composerState.focused || composerState.keyboardOpen} uploading={uploading} busy={chat.busy} hasFiles={!!files.length} idleSend={chat.temporary || mode === 'Work'} attachments={files.length > 0 ? <div className="m-attachments">{files.map(file => <MobileAttachment key={file.id} file={file} pending onRemove={() => setFiles(previous => previous.filter(item => item.id !== file.id))}/>)}</div> : undefined}
             onChange={value => setDraft(preferences.settings.smartPunctuation ? smartPunctuation(value) : value)} onFocus={() => setComposerState(focusComposer)} onBlur={() => { setComposerState(blurComposer); mobileComposerKeyboard('hide'); }} onAttach={() => setSheet('attachments')}

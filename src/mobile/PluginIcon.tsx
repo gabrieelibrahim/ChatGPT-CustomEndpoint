@@ -68,6 +68,8 @@ const marks: Record<string, string> = {
   'sentry': 'sentry.svg',
   'vercel': 'vercel.svg',
 };
+/** The bundled logo file for a catalog plugin, if one is verified. */
+export const pluginMark = (id: string) => marks[id] ? '/plugin-icons/' + marks[id] : undefined;
 export function PluginIcon({ id, name, icon }: { id: string; name: string; icon?: string }) {
   const symbol = icon || id;
   let content;
