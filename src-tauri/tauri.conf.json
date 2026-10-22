@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "SuperGPT",
   "mainBinaryName": "SuperGPT",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "identifier": "id.sakelar.client",
   "build": {
     "frontendDist": "../dist",

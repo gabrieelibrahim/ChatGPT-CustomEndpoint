@@ -1,6 +1,6 @@
 [package]
 name = "sakelar"
-version = "0.1.17"
+version = "0.1.18"
 description = "SuperGPT by Sakelar - Universal AI Client"
 authors = ["Sakelar contributors"]
 repository = "https://github.com/gabrieelibrahim/SuperGPT"
