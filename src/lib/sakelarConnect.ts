@@ -101,13 +101,33 @@ export async function resumeSakelar(signal:AbortSignal,progress:(message:string,
  await poll(pending,deadline,progress,commit);
  return true;
 }
+/** Resolves once the app is in front again. Android pauses the WebView behind the browser, and native requests
+ * made from a paused WebView can fail before they reach the network. */
+function foreground(signal:AbortSignal){return new Promise<void>((resolve,reject)=>{
+ if(typeof document==='undefined'||document.visibilityState!=='hidden'){resolve();return}
+ const shown=()=>{if(document.visibilityState!=='hidden'){cleanup();resolve()}};
+ const abort=()=>{cleanup();reject(Error('Koneksi Sakelar dibatalkan.'))};
+ const cleanup=()=>{document.removeEventListener('visibilitychange',shown);signal.removeEventListener('abort',abort)};
+ document.addEventListener('visibilitychange',shown);signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
+});}
 async function poll(pending:PendingSakelar,deadline:AbortSignal,progress:(message:string,code?:string,browserUrl?:string)=>void,commit:(connection:SakelarConnection)=>Promise<void>){
  const {deviceCode,verifier}=pending;
+ let failures=0;
  try{
   for(;;){
    await delay(deadline,3000);deadline.throwIfAborted();
+   await foreground(deadline);
    // Closing the browser after consent is a normal way to return to the app.
-   const response=await request('token',deadline,{deviceCode,verifier});
+   let response:Response;
+   try{response=await request('token',deadline,{deviceCode,verifier});}
+   catch(error){
+    // A dropped request (app just resumed, network switching) is retried until the 10-minute code expires.
+    deadline.throwIfAborted();
+    if(++failures===2)progress('Menunggu jaringan untuk menyelesaikan koneksi Sakelar…',pending.userCode,pending.browserUrl);
+    continue;
+   }
+   if(failures>=2)progress('Menunggu persetujuan di browser Sakelar…',pending.userCode,pending.browserUrl);
+   failures=0;
    if(response.status===202){await response.body?.cancel();continue;}
    if(!response.ok){await response.body?.cancel();throw Error(response.status===403?'Koneksi ditolak atau akun tidak tersedia.':response.status===429?'Batas percobaan Sakelar tercapai. Mulai lagi nanti.':'Kode koneksi sudah berakhir atau hasilnya belum terkonfirmasi. Mulai lagi dari SuperGPT.');}
    const value=await json(response);

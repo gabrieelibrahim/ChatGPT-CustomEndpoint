@@ -10,16 +10,17 @@ const KEY = 'sk_live_' + 'k'.repeat(43);
 function storage() { const values = {}; return { getItem: key => values[key] ?? null, setItem: (key, value) => { values[key] = String(value); }, removeItem: key => { delete values[key]; } }; }
 
 /** Browser-like globals and a fake Sakelar: token answers pending `pendingPolls` times, then issues a key. */
-function fixture(t, { pendingPolls = 1 } = {}) {
+function fixture(t, { pendingPolls = 1, dropTokens = 0 } = {}) {
   const previous = Object.fromEntries(['window', 'document', 'localStorage', 'fetch'].map(key => [key, globalThis[key]]));
   const popup = { opener: {}, location: { href: '' }, closed: false, close() { this.closed = true; } };
   globalThis.window = Object.assign(new EventTarget(), { open: () => popup });
   globalThis.document = Object.assign(new EventTarget(), { visibilityState: 'visible' });
   globalThis.localStorage = storage();
   const calls = [];
-  let polls = 0;
+  let polls = 0, dropped = 0;
   globalThis.fetch = async (url, init = {}) => {
     const path = new URL(url).pathname;
+    if (path === '/api/supergpt/token' && dropped < dropTokens) { dropped++; throw new TypeError('Failed to fetch'); }
     calls.push(path);
     const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
     if (path === '/api/supergpt/start') return json(200, { deviceCode: DEVICE, userCode: 'ABCD-EFGH', verificationUri: 'https://app.sakelar.web.id/console/connectsupergpt?code=ABCD-EFGH', expiresIn: 600, interval: 3 });
@@ -74,4 +75,18 @@ test('an expired saved connection is not resumed', async t => {
   localStorage.setItem('supergpt.sakelar.pending', JSON.stringify({ deviceCode: DEVICE, verifier: 'v'.repeat(43), userCode: 'ABCD-EFGH', browserUrl: 'https://app.sakelar.web.id/console/connectsupergpt?code=ABCD-EFGH', expiresAt: Date.now() - 1 }));
   assert.equal(connect.pendingSakelar(), null);
   assert.equal(localStorage.getItem('supergpt.sakelar.pending'), null);
+});
+
+test('requests wait for the app to be in front, and a dropped request is retried instead of cancelling', async t => {
+  const { calls } = fixture(t, { pendingPolls: 0, dropTokens: 3 });
+  document.visibilityState = 'hidden';  // the browser is in front
+  const committed = [];
+  const running = connect.connectSakelar(new AbortController().signal, () => {}, async value => { committed.push(value); });
+  await new Promise(resolve => setTimeout(resolve, 200));
+  assert.ok(!calls.includes('/api/supergpt/token'), 'no request while the app is behind the browser');
+  document.visibilityState = 'visible';  // the deep link brings the app back
+  await running;
+  assert.equal(committed.length, 1, 'connected after three dropped requests');
+  assert.ok(!calls.includes('/api/supergpt/cancel'), 'a dropped request never cancels the connection');
+  assert.equal(connect.pendingSakelar(), null);
 });
