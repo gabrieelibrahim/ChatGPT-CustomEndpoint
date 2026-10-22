@@ -9,6 +9,10 @@ export function googleScopes(service: GoogleWorkspaceService, write = false) {
   return [...new Set([...service.readScopes, ...(write ? service.writeScopes : []), googleIdentityScope])];
 }
 export function googleScopeGranted(scope: string, granted: string[]) {
+  // Google normalizes the legacy Classroom coursework read scope in consent results.
+  const classroomRead = 'https://www.googleapis.com/auth/classroom.coursework.students.readonly';
+  const classroomCanonical = 'https://www.googleapis.com/auth/classroom.student-submissions.students.readonly';
+  if (scope === classroomRead && granted.includes(classroomCanonical)) return true;
   if (scope === googleIdentityScope && granted.includes('email')) return true;
   if (scope === 'https://www.googleapis.com/auth/userinfo.profile' && granted.includes('profile')) return true;
   if (granted.includes(scope)) return true;

@@ -1,6 +1,6 @@
 # SuperGPT: Google OAuth dan iPhone/iPad
 
-22 Oktober 2026. Persiapan source; belum ada proyek Google Cloud, server HTTPS, build iOS, atau pengujian iPhone nyata dari pekerjaan ini.
+22 Oktober 2026. Proyek Google Cloud dan client Android sudah dikonfigurasi pada sesi pemilik. Belum ada server OAuth HTTPS yang dideploy, build iOS, atau pengujian iPhone nyata dari pekerjaan ini. Akses MCP resmi masih menunggu akun Google Workspace dan persetujuan Developer Preview; akun Gmail pribadi tidak diterima oleh formulir program. Rincian terkini: [pendaftaran Google Workspace](google-workspace-registration.md).
 
 ## Mulai sekarang: daftar proyek Google
 

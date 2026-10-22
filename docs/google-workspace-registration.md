@@ -1,6 +1,8 @@
 # Pendaftaran Google Workspace MCP untuk SuperGPT
 
-Tanggal: 22 Oktober 2026, Asia/Jakarta. Source disiapkan; proyek Google Cloud dan OAuth client belum dibuat. Panduan ini tidak memberi izin compile, push, deploy, atau rilis.
+Tanggal: 22 Oktober 2026, Asia/Jakarta. Source disiapkan. Pada sesi konfigurasi pemilik, proyek dan client Android sudah dibuat, API produk dan MCP diaktifkan, scope disimpan, serta Chat MCP dikonfigurasi. Identitas proyek pribadi disimpan di catatan lokal, bukan source. Belum compile atau rilis.
+
+**Penghalang akses MCP:** [formulir Developer Preview resmi](https://developers.google.com/workspace/preview) mensyaratkan email dalam domain Google Workspace dan tidak menerima Gmail, service account, atau Google Group. Pemilik saat ini belum memiliki akun Workspace. API berstatus Enabled dan OAuth client terdaftar belum membuktikan akses MCP. Pendaftaran serta persetujuan Google masih diperlukan sebelum uji koneksi nyata; source tetap dapat disiapkan untuk compile. Jangan membeli Workspace hanya dengan asumsi bahwa akses preview pasti disetujui.
 
 ## Layanan yang disiapkan
 
@@ -41,7 +43,7 @@ Source memakai Google Identity `AuthorizationClient` dan Google-owned consent UI
    ```
 
    Fingerprint dibaca dari APK v0.1.11 yang sudah ada, tanpa membangun APK baru. SHA-256 sertifikat cocok dengan pin repo: `7544dc65194da6bb8b0bb8c86005759e91707f7dc0a6f8ddb53eb907bf7a7737`. Tidak ada private key/password yang dibaca atau diganti.
-3. Daftarkan consent/scopes pada proyek yang sama. Ikuti persyaratan **Use this client for an AI-powered agent** untuk akses MCP resmi. Bila Google tidak menyediakan pengaturan yang diperlukan untuk tipe Android atau proyekmu, gunakan jalur server di bawah; otorisasi akun Google saja belum membuktikan MCP akan menerima client tersebut.
+3. Daftarkan consent/scopes pada proyek yang sama. Centang **Use this client for an AI-powered agent** untuk akses MCP resmi. Opsi ini tersedia pada client Android dan sudah dipilih pada sesi konfigurasi pemilik. Otorisasi akun Google saja belum membuktikan MCP akan menerima client tersebut.
 4. Versi debug memakai package terpisah dan sertifikat berbeda; jangan mengganti signing key produksi untuk menyelesaikan pendaftaran debug.
 5. Pengujian perangkat membutuhkan Google Play services, akun yang diizinkan, dan future build yang mendapat izin pengguna. Google memblokir loopback OAuth untuk client tipe Android; source Android Google ini menggunakan Google Identity, bukan callback loopback generik.
 

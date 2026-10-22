@@ -76,6 +76,8 @@ class GoogleAuthorizationBridge(private val activity: Activity) {
   }
   private fun scopeGranted(scope: String, granted: Set<String>): Boolean {
     if (scope in granted) return true
+    // Google canonicalizes this legacy Classroom read scope after consent.
+    if (scope == "https://www.googleapis.com/auth/classroom.coursework.students.readonly" && "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly" in granted) return true
     if (scope == EMAIL_SCOPE && "email" in granted) return true
     if (scope == "https://www.googleapis.com/auth/userinfo.profile" && "profile" in granted) return true
     if (scope.endsWith(".readonly") && scope.removeSuffix(".readonly") in granted) return true
