@@ -71,9 +71,9 @@ The generated Android project is checked in without build outputs, local SDK pat
 
 ## iOS
 
-The shared mobile interface and `tauri.ios.conf.json` are prepared. Generating, signing and testing an iOS application requires **macOS with Xcode and Apple's signing setup**. It cannot be compiled into an installable IPA on this Windows machine.
+See [Google OAuth and iOS setup](docs/ios-and-google-setup.md) for the current source preparation and Safari option without a Mac. The shared mobile interface and `tauri.ios.conf.json` are prepared for iOS/iPadOS 17.4+. Generating, signing and testing an iOS application requires **macOS with Xcode and Apple's signing setup**. It cannot be compiled into an installable IPA on this Windows machine.
 
-On a Mac with Tauri's iOS prerequisites installed:
+Run `npm run ios:doctor` on a Mac for a read-only prerequisite report. The commands below can compile and require separate user authorization. On a Mac with Tauri's iOS prerequisites installed:
 
 ```bash
 npm ci

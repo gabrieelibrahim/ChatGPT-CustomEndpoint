@@ -1,10 +1,10 @@
 {
   "build": {
     "beforeDevCommand": "npm run dev:mobile",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "npm run build:mobile"
   },
   "app": {
     "windows": [{ "label": "main", "title": "SuperGPT", "visible": true, "minWidth": 320, "minHeight": 320, "backgroundColor": "#000000" }]
   },
-  "bundle": { "resources": [] }
+  "bundle": { "resources": [], "iOS": { "minimumSystemVersion": "17.4", "infoPlist": "Info.ios.plist" } }
 }

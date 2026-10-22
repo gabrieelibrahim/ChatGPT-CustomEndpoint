@@ -30,12 +30,14 @@
     "android:build:debug": "node scripts/mobile.mjs android build --apk --target aarch64 --debug",
     "android:signing:init": "node scripts/setupAndroidSigning.mjs",
     "test:android-release": "node scripts/androidStartupSmoke.mjs",
-    "ios:init": "node scripts/mobile.mjs ios init",
-    "ios:dev": "node scripts/mobile.mjs ios dev",
-    "ios:build": "node scripts/mobile.mjs ios build",
+    "ios:init": "node scripts/ios.mjs init",
+    "ios:dev": "node scripts/ios.mjs dev",
+    "ios:build": "node scripts/ios.mjs build",
     "sdk:server": "node server/sdk/main.mjs",
     "test:sdk": "node --test tests/sdk-*.test.mjs",
-    "release:android": "node scripts/publishAndroidRelease.mjs"
+    "release:android": "node scripts/publishAndroidRelease.mjs",
+    "build:mobile": "tsc --noEmit && vite build --mode mobile && node scripts/checkSdkStyles.mjs",
+    "ios:doctor": "node scripts/ios.mjs doctor"
   },
   "dependencies": {
     "@openai/agents": "0.20.0",

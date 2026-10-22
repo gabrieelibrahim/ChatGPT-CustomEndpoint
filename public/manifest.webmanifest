@@ -1,0 +1,13 @@
+{
+  "id": "/",
+  "name": "SuperGPT",
+  "short_name": "SuperGPT",
+  "lang": "id",
+  "description": "Chat AI dengan endpoint pilihan dan plugin yang kamu hubungkan.",
+  "start_url": "/?mobile=1",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [{ "src": "/app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

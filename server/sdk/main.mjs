@@ -23,7 +23,7 @@ const server = createServer((req, res) => {
   const file = existsSync(path) && statSync(path).isFile() ? path : resolve(root, 'index.html');
   if (!existsSync(file)) { res.writeHead(503).end('Run npm run build first.'); return; }
   const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.ttf': 'font/ttf', '.svg': 'image/svg+xml' };
-  res.setHeader('Content-Type', mime[extname(file)] || 'application/octet-stream'); res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Type', extname(file) === '.webmanifest' ? 'application/manifest+json' : mime[extname(file)] || 'application/octet-stream'); res.setHeader('X-Content-Type-Options', 'nosniff');
   if (extname(file) === '.ttf') res.setHeader('Access-Control-Allow-Origin', '*');
   res.end(req.method === 'HEAD' ? undefined : readFileSync(file));
 });

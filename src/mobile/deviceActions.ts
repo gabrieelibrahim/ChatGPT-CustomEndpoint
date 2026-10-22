@@ -1,5 +1,6 @@
 import { diagnosticReport, logDiagnostic } from '../lib/diagnosticLog';
 import { isNativeDesktop } from '../lib/nativeDesktop';
+import { isAppleMobileDevice } from '../lib/applePlatform';
 
 type Bridge = { postMessage(value: string): void; addEventListener(type: 'message', listener: (event: MessageEvent) => void): void };
 const pending = new Map<string, { resolve(value: string): void; reject(reason: Error): void }>();
@@ -8,6 +9,15 @@ export async function exportDeviceFile(name: string, text: string, type = 'appli
   const bridge = (window as Window & { SuperGPTExport?: Bridge }).SuperGPTExport;
   if (!bridge) {
     if (isNativeDesktop() && /Android/i.test(navigator.userAgent)) throw Error('Ekspor memerlukan APK terbaru.');
+    if (isAppleMobileDevice()) {
+      const file = new File([text], name, { type });
+      if (navigator.canShare?.({ files: [file] })) {
+        // iOS offers Save to Files in its share sheet; keep this in the click gesture.
+        try { await navigator.share({ files: [file], title: name }); }
+        catch (error) { if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled'; throw error; }
+        return 'shared';
+      }
+    }
     const url = URL.createObjectURL(new Blob([text], { type }));
     const link = document.createElement('a'); link.href = url; link.download = name; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000); return 'downloaded';

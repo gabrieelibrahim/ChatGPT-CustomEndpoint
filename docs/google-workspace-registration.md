@@ -47,7 +47,9 @@ Source memakai Google Identity `AuthorizationClient` dan Google-owned consent UI
 
 Lihat [otorisasi Android](https://developer.android.com/identity/authorization) dan [pembatasan loopback Google](https://developers.google.com/identity/protocols/oauth2/resources/loopback-migration).
 
-## 2B. Server OAuth untuk web atau alternatif Android
+## 2B. Server OAuth untuk web, iOS, atau alternatif Android
+
+Pada iPhone/iPad gunakan jalur server ini; Google Identity dan vault native Android tidak tersedia di iOS. Koneksi iOS disimpan selama sesi aplikasi, belum memakai Keychain.
 
 Gunakan server SuperGPT yang kamu kendalikan. Secret OAuth Google serta refresh token berada pada server; aplikasi hanya menyimpan koneksi opaque dan meminta access token saat membutuhkan MCP.
 
@@ -84,3 +86,5 @@ Lihat [Google OAuth web-server](https://developers.google.com/identity/protocols
 - Uji satu operasi baca yang dipilih pengguna; untuk menulis, tampilkan argumen tindakan lalu minta persetujuan melalui mekanisme chat yang sudah ada.
 - Uji web broker menggunakan HTTPS sungguhan, CORS origin yang tepat, refresh sesudah access token berakhir, dan pemulihan server dengan kunci enkripsi yang sama.
 - Sampai langkah tersebut dilakukan, jangan menyatakan akun Google nyata sudah terhubung atau semua tool Google berhasil berjalan.
+
+Panduan mulai dari nol dan pilihan iPhone tanpa Mac: [Google OAuth dan iOS](ios-and-google-setup.md).
