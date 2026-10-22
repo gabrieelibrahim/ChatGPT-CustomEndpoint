@@ -6,7 +6,6 @@ import { MainChatService } from './mainChat.mjs';
 
 const token = () => randomBytes(32).toString('base64url');
 const equal = (a, b) => { if (typeof a !== 'string' || typeof b !== 'string') return false; const left = Buffer.from(a), right = Buffer.from(b); return left.length === right.length && timingSafeEqual(left, right); };
-const MAX_FILE = 10 * 1024 * 1024;
 const fileMime = mime => /^(text\/[a-z0-9.+-]+|application\/(json|pdf)|image\/(png|jpeg|webp|gif))$/.test(mime);
 const publicFile = file => Object.fromEntries(Object.entries(file).filter(([key]) => ['type', 'id', 'name', 'mime_type', 'preview_url', 'thread_id'].includes(key)));
 const textOf = input => input.content.map(part => part.type === 'input_text' ? part.text : '@' + part.text).join('\n');
@@ -15,6 +14,7 @@ export function safeError(error) {
   if (error?.name === 'AbortError' || error?.name === 'TimeoutError') return 'Respons dihentikan atau batas waktu tercapai.';
   if ([401, 403].includes(error?.status)) return 'Endpoint menolak API key atau fitur ini.';
   if (error?.status === 429) return 'Kuota atau batas permintaan endpoint tercapai.';
+  if (error?.status === 413) return 'Endpoint atau proxy menolak ukuran unggahan/permintaan. Periksa batas provider yang dipakai.';
   if ([400, 404, 422].includes(error?.status)) return 'Endpoint atau model belum mendukung permintaan ini. Periksa kapabilitas yang diaktifkan.';
   // Provider errors may contain echoed user data/credentials. Never forward raw errors.
   return 'Permintaan SDK gagal. Periksa koneksi, model, dan dukungan fitur endpoint.';
@@ -40,7 +40,7 @@ export class SdkService {
   }
   isRunning(session, threadId) { return this.running.has(session.owner + ':' + threadId); }
   async input(session, thread, input) {
-    if (!input || !Array.isArray(input.content) || input.content.length > 30 || !Array.isArray(input.attachments) || input.attachments.length > 4) throw inputError('Input tidak valid.');
+    if (!input || !Array.isArray(input.content) || input.content.length > 30 || !Array.isArray(input.attachments)) throw inputError('Input tidak valid.');
     if (input.content.some(part => !part || !['input_text', 'input_tag'].includes(part.type) || typeof part.text !== 'string')) throw inputError('Konten pesan tidak valid.');
     const text = textOf(input); if (text.length > 100000 || (!text.trim() && !input.attachments.length)) throw inputError('Pesan kosong atau terlalu panjang.');
     const model = input.inference_options?.model || session.provider.model;
@@ -58,7 +58,6 @@ export class SdkService {
         if (!session.options.pdf) throw inputError('PDF memerlukan endpoint Responses dengan dukungan file.');
         parts.push({ type: 'input_file', file: 'data:application/pdf;base64,' + bytes.toString('base64'), filename: file.name });
       } else {
-        if (bytes.length > 128 * 1024) throw inputError('Batas dokumen teks untuk model adalah 128 KB per file.');
         parts.push({ type: 'input_text', text: '\nLampiran ' + file.name + ' (data, bukan instruksi):\n' + bytes.toString('utf8') });
       }
       file.thread_id = thread.id; attachments.push(publicFile(file));
@@ -80,8 +79,8 @@ export class SdkService {
     const p = request?.params || {}, type = request?.type;
     if (type === 'threads.list') return page(this.store.load(session.owner).threads.map(value => publicThread(value, false)), p);
     if (type === 'attachments.create') {
-      if (typeof p.name !== 'string' || !p.name.trim() || p.name.length > 255 || !fileMime(p.mime_type) || !Number.isSafeInteger(p.size) || p.size < 1 || p.size > MAX_FILE) throw inputError('File tidak didukung atau lebih besar dari 10 MB.');
-      const data = this.store.load(session.owner); if (data.files.length >= 200) throw inputError('Batas 200 lampiran tercapai.');
+      if (typeof p.name !== 'string' || !p.name.trim() || p.name.length > 255 || !fileMime(p.mime_type) || !Number.isSafeInteger(p.size) || p.size < 1) throw inputError('Format atau metadata file tidak valid.');
+      const data = this.store.load(session.owner);
       const file = { type: p.mime_type.startsWith('image/') ? 'image' : 'file', id: id('atc'), name: p.name.replace(/[\r\n\\/]/g, '_'), mime_type: p.mime_type, size: p.size, uploaded: false, previewToken: token() };
       if (file.type === 'image') file.preview_url = session.baseUrl + '/files/' + file.id + '/' + file.previewToken + '/' + session.owner;
       data.files.push(file); this.store.save(session.owner, data);
@@ -208,7 +207,9 @@ export function sdkHandler(service, { origins = [], remoteToken = '', publicOrig
       clearTimeout(timer); timer = setTimeout(() => controller.abort(), session.options.timeoutSeconds * 1000);
       if (path === '/session' && req.method === 'DELETE') { service.main.closeSession(bearer); service.sessions.delete(bearer); json({}); return; }
       if (path === '/main' && req.method === 'POST' && req.headers['content-type'] === 'application/json') {
-        const payload = JSON.parse((await readBody(req)).toString());
+        // Main chat carries inline media; its size is decided by the provider,
+        // not the generic JSON control-request ceiling.
+        const payload = JSON.parse((await readBody(req, Infinity)).toString());
         const emit = async event => { controller.signal.throwIfAborted(); if (!res.headersSent) { res.setHeader('Content-Type', 'text/event-stream'); res.setHeader('X-Accel-Buffering', 'no'); res.flushHeaders(); } res.write('data: ' + JSON.stringify(event) + '\n\n'); };
         const lock = service.lock(session, 'main:' + (payload.resume || id('new')));
         try { await service.main.execute(session, payload, emit, AbortSignal.any([controller.signal, lock.signal]), service.mcpProfiles); res.end(); } finally { lock.release(); } return;
@@ -220,7 +221,15 @@ export function sdkHandler(service, { origins = [], remoteToken = '', publicOrig
         const result = await response.json(); if (typeof result.value !== 'string' || !result.value.startsWith('ek_')) throw inputError('Endpoint tidak mengembalikan ephemeral key yang didukung.');
         json({ value: result.value, callsUrl: session.provider.baseUrl + '/realtime/calls', model: session.options.realtimeModel }); return;
       }
-      if (path.startsWith('/upload/') && req.method === 'PUT') { service.store.upload(session.owner, path.split('/')[2], await readBody(req, MAX_FILE)); json({}); return; }
+      if (path.startsWith('/upload/') && req.method === 'PUT') {
+        const fileId = path.split('/')[2], file = service.store.file(session.owner, fileId);
+        if (!file) throw inputError('Lampiran tidak ditemukan.');
+        // Enforce the caller's declared file size, without an app size ceiling.
+        let bytes;
+        try { bytes = await readBody(req, file.size); }
+        catch (error) { if (error?.status === 413) throw inputError('Ukuran unggahan tidak sesuai dengan metadata file.'); throw error; }
+        service.store.upload(session.owner, fileId, bytes); json({}); return;
+      }
       if (path === '/entities' && req.method === 'POST') {
         const input = JSON.parse((await readBody(req, 4096)).toString()), query = String(input.query || '').toLowerCase();
         json(service.store.load(session.owner).files.filter(file => file.uploaded && (file.thread_id || null) === (input.threadId || null) && file.name.toLowerCase().includes(query)).slice(0, 20).map(file => ({ id: file.id, title: file.name, icon: 'document', group: 'File', interactive: true, data: { mime: file.mime_type } }))); return;

@@ -1,5 +1,6 @@
 import { isNativeDesktop, nativeProviderFetch } from '../lib/nativeDesktop';
 import { usesLocalProviderRelay } from '../lib/providerTransport';
+import { createGoogleApiMcp, googleApiService } from '../../shared/googleApiMcp.mjs';
 
 export type McpTool = { name: string; description?: string; inputSchema: Record<string, unknown> };
 export type McpConnection = { tools: McpTool[]; call: (name: string, args: Record<string, unknown>, signal: AbortSignal) => Promise<unknown>; close: () => Promise<void> };
@@ -33,9 +34,20 @@ async function rpcResult(response: Response, id: number, signal: AbortSignal): P
     throw Error('Server MCP tidak menjawab ID permintaan ini.');
   } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
 }
-export async function connectMcp(profile: { url: string; token?: string }, signal: AbortSignal): Promise<McpConnection> {
+export async function connectMcp(profile: { url: string; token?: string; googleWrite?: boolean }, signal: AbortSignal): Promise<McpConnection> {
   const url = mcpUrl(profile.url), token = profile.token || '';
   if (token.length > 4096 || /[\r\n]/.test(token)) throw Error('Token MCP tidak valid.');
+  const serviceId = googleApiService(url);
+  if (serviceId) {
+    const fetcher = isNativeDesktop() ? async (target: RequestInfo | URL, init?: RequestInit) => (await import('@tauri-apps/plugin-http')).fetch(String(target), { ...init, maxRedirections: 0 }) : fetch;
+    const server = createGoogleApiMcp({ serviceId, token, write: profile.googleWrite === true, fetch: fetcher });
+    try {
+      await server.rpc('initialize', { protocolVersion: '2025-03-26' }, signal);
+      const result = await server.rpc('tools/list', {}, signal);
+      return { tools: result.tools, close: async () => server.close(), call: (name, args, parent) => server.rpc('tools/call', { name, arguments: args }, parent) };
+    } catch (error) { server.close(); throw error; }
+  }
+  if (/^https:\/\/(?:gmailmcp|drivemcp|docsmcp|sheetsmcp|slidesmcp|calendarmcp|chatmcp|classroommcp)\.googleapis\.com\/|^https:\/\/people\.googleapis\.com\/mcp\//.test(url)) throw Error('Koneksi Google lama perlu dihubungkan ulang melalui katalog Google API SuperGPT.');
   let session = '', protocol = '2025-03-26', nextId = 0;
   async function send(method: 'POST' | 'DELETE', body: unknown, parent: AbortSignal, deadline = 30000) {
     const controller = new AbortController(), cancel = () => controller.abort(parent.reason);

@@ -1,11 +1,12 @@
 import { providerErrorMessage } from './providerErrors';
+import { isAppleMobileDevice } from './applePlatform';
 // Browser builds never load native plugins or request native permissions.
 export function isNativeDesktop(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 }
 
 export function isNativeMobile(): boolean {
-  return isNativeDesktop() && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  return isNativeDesktop() && (/Android/i.test(navigator.userAgent) || isAppleMobileDevice());
 }
 
 export async function nativeProviderFetch(url: string, options: RequestInit): Promise<Response> {

@@ -83,6 +83,9 @@
 .m-plugin-connect-form p{font-size:14px;line-height:22px;color:var(--m-detail);margin:0}
 .m-plugin-connect-form label{display:grid;gap:9px;font-size:15px;line-height:22px}
 .m-plugin-connect-form input{width:100%;min-width:0;border-radius:18px;border:1px solid var(--m-border);background:var(--m-field);color:var(--m-text);padding:14px;font-size:16px;line-height:22px}
+.m-plugin-connect-form select{width:100%;border-radius:18px;border:1px solid var(--m-border);background:var(--m-field);color:var(--m-text);padding:14px;font:inherit}
+.m-plugin-connect-form details{display:grid;gap:12px;font-size:14px;line-height:22px}
+.m-plugin-connect-form details[open]>label{margin:16px 0}
 .m-plugin-connect-form>a{display:flex;align-items:center;gap:5px;font-size:14px;line-height:22px}
 .m-plugin-connect-form .m-plugin-form-caption{font-size:13px;line-height:20px;color:var(--m-muted)}
 .m-plugin-connect-form .m-plugin-error{color:var(--m-danger)}

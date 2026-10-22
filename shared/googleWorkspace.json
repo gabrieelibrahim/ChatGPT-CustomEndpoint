@@ -1,0 +1,170 @@
+[
+  {
+    "id": "gmail",
+    "name": "Gmail",
+    "url": "https://google.supergpt.invalid/mcp/gmail",
+    "icon": "gmail",
+    "description": "Cari email, baca percakapan, dan buat draf melalui akun Google",
+    "categories": [
+      "Populer",
+      "Komunikasi"
+    ],
+    "readScopes": [
+      "https://www.googleapis.com/auth/gmail.readonly"
+    ],
+    "writeScopes": [
+      "https://www.googleapis.com/auth/gmail.compose",
+      "https://www.googleapis.com/auth/gmail.modify"
+    ],
+    "legacyUrl": "https://gmailmcp.googleapis.com/mcp/v1"
+  },
+  {
+    "id": "google-drive",
+    "name": "Google Drive",
+    "url": "https://google.supergpt.invalid/mcp/google-drive",
+    "icon": "drive",
+    "description": "Cari, baca, dan kelola file Google Drive",
+    "categories": [
+      "Populer",
+      "Produktivitas"
+    ],
+    "readScopes": [
+      "https://www.googleapis.com/auth/drive.readonly"
+    ],
+    "writeScopes": [
+      "https://www.googleapis.com/auth/drive.file"
+    ],
+    "legacyUrl": "https://drivemcp.googleapis.com/mcp/v1"
+  },
+  {
+    "id": "google-docs",
+    "name": "Google Docs",
+    "url": "https://google.supergpt.invalid/mcp/google-docs",
+    "icon": "googledocs",
+    "description": "Baca dan ubah dokumen Google Docs",
+    "categories": [
+      "Produktivitas"
+    ],
+    "readScopes": [
+      "https://www.googleapis.com/auth/drive.readonly",
+      "https://www.googleapis.com/auth/documents.readonly"
+    ],
+    "writeScopes": [
+      "https://www.googleapis.com/auth/documents"
+    ],
+    "legacyUrl": "https://docsmcp.googleapis.com/mcp/v1"
+  },
+  {
+    "id": "google-sheets",
+    "name": "Google Sheets",
+    "url": "https://google.supergpt.invalid/mcp/google-sheets",
+    "icon": "googlesheets",
+    "description": "Baca data, perbarui sel, dan kelola rumus spreadsheet",
+    "categories": [
+      "Produktivitas",
+      "Data & Analitika"
+    ],
+    "readScopes": [
+      "https://www.googleapis.com/auth/drive.readonly",
+      "https://www.googleapis.com/auth/spreadsheets.readonly"
+    ],
+    "writeScopes": [
+      "https://www.googleapis.com/auth/spreadsheets"
+    ],
+    "legacyUrl": "https://sheetsmcp.googleapis.com/mcp/v1"
+  },
+  {
+    "id": "google-slides",
+    "name": "Google Slides",
+    "url": "https://google.supergpt.invalid/mcp/google-slides",
+    "icon": "googleslides",
+    "description": "Baca dan ubah presentasi Google Slides",
+    "categories": [
+      "Produktivitas",
+      "Kreativitas"
+    ],
+    "readScopes": [
+      "https://www.googleapis.com/auth/drive.readonly",
+      "https://www.googleapis.com/auth/presentations.readonly"
+    ],
+    "writeScopes": [
+      "https://www.googleapis.com/auth/presentations"
+    ],
+    "legacyUrl": "https://slidesmcp.googleapis.com/mcp/v1"
+  },
+  {
+    "id": "google-calendar",
+    "name": "Google Calendar",
+    "url": "https://google.supergpt.invalid/mcp/google-calendar",
+    "icon": "calendar",
+    "description": "Lihat agenda, cari waktu luang, dan kelola acara",
+    "categories": [
+      "Produktivitas",
+      "Komunikasi"
+    ],
+    "readScopes": [
+      "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+      "https://www.googleapis.com/auth/calendar.events.readonly",
+      "https://www.googleapis.com/auth/calendar.events.freebusy"
+    ],
+    "writeScopes": [
+      "https://www.googleapis.com/auth/calendar.events"
+    ],
+    "legacyUrl": "https://calendarmcp.googleapis.com/mcp/v1"
+  },
+  {
+    "id": "google-chat",
+    "name": "Google Chat",
+    "url": "https://google.supergpt.invalid/mcp/google-chat",
+    "icon": "mail",
+    "description": "Cari percakapan Google Chat dan tanggapi pesan",
+    "categories": [
+      "Komunikasi"
+    ],
+    "readScopes": [
+      "https://www.googleapis.com/auth/chat.spaces.readonly",
+      "https://www.googleapis.com/auth/chat.messages.readonly"
+    ],
+    "writeScopes": [
+      "https://www.googleapis.com/auth/chat.messages.create"
+    ],
+    "legacyUrl": "https://chatmcp.googleapis.com/mcp/v1"
+  },
+  {
+    "id": "google-contacts",
+    "name": "Google Contacts",
+    "url": "https://google.supergpt.invalid/mcp/google-contacts",
+    "icon": "personal",
+    "description": "Cari kontak dan baca profil Google melalui People API",
+    "categories": [
+      "Komunikasi"
+    ],
+    "readScopes": [
+      "https://www.googleapis.com/auth/contacts.readonly"
+    ],
+    "writeScopes": [],
+    "legacyUrl": "https://people.googleapis.com/mcp/v1"
+  },
+  {
+    "id": "google-classroom",
+    "name": "Google Classroom",
+    "url": "https://google.supergpt.invalid/mcp/google-classroom",
+    "icon": "book",
+    "description": "Lihat kelas dan tugas, serta siapkan pengumuman kelas",
+    "categories": [
+      "Pendidikan"
+    ],
+    "readScopes": [
+      "https://www.googleapis.com/auth/classroom.courses.readonly",
+      "https://www.googleapis.com/auth/classroom.rosters.readonly",
+      "https://www.googleapis.com/auth/classroom.student-submissions.students.readonly",
+      "https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly",
+      "https://www.googleapis.com/auth/classroom.topics.readonly",
+      "https://www.googleapis.com/auth/classroom.announcements.readonly"
+    ],
+    "writeScopes": [
+      "https://www.googleapis.com/auth/classroom.announcements"
+    ],
+    "legacyUrl": "https://classroommcp.googleapis.com/mcp/v1"
+  }
+]

@@ -21,7 +21,7 @@ export function providerStatusError(status: number): Error {
   if (status === 401 || status === 403) return Error('Akses ditolak. Periksa API key dan izin penyedia.');
   if (status === 429) return Error('Kuota atau batas permintaan tercapai. Periksa saldo dan batas penyedia.');
   if (status === 400 || status === 404) return Error('Model atau alamat API tidak tersedia. Periksa Base URL dan ID model.');
-  if (status === 413) return Error('Percakapan terlalu besar untuk koneksi ini. Mulai chat baru atau kurangi teks.');
+  if (status === 413) return Error('Endpoint atau proxy menolak ukuran unggahan/permintaan. Periksa batas provider yang dipakai.');
   if (status === 502) return Error('Koneksi lokal gagal menghubungi penyedia. Periksa Base URL dan jaringan.');
   if (status === 504) return Error('Penyedia terlalu lama merespons. Coba lagi.');
   return Error('Permintaan gagal (HTTP ' + status + '). Coba lagi nanti.');

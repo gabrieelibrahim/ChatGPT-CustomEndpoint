@@ -13,8 +13,8 @@ export function localProviderRelay() {
         const timer = setTimeout(() => controller.abort(), 3600000);
         res.on('close', () => { if (!res.writableEnded) controller.abort(); });
         try {
-          const chunks = []; let size = 0;
-          for await (const chunk of req) { size += chunk.length; if (size > 32 * 1024 * 1024) { fail(413); return; } chunks.push(chunk); }
+          const chunks = [];
+          for await (const chunk of req) chunks.push(chunk);
           const raw = Buffer.concat(chunks).toString('utf8');
           let payload, url;
           try { payload = JSON.parse(raw); url = new URL(payload.url); } catch { fail(400); return; }

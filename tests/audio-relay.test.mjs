@@ -32,3 +32,21 @@ test('audio relay rejects cross-origin requests and invalid audio before contact
     assert.equal(b.status, 400);
   } finally { await close(relay); }
 });
+
+test('provider relay forwards media above the old 32 MB envelope and preserves provider rejection status', async () => {
+  let received;
+  const provider = http.createServer(async (req, res) => {
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    received = JSON.parse(Buffer.concat(chunks).toString());
+    res.writeHead(413, { 'Content-Type': 'application/json' }); res.end('{"error":"provider size limit"}');
+  });
+  let handler; localProviderRelay().configureServer({ middlewares: { use(_, value) { handler = value; } } });
+  const relay = http.createServer(handler), providerUrl = await listen(provider), relayUrl = await listen(relay);
+  try {
+    const image = 'data:image/png;base64,' + 'A'.repeat(33 * 1024 * 1024);
+    const body = { model: 'fixture', messages: [{ role: 'user', content: [{ type: 'image_url', image_url: { url: image } }] }] };
+    const response = await fetch(relayUrl, { method: 'POST', headers: { Origin: relayUrl, 'Content-Type': 'application/json' }, body: JSON.stringify({ url: providerUrl + '/v1/chat/completions', key: '', body }) });
+    assert.equal(received.messages[0].content[0].image_url.url, image);
+    assert.equal(response.status, 413);
+  } finally { await close(relay); await close(provider); }
+});

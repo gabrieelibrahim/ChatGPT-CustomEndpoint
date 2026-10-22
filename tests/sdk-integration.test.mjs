@@ -15,7 +15,7 @@ const stop = server => new Promise(resolve => { server.close(resolve); server.cl
 async function fixture(t, opts = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'supergpt-sdk-test-')), requests = [];
   const provider = createServer(async (req, res) => {
-    const rawBody = req.method === 'POST' ? await readBody(req) : Buffer.alloc(0);
+    const rawBody = req.method === 'POST' ? await readBody(req, opts.providerBodyLimit) : Buffer.alloc(0);
     const body = req.headers['content-type']?.startsWith('multipart/form-data') ? {} : JSON.parse(rawBody.toString() || '{}');
     requests.push({ path: req.url, body, authorization: req.headers.authorization });
     if (req.url === '/v1/audio/transcriptions') { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ text: 'Transkripsi fixture' })); return; }
@@ -131,6 +131,35 @@ test('two-phase text uploads bind to a thread; foreign files and unsupported for
   assert.equal((await f.stream({ type: 'threads.create', params: { input: message } })).response.status, 400);
 });
 
+test('SDK accepts large uploads and multiple attachments while preserving ownership and size consistency', async t => {
+  const f = await fixture(t);
+  const data = f.service.store.load(owner);
+  data.files = Array.from({ length: 200 }, (_, n) => ({ id: 'existing_' + n, name: 'old.txt', size: 1, mime_type: 'text/plain', uploaded: false }));
+  f.service.store.save(owner, data);
+  const bytes = Buffer.alloc(11 * 1024 * 1024, 'x'); bytes.write('end-marker', bytes.length - 10);
+  const refs = [];
+  for (let n = 0; n < 6; n++) {
+    const contents = n === 0 ? bytes : Buffer.from('attachment-' + n);
+    const created = await f.call('/chatkit', { type: 'attachments.create', params: { name: 'large-' + n + '.txt', size: contents.length, mime_type: 'text/plain' } });
+    assert.equal(created.status, 200);
+    const file = await created.json(); refs.push(file.id);
+    const send = (body, headers = file.upload_descriptor.headers) => fetch(file.upload_descriptor.url, { method: 'PUT', headers: { ...headers, Origin: f.url }, body });
+    if (n === 0) {
+      assert.equal((await send(contents, { ...file.upload_descriptor.headers, Authorization: 'Bearer foreign-session' })).status, 401);
+      assert.equal((await send(Buffer.from('short'))).status, 400);
+    }
+    if (n === 1) assert.equal((await send(Buffer.concat([contents, Buffer.from('extra')]))).status, 400);
+    assert.equal((await send(contents)).status, 200);
+  }
+  assert.equal(f.service.store.load(owner).files.length, 206);
+  const message = { ...input('read attached files'), attachments: refs };
+  const result = await f.stream({ type: 'threads.create', params: { input: message } });
+  assert.equal(result.response.status, 200); assert.ok(!result.events.some(e => e.type === 'error'), result.text);
+  const sent = f.requests.at(-1).body.messages.find(m => m.role === 'user').content;
+  const text = typeof sent === 'string' ? sent : sent.map(p => p.text || '').join('');
+  assert.ok(text.includes(bytes.toString())); assert.ok(text.includes('attachment-5'));
+});
+
 test('loopback origin, opaque session isolation, validation and error redaction', async t => {
   const f = await fixture(t);
   assert.equal((await f.call('/session', f.payload, { Origin: 'https://evil.invalid' })).status, 403);
@@ -213,6 +242,17 @@ const mainStream = async (f, payload, token = f.token) => {
   return { response, text, events };
 };
 const mainInput = text => ({ messages: [{ role: 'user', text }] });
+
+test('main chat forwards inline media above the old 32 MB envelope and large hydrated document text', async t => {
+  const f = await fixture(t, { providerBodyLimit: Infinity });
+  const image = 'data:image/png;base64,' + 'A'.repeat(33 * 1024 * 1024);
+  const text = 'document-data '.repeat(20000) + 'end-marker';
+  const result = await mainStream(f, { messages: [{ role: 'user', text, images: [image] }] });
+  assert.equal(result.response.status, 200); assert.ok(result.events.some(e => e.type === 'main.done'), result.text);
+  const sent = f.requests.at(-1).body.messages.find(m => m.role === 'user').content;
+  assert.equal(sent.find(p => p.type === 'image_url').image_url.url, image);
+  assert.ok(sent.some(p => p.text === text));
+});
 
 test('main chat uses current device history, function calls, and never creates a second server history', async t => {
   const f = await fixture(t), messages = [{ role: 'user', text: 'Previous question' }, { role: 'assistant', text: 'Previous answer' }, { role: 'user', text: 'calculate fixture' }];

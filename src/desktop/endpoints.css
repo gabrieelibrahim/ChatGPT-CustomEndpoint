@@ -102,3 +102,5 @@
 :is(.d-root,.d-setup) .d-endpoint-form .d-error{display:block;border-color:#654541;background:#382826;color:#ffc0b8}
 :is(.d-root,.d-setup) .d-endpoint-form footer{position:static;display:flex;justify-content:flex-end;gap:12px;margin-top:28px;padding:20px 0 0;border-top:1px solid #383838;background:none}
 :is(.d-root,.d-setup) .d-endpoint-scope{display:flex;align-items:center;gap:10px;max-width:1250px;margin:24px auto 0;color:#888;font-size:14px;line-height:24px}
+
+.d-sakelar-connect{border:1px solid var(--m-border,#8884);padding:18px 20px;border-radius:16px;margin:16px 0 24px;max-width:760px}.d-sakelar-connect>strong{font-size:16px;font-weight:600}.d-sakelar-connect p{font-size:13px;line-height:1.6;color:var(--m-muted,#999);margin:8px 0 12px;overflow-wrap:anywhere}.d-sakelar-connect small{display:block;font-size:12px;color:var(--m-muted,#999);margin-top:12px}.d-sakelar-code{font-family:monospace;letter-spacing:3px;color:var(--m-text,inherit);white-space:nowrap}

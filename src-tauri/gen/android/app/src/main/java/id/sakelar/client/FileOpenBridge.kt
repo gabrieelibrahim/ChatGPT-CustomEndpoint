@@ -16,14 +16,13 @@ class FileOpenBridge(private val activity: Activity) {
     WebViewCompat.addWebMessageListener(webView, "SuperGPTFile", origins) { _, message, _, mainFrame, _ ->
       if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
       val raw = message.data ?: return@addWebMessageListener
-      if (raw.length > 15 * 1024 * 1024) return@addWebMessageListener
       worker.execute {
         try {
           val request = JSONObject(raw)
           val name = request.getString("name").replace(Regex("[^\\p{L}\\p{N}._ -]"), "_").take(160).ifBlank { "attachment" }
           val type = request.optString("type").takeIf { it.matches(Regex("[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+-]+")) } ?: "application/octet-stream"
-          val encoded = request.getString("data"); require(encoded.length <= 14 * 1024 * 1024)
-          val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT); require(bytes.size <= 10 * 1024 * 1024)
+          val encoded = request.getString("data")
+          val bytes = android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
           val directory = File(activity.cacheDir, "attachment-previews").apply { mkdirs() }
           // Keep external readers usable for one day; clear only our own stale copies.
           directory.listFiles()?.filter { System.currentTimeMillis() - it.lastModified() > 86400000 }?.forEach { it.deleteRecursively() }

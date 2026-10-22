@@ -3,6 +3,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import { SdkService, sdkHandler } from './service.mjs';
 import { safeUrl, loadMcpProfiles } from './config.mjs';
+import { googleOAuthBrokerFromEnvironment } from '../google/oauthBroker.mjs';
 
 const directory = resolve(process.env.SUPERGPT_SDK_DATA || '.supergpt-sdk');
 const mcpProfiles = loadMcpProfiles();
@@ -10,8 +11,10 @@ const origins = (process.env.SUPERGPT_ALLOWED_ORIGINS || '').split(',').map(valu
 const service = new SdkService({ directory, mcpProfiles });
 const publicOrigin = process.env.SUPERGPT_PUBLIC_ORIGIN ? safeUrl(process.env.SUPERGPT_PUBLIC_ORIGIN) : '';
 const api = sdkHandler(service, { origins, remoteToken: process.env.SUPERGPT_SERVER_TOKEN || '', publicOrigin });
+const google = googleOAuthBrokerFromEnvironment({ directory: resolve(directory, 'google'), origins });
 const root = resolve('dist');
 const server = createServer((req, res) => {
+  if (req.url?.startsWith('/__google/')) { void google.handler(req, res); return; }
   if (req.url?.startsWith('/__sdk/')) { void api(req, res); return; }
   const host = req.headers.host || '';
   if (!/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host) || !['GET', 'HEAD'].includes(req.method)) { res.writeHead(403).end(); return; }
@@ -20,9 +23,9 @@ const server = createServer((req, res) => {
   const file = existsSync(path) && statSync(path).isFile() ? path : resolve(root, 'index.html');
   if (!existsSync(file)) { res.writeHead(503).end('Run npm run build first.'); return; }
   const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.ttf': 'font/ttf', '.svg': 'image/svg+xml' };
-  res.setHeader('Content-Type', mime[extname(file)] || 'application/octet-stream'); res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Type', extname(file) === '.webmanifest' ? 'application/manifest+json' : mime[extname(file)] || 'application/octet-stream'); res.setHeader('X-Content-Type-Options', 'nosniff');
   if (extname(file) === '.ttf') res.setHeader('Access-Control-Allow-Origin', '*');
   res.end(req.method === 'HEAD' ? undefined : readFileSync(file));
 });
 server.listen(Number(process.env.SUPERGPT_SDK_PORT || 1430), '127.0.0.1', () => console.log('SuperGPT SDK server: http://127.0.0.1:' + server.address().port));
-for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { service.close(); server.close(); });
+for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => { google.close(); service.close(); server.close(); });

@@ -1,4 +1,6 @@
 import { safeAgentItem } from './agentItem';
+import type { ToolActivity } from './toolActivity';
+import { finishActivities } from './toolActivity';
 import { connectSdk } from '../chatkit/transport';
 import { loadSettings } from '../lib/clientSettings';
 import { streamEndpointChat, type ProviderMessage } from '../lib/endpointChat';
@@ -7,7 +9,7 @@ import { loadMainAi, mainAgentAvailable, mainMcpProfiles, mainServerToken } from
 import type { Widgets } from '@openai/chatkit';
 
 export type AgentDecision = { kind: 'approval'; itemId: string; callId: string; allow: boolean } | { kind: 'answer'; itemId: string; text: string };
-export type AgentItem = { id: string; type: 'widget' | 'structured_input' | 'generated_image'; widget?: Widgets.WidgetRoot; status?: string; inputs?: { id: string; question: string; options?: { value: string }[]; answer?: { values: string[] } }[]; image?: { url: string } };
+export type AgentItem = { id: string; type: 'widget' | 'structured_input' | 'generated_image' | 'tool_activity'; activity?: ToolActivity; widget?: Widgets.WidgetRoot; status?: string; inputs?: { id: string; question: string; options?: { value: string }[]; answer?: { values: string[] } }[]; image?: { url: string } };
 export type AgentMessageState = { runId?: string; progress?: string; notice?: string; active: boolean; pending: boolean; sources: { title: string; url: string }[]; items: AgentItem[] };
 const decisions = new Map<string, (decision: AgentDecision) => void>();
 export const canAnswerAgent = (id?: string) => !!id && decisions.has(id);
@@ -34,7 +36,7 @@ export async function streamMainChat(profile: EndpointProfile, key: string, mode
   const settings = loadSettings(), state: AgentMessageState = { active: true, pending: false, progress: 'Memproses…', sources: [], items: [] }, texts = new Map<string, string>();
   const publish = () => onState?.({ ...state, sources: [...state.sources], items: [...state.items] });
   const mergeSources = (sources: { title: string; url: string }[]) => { for (const source of sources) { try { const url = new URL(source.url); if (['https:', 'http:'].includes(url.protocol) && !url.username && !url.password && !state.sources.some(value => value.url === url.href)) state.sources.push({ title: String(source.title || url.hostname).slice(0, 240), url: url.href }); } catch { /* Invalid source. */ } } state.sources = state.sources.slice(0, 20); };
-  const connection = await connectSdk({ server: config.server, domainKey: '', options: { api: config.api, tools: true, vision: true, pdf: false, web: config.web, webSearch: config.webSearch, code: false, images: false, mcp: config.mcp && settings.pluginsEnabled, vectorStores: [], transcriptionModel: '', realtimeModel: '' } }, { ...profile, model }, key, mainServerToken(), { ...settings, instructions: '', memoriesEnabled: false, writingStyle: 'balanced' }, { signal, mcp: config.mcp && settings.pluginsEnabled ? mainMcpProfiles() : [], reasoningEffort: effort });
+  const connection = await connectSdk({ server: config.server, domainKey: '', options: { api: config.api, tools: true, vision: true, pdf: false, web: config.web, webSearch: config.webSearch, code: false, images: false, mcp: config.mcp && settings.pluginsEnabled, vectorStores: [], transcriptionModel: '', realtimeModel: '' } }, { ...profile, model }, key, mainServerToken(), { ...settings, instructions: '', memoriesEnabled: false, writingStyle: 'balanced' }, { signal, mcp: config.mcp && settings.pluginsEnabled ? await mainMcpProfiles(signal) : [], reasoningEffort: effort });
   let usage: { input?: number; output?: number } = {};
   let payload: unknown = { messages: messages.map(({ role, text, images }) => ({ role, text, images })), temporary };
   try {
@@ -55,7 +57,7 @@ export async function streamMainChat(profile: EndpointProfile, key: string, mode
           onText([...texts.values()].filter(Boolean).join('\n\n')); publish();
         } else if (event.type === 'thread.item.updated' && event.update?.type === 'assistant_message.content_part.text_delta') {
           texts.set(event.item_id, (texts.get(event.item_id) || '') + event.update.delta); onText([...texts.values()].filter(Boolean).join('\n\n'));
-        } else if (item && ['widget', 'structured_input', 'generated_image'].includes(item.type)) { const safe = safeAgentItem(item); if (safe) { const at = state.items.findIndex(value => value.id === safe.id); if (at < 0 && state.items.length < 64) state.items.push(safe); else if (at >= 0) state.items[at] = safe; publish(); } }
+        } else if (item && ['widget', 'structured_input', 'generated_image', 'tool_activity'].includes(item.type)) { const safe = safeAgentItem(item); if (safe) { const at = state.items.findIndex(value => value.id === safe.id); if (at < 0 && state.items.length < 64) state.items.push(safe); else if (at >= 0) state.items[at] = safe; publish(); } }
         if (event.type === 'client_effect' && event.name === 'sdk.usage') { for (const key of ['input', 'output'] as const) if (typeof event.data?.[key] === 'number') usage[key] = (usage[key] || 0) + event.data[key]; onUsage?.({ ...usage }); }
       });
       if (!paused) { if (!finished) throw Error('Koneksi agen berakhir sebelum jawaban selesai.'); break; }
@@ -63,5 +65,5 @@ export async function streamMainChat(profile: EndpointProfile, key: string, mode
       const decision = await waitDecision(state.runId!, signal, publish);
       state.pending = false; state.progress = 'Melanjutkan…'; publish(); payload = { resume: state.runId, decision };
     }
-  } finally { if (state.runId) decisions.delete(state.runId); state.active = false; state.pending = false; state.progress = ''; publish(); await connection.close().catch(() => {}); }
+  } finally { if (state.runId) decisions.delete(state.runId); finishActivities(state.items); state.active = false; state.pending = false; state.progress = ''; publish(); await connection.close().catch(() => {}); }
 }
