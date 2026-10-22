@@ -17,11 +17,10 @@
 .m-app .m-plugin-installed-strip>div>.m-plugin-overflow-count{background:var(--m-panel);border:1px solid var(--m-border);font-size:18px;font-weight:500}
 .m-plugin-icon{height:48px;width:48px;min-width:48px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--m-border-soft);border-radius:13px;background:#050505;padding:6px;overflow:hidden;color:#fff;box-sizing:border-box}
 .m-plugin-icon>img,.m-plugin-icon>svg{display:block;object-fit:contain;width:100%;height:100%;max-width:100%;max-height:100%}
-.m-plugin-icon-github>svg{width:40px;height:40px}
+.m-plugin-icon.m-plugin-mark{background:#fff}
 .m-plugin-icon.m-plugin-icon-management{background:#146c68;border-color:#286e6c;color:#d9ffff}
 .m-plugin-flower{font-size:33px;line-height:1}
 .m-plugin-monogram{font-size:21px;font-weight:600;letter-spacing:-1px;white-space:nowrap}
-.m-plugin-icon-remote .m-plugin-monogram{font-size:26px;color:#fff}
 .m-plugin-icon-spaces,.m-plugin-icon-globe{color:var(--m-text);background:transparent}
 .m-plugin-category{margin:0 0 48px}
 .m-plugin-category>h2{font-size:17px;line-height:24px;font-weight:500;margin:4px 0 24px;color:var(--m-detail)}
