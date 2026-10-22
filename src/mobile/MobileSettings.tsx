@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { MobileNavigationIcon as Icon } from './MobileNavigationIcon';
 import { ClientSwitch } from '../components/SDKPrimitives';
-import { loadUsage, type ClientSettings } from '../lib/clientSettings';
+import { type ClientSettings } from '../lib/clientSettings';
 import { saveLocalProfile, type LocalProfile } from '../lib/localProfile';
 import { libraryFiles } from '../lib/fileLibrary';
 import { loadEndpointStore } from '../lib/endpointProfiles';
@@ -11,6 +11,8 @@ import { MobileDeviceLibrary } from './MobileDeviceLibrary';
 import { MobileSettingsSkeleton } from './MobileSettingsSkeleton';
 import { TimeoutControls } from '../components/TimeoutControls';
 import { MobileLogs } from './MobileLogs';
+import { MobileUsage } from './MobileUsage';
+import { Group, Row } from './SettingsCard';
 import { MainAiControls } from '../agent/MainAiControls';
 
 type Props = {
@@ -21,11 +23,6 @@ type Props = {
   onArchive: (titles: string[]) => void; onNotice: (message: string) => void; onClose: () => void; onSignOut: () => void;
 };
 
-function Group({ title, children }: { title?: string; children: ReactNode }) { return <section className="m-setting-group">{title && <h2>{title}</h2>}<div className="m-setting-card">{children}</div></section>; }
-function Row({ icon, title, detail, onClick, children, disabled = false }: { icon?: string; title: string; detail?: string; onClick?: () => void; children?: ReactNode; disabled?: boolean }) {
-  const content = <>{icon && <Icon name={icon} size={22}/>}<span className="m-setting-label">{title}</span>{detail && <span className="m-setting-detail">{detail}</span>}{children}</>;
-  return onClick ? <button type="button" className="m-setting-row" disabled={disabled} onClick={onClick}>{content}</button> : <div className="m-setting-row" aria-disabled={disabled || undefined}>{content}</div>;
-}
 const names: Record<string, string> = { root: 'Pengaturan', tools: 'Fitur AI', personalization: 'Personalisasi', memory: 'Memori', account: 'Akun', usage: 'Penggunaan dan batasan', appearance: 'Tampilan', accent: 'Warna aksen', general: 'Umum', notifications: 'Notifikasi', voice: 'Suara', security: 'Keamanan dan masuk', storage: 'Penyimpanan', privacy: 'Pusat privasi', data: 'Kontrol data', about: 'Tentang', deviceLibrary: 'Library perangkat', updates: 'Pembaruan aplikasi', logs: 'Log aplikasi' };
 
 export function MobileSettings(p: Props) {
@@ -74,7 +71,7 @@ export function MobileSettings(p: Props) {
     : screen === 'general' ? <Group>{toggle('Getaran streaming', s.streamHaptics, streamHaptics => update({ streamHaptics }))}{toggle('Saran di halaman utama', s.suggestions, suggestions => update({ suggestions }))}<Row title="Model" detail={p.model || 'Belum dipilih'} onClick={p.onModels}/><Row title="Custom Endpoint" onClick={p.onEndpoint}/><TimeoutControls seconds={s.timeoutSeconds} onChange={timeoutSeconds => update({ timeoutSeconds })}/></Group>
     : screen === 'notifications' ? <><Group>{toggle('Pengingat dalam aplikasi', s.notifications, notifications => { update({ notifications }); configureTaskNotifications(notifications, notifications); })}</Group><p className="m-setting-caption">Notifikasi muncul saat respons task selesai dan saat pengingat jatuh tempo selama aplikasi berjalan. Izinkan notifikasi SuperGPT di pengaturan perangkat.</p></>
     : screen === 'voice' ? <><Group><Row title="Layanan dikte">{select('Layanan dikte', s.dictationEngine, [['auto', 'Otomatis'], ['endpoint', 'Custom Endpoint'], ['device', 'Layanan perangkat']], value => update({ dictationEngine: value as ClientSettings['dictationEngine'] }))}</Row><Row title="Endpoint dikte">{select('Endpoint dikte', s.transcriptionEndpointId, [['', 'Ikuti endpoint chat'], ...loadEndpointStore().profiles.map(endpoint => [endpoint.id, endpoint.name] as [string, string])], transcriptionEndpointId => update({ transcriptionEndpointId }))}</Row><Row title="Kelola endpoint dikte" onClick={p.onEndpoint}/><label className="m-setting-editor">Model transkripsi<input aria-label="Model transkripsi" maxLength={160} value={s.transcriptionModel} onChange={event => update({ transcriptionModel: event.target.value })}/></label><Row title="Bahasa dikte">{select('Bahasa dikte', s.dictationLanguage, [['auto', 'Otomatis'], ['id-ID', 'Indonesia'], ['en-US', 'English (US)'], ['en-GB', 'English (UK)'], ['ja-JP', '日本語']], value => update({ dictationLanguage: value }))}</Row><Row title="Suara baca">{select('Suara baca', s.voice, [['', 'Default perangkat'], ...voices.map(v => [v.voiceURI, v.name] as [string, string])], voice => update({ voice }))}</Row><Row title="Kecepatan baca"><input aria-label="Kecepatan baca" type="range" min="0.5" max="2" step="0.1" value={s.voiceRate} onChange={event => update({ voiceRate: Number(event.target.value) })}/></Row>{toggle('Tanda baca otomatis', s.smartPunctuation, smartPunctuation => update({ smartPunctuation }))}</Group><p className="m-setting-caption">Otomatis memakai perekam Android dan API /audio/transcriptions dari endpoint dikte pilihanmu. Endpoint dikte bisa berbeda dari endpoint chat; tambahkan profil melalui Kelola endpoint dikte, lalu pilih di sini. Penyedia harus mendukung model transkripsi di atas. Audio dikirim saat rekaman diselesaikan dan tidak disimpan dalam log. Pilih Layanan perangkat untuk pengenalan suara tanpa API endpoint.</p></>
-    : screen === 'usage' ? <><Group>{loadUsage().slice(-30).reverse().map(item => <Row key={item.id} title={item.model} detail={`${item.input ?? '?'} / ${item.output ?? '?'} token`}/>)}{!loadUsage().length && <p className="m-setting-empty">Belum ada penggunaan tercatat.</p>}</Group><p className="m-setting-caption">Token hanya ditampilkan jika dilaporkan penyedia. Kuota dan tagihan dikelola penyedia.</p></>
+    : screen === 'usage' ? <MobileUsage onEndpoint={p.onEndpoint}/>
     : screen === 'data' ? <><Group><Row title="Ekspor obrolan" onClick={() => void exportChats()}/><Row title="Arsipkan semua obrolan" onClick={() => { p.onArchive([...new Set([...p.archived, ...p.titles])]); p.onNotice('Semua obrolan diarsipkan.'); }}/></Group><Group title="Obrolan diarsipkan">{p.archived.filter(title => p.titles.includes(title)).map(title => <Row key={title} title={title}><button aria-label={'Pulihkan ' + title} onClick={() => p.onArchive(p.archived.filter(value => value !== title))}>Pulihkan</button></Row>)}{!p.archived.length && <p className="m-setting-empty">Belum ada arsip.</p>}</Group></>
     : screen === 'storage' ? <Group><Row title="Library perangkat" detail={storage || 'Memeriksa…'} onClick={page('deviceLibrary')}/><Row title="Obrolan lokal" detail={String(p.titles.length)}/><Row title="Ekspor obrolan" onClick={() => void exportChats()}/></Group>
     : screen === 'about' ? <><div className="m-setting-about"><img className="m-brand" src="/supergpt-logo.png" alt=""/><h2>SuperGPT by Sakelar</h2><p>0.3.0</p></div><Group><Row title="Provider rekomendasi" detail="Sakelar AI"/><Row title="Custom Endpoint" onClick={p.onEndpoint}/></Group><p className="m-setting-caption">Client AI independen untuk penyedia API pilihanmu.</p></>

@@ -104,8 +104,4 @@ html[data-client-theme=light] .m-brand{filter:none}
 .m-settings p{font-size:14px;color:var(--m-muted)}
 .m-settings>.m-brand{vertical-align:middle;margin-right:12px}
 .m-endpoints{flex:1;overflow:auto;min-height:0;--d-bg:var(--m-bg);--d-hover:var(--m-field);--d-fg:var(--m-text);--d-border:#80808040}
-.m-app .m-endpoints .d-endpoint-page{height:auto;overflow:visible;padding:20px 18px 40px;color:var(--m-text);font-size:14px}
-.m-app .m-endpoints .d-endpoint-layout{display:block}
-.m-app .m-endpoints .d-endpoint-page h1{font-size:24px}
-.m-app .m-endpoints button,.m-app .m-endpoints input{font-size:14px}
 @media(prefers-reduced-motion:reduce){.m-waiting span{animation:none}}

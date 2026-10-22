@@ -1,33 +1,83 @@
+/* Custom Endpoint on mobile, in the settings card style: the page header already names the page, so the inner
+   heading gives way to an "add" card; the Sakelar connection, saved endpoints and the form are rounded cards. */
 .m-app:has(.m-endpoints),.m-app:has(.m-endpoints)>.m-content{overflow:clip}
-.m-app .m-endpoints .d-endpoint-page{padding:20px 18px 32px;font-size:15px;line-height:1.5}
-.m-endpoints .d-endpoint-page>header{display:flex;flex-direction:column;align-items:flex-start;gap:16px;margin:0 0 24px}
-.m-app .m-endpoints .d-endpoint-page h1{font-size:24px;font-weight:500;line-height:32px;margin:0 0 6px}
-.m-endpoints .d-endpoint-page>header p{font-size:15px;line-height:23px;margin:0;color:var(--m-muted)}
-.m-app .m-endpoints .d-endpoint-layout{display:flex;flex-direction:column;gap:24px}
-.m-endpoints .d-endpoint-profiles,.m-endpoints .d-endpoint-form{width:100%;min-width:0}
-.m-endpoints .d-endpoint-profiles h2{display:flex;align-items:center;gap:8px;font-size:15px;line-height:24px;margin:0 0 12px;font-weight:500}
-.m-endpoints .d-endpoint-card{background:var(--m-panel);padding:14px;margin:0 0 12px}
-.m-endpoints .d-endpoint-card:last-child{margin-bottom:0}
-.m-app .m-endpoints .d-endpoint-open{display:flex;align-items:center;width:100%;gap:12px;padding:0;text-align:left}
-.m-endpoints .d-endpoint-open b{font-size:16px;line-height:24px;font-weight:500}
-.m-endpoints .d-endpoint-open small{font-size:13px;line-height:20px}
-.m-endpoints .d-endpoint-card>p{margin:12px 0;overflow-wrap:anywhere;font-size:14px}
-.m-endpoints .d-endpoint-form-heading{margin:0 0 24px}
-.m-endpoints .d-endpoint-form-heading h2{font-size:17px;font-weight:500;line-height:24px;margin:0 0 4px}
-.m-endpoints .d-endpoint-form-heading p{font-size:13px;line-height:20px;margin:0;color:var(--m-muted)}
-.m-endpoints .d-endpoint-form>label:not(.d-endpoint-auth){display:block;margin:0 0 22px;font-size:15px;line-height:22px;font-weight:500}
-.m-endpoints .d-endpoint-form>label>.d-sdk-input{margin-top:8px}
-.m-endpoints .d-endpoint-form label small{font-size:12px;line-height:19px;color:var(--m-muted)}
-.m-endpoints .d-endpoint-form>.d-endpoint-auth{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:56px;margin:8px 0 18px;padding:8px 0;border-bottom:1px solid #80808030;font-size:14px;line-height:21px;cursor:pointer}
-.m-endpoints .d-endpoint-auth>span{order:-1;flex:1;min-width:0}
-.m-endpoints .d-endpoint-auth>.d-sdk-switch{flex-shrink:0}
-.m-endpoints .d-endpoint-secret{display:flex;align-items:center;gap:10px;margin-top:8px}
-.m-endpoints .d-endpoint-secret>.d-sdk-input{flex:1;min-width:0}
-.m-endpoints .d-endpoint-secret>button{flex-shrink:0}
-.m-endpoints .d-endpoint-model-heading{margin-top:22px;margin-bottom:10px;gap:12px;flex-wrap:wrap}
-.m-endpoints .d-endpoint-model-heading>label{font-size:15px;font-weight:500}
-.m-endpoints .d-endpoint-hint{font-size:12px;line-height:19px;color:var(--m-muted);margin:10px 0 18px}
-.m-endpoints .d-endpoint-form>footer{position:static;display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:12px;margin-top:24px;padding-top:20px;border-top:1px solid #80808030;background:none}
-.m-endpoints .d-endpoint-scope{display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:19px;color:var(--m-muted);margin:20px 0}
-.m-endpoints .d-endpoint-scope svg{margin-top:1px}
-html[data-client-theme=light] .m-endpoints .d-endpoint-card{background:var(--m-panel);border-color:#ddd}
+.m-app .m-endpoints .d-endpoint-page{height:auto;overflow:visible;color:var(--m-text);padding:8px 16px calc(32px + env(safe-area-inset-bottom));font-size:16px;line-height:1.5;display:grid;gap:0}
+.m-app .m-endpoints .d-endpoint-page>header{margin:0 0 32px;display:block}
+.m-app .m-endpoints .d-endpoint-page>header>div{display:none}
+.m-app .m-endpoints .d-endpoint-page>header .d-endpoint-primary{width:100%;min-height:55px;justify-content:flex-start;gap:14px;padding:12px 16px;border-radius:28px;border:1px solid var(--m-border);background:var(--m-card);color:var(--m-text);font-size:18px;font-weight:400;--button-background-color:var(--m-card);--button-background-color-hover:var(--m-card);--button-background-color-active:var(--m-card);--button-text-color:var(--m-text);--button-text-color-hover:var(--m-text);--button-border-color:var(--m-border);--button-border-color-hover:var(--m-border)}
+
+/* Card shell shared by the Sakelar connection and the form. */
+.m-app .m-endpoints :is(.d-sakelar-connect,.d-endpoint-form){border-radius:28px;border:1px solid var(--m-border);background:var(--m-card);margin:0 0 32px;max-width:none}
+.m-app .m-endpoints .d-sakelar-connect{padding:20px;display:grid;gap:12px}
+.m-app .m-endpoints .d-sakelar-connect>strong{font-size:18px;line-height:24px;font-weight:500}
+.m-app .m-endpoints .d-sakelar-connect p{margin:0;font-size:15px;line-height:22px;color:var(--m-detail)}
+.m-app .m-endpoints .d-sakelar-connect small{font-size:13px;line-height:19px;color:var(--m-muted)}
+.m-app .m-endpoints .d-sakelar-connect .d-sdk-button{width:100%;min-height:48px;border-radius:24px;justify-content:center;font-size:16px;font-weight:500;border:1px solid var(--m-border);background:none;color:var(--m-text);--button-background-color:none;--button-background-color-hover:none;--button-background-color-active:none;--button-text-color:var(--m-text);--button-text-color-hover:var(--m-text);--button-border-color:var(--m-border);--button-border-color-hover:var(--m-border)}
+.m-app .m-endpoints .d-sakelar-connect .d-sdk-button:first-of-type{background:var(--m-text);color:var(--m-bg);border-color:var(--m-text);--button-background-color:var(--m-text);--button-background-color-hover:var(--m-text);--button-background-color-active:var(--m-text);--button-text-color:var(--m-bg);--button-text-color-hover:var(--m-bg);--button-border-color:var(--m-text)}
+.m-app .m-endpoints .d-sakelar-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:20px;letter-spacing:2px;color:var(--m-text)}
+
+/* Saved endpoints: one grouped card, a row per endpoint. */
+.m-app .m-endpoints .d-endpoint-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:0;max-width:none;margin:0}
+.m-app .m-endpoints .d-endpoint-profiles{margin:0 0 32px;min-width:0}
+.m-app .m-endpoints .d-endpoint-profiles h2{display:flex;align-items:center;gap:8px;margin:0 16px 10px;font-size:18px;line-height:24px;font-weight:400;color:var(--m-detail)}
+.m-app .m-endpoints .d-endpoint-profiles h2 span{font-size:13px;line-height:18px;padding:1px 8px;border-radius:999px;background:var(--m-field);color:var(--m-detail)}
+.m-app .m-endpoints .d-endpoint-card{background:var(--m-card);border:1px solid var(--m-border);border-top:0;border-radius:0;padding:14px 16px;margin:0}
+.m-app .m-endpoints .d-endpoint-profiles h2+.d-endpoint-card{border-top:1px solid var(--m-border);border-radius:28px 28px 0 0}
+.m-app .m-endpoints .d-endpoint-card:last-child{border-radius:0 0 28px 28px}
+.m-app .m-endpoints .d-endpoint-profiles h2+.d-endpoint-card:last-child{border-radius:28px}
+.m-app .m-endpoints .d-endpoint-card.d-is-editing{background:color-mix(in srgb,var(--m-text) 4%,var(--m-card))}
+.m-app .m-endpoints .d-endpoint-open{display:flex;align-items:center;width:100%;gap:12px;padding:0;text-align:left;background:none;border:0;color:inherit}
+.m-app .m-endpoints .d-endpoint-mark{width:40px;height:40px;border-radius:50%;border:0;background:var(--m-field);color:var(--m-detail)}
+.m-app .m-endpoints .d-endpoint-open>span:nth-child(2){flex:1;min-width:0;display:grid}
+.m-app .m-endpoints .d-endpoint-open b{font-size:17px;line-height:24px;font-weight:500}
+.m-app .m-endpoints .d-endpoint-open small{font-size:13px;line-height:19px;color:var(--m-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-app .m-endpoints .d-endpoint-card>p{margin:10px 0 10px 52px;font-size:14px;line-height:20px;color:var(--m-detail);overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.m-app .m-endpoints .d-endpoint-key-needed{display:block;font-family:system-ui,sans-serif;color:var(--m-danger)}
+.m-app .m-endpoints .d-endpoint-card-actions{display:flex;gap:8px;margin-left:52px;justify-content:flex-start}
+.m-app .m-endpoints .d-endpoint-card-actions .d-sdk-button{min-height:34px;padding:6px 14px;border-radius:999px;border:1px solid var(--m-border);background:none;color:var(--m-text);font-size:14px;--button-background-color:none;--button-background-color-hover:none;--button-background-color-active:none;--button-text-color:var(--m-text);--button-text-color-hover:var(--m-text);--button-border-color:var(--m-border);--button-border-color-hover:var(--m-border)}
+.m-app .m-endpoints .d-endpoint-card-actions .d-sdk-button:disabled{border-color:transparent;background:var(--m-field);color:var(--m-detail);opacity:1;--button-background-color:var(--m-field);--button-background-color-hover:var(--m-field);--button-background-color-active:var(--m-field);--button-text-color:var(--m-detail);--button-text-color-hover:var(--m-detail);--button-border-color:transparent}
+.m-app .m-endpoints .d-endpoint-card-actions .d-sdk-button[aria-label^=Hapus]{color:var(--m-danger);--button-text-color:var(--m-danger);--button-text-color-hover:var(--m-danger)}
+.m-app .m-endpoints .d-endpoint-delete{margin:12px 0 0 52px;padding-top:12px;border-top:1px solid var(--m-border);display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.m-app .m-endpoints .d-endpoint-delete p{flex-basis:100%;margin:0;color:var(--m-detail);font-size:14px}
+.m-app .m-endpoints .d-endpoint-delete .d-sdk-button{min-height:34px;padding:6px 14px;border-radius:999px;font-size:14px;background:var(--m-field);--button-background-color:var(--m-field);--button-background-color-hover:var(--m-field);--button-background-color-active:var(--m-field)}
+.m-app .m-endpoints .d-endpoint-delete .d-sdk-button:first-of-type{color:var(--m-danger);--button-text-color:var(--m-danger);--button-text-color-hover:var(--m-danger)}
+.m-app .m-endpoints .d-endpoint-empty{display:grid;justify-items:center;gap:4px;border:1px solid var(--m-border);border-radius:28px;background:var(--m-card);padding:24px 20px;text-align:center;color:var(--m-muted);font-size:15px}
+.m-app .m-endpoints .d-endpoint-empty b{color:var(--m-text);font-weight:500;margin:0}
+.m-app .m-endpoints .d-endpoint-empty p{margin:0}
+
+/* The form: one card, its title on top and fields stacked with the settings row rhythm. */
+.m-app .m-endpoints .d-endpoint-form{padding:18px 16px 16px;min-width:0}
+.m-app .m-endpoints .d-endpoint-form-heading{margin:0 0 4px}
+.m-app .m-endpoints .d-endpoint-form-heading h2{margin:0;font-size:18px;line-height:24px;font-weight:500}
+.m-app .m-endpoints .d-endpoint-form-heading p{margin:0;font-size:14px;line-height:20px;color:var(--m-muted)}
+.m-app .m-endpoints .d-endpoint-form>label:not(.d-endpoint-auth){display:grid;gap:8px;margin:0;padding:14px 0;border-bottom:1px solid var(--m-border);font-size:15px;line-height:22px;font-weight:500;color:var(--m-detail)}
+.m-app .m-endpoints .d-endpoint-form :is(.d-sdk-input,.d-discovered-models input){width:100%;min-height:48px;border-radius:14px;border:1px solid var(--m-border);background:var(--m-field);color:var(--m-text);padding:0 14px;font-size:16px;font-weight:400;box-shadow:none;outline-offset:2px}
+.m-app .m-endpoints .d-endpoint-form .d-sdk-input input{width:100%;min-height:46px;border:0;background:none;padding:0;color:inherit;font:inherit;box-shadow:none;outline:0}
+.m-app .m-endpoints .d-endpoint-form .d-sdk-input:focus-within{border-color:var(--m-detail)}
+.m-app .m-endpoints .d-endpoint-form label small{font-size:13px;line-height:19px;font-weight:400;color:var(--m-muted)}
+.m-app .m-endpoints .d-endpoint-form>.d-endpoint-auth{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:55px;margin:0;padding:8px 0;border-bottom:1px solid var(--m-border);font-size:16px;line-height:22px;cursor:pointer}
+.m-app .m-endpoints .d-endpoint-auth>span{order:-1;flex:1;min-width:0}
+.m-app .m-endpoints .d-endpoint-auth>.d-sdk-switch{flex-shrink:0}
+.m-app .m-endpoints .d-endpoint-secret{display:flex;align-items:center;gap:8px}
+.m-app .m-endpoints .d-endpoint-secret>.d-sdk-input{flex:1;min-width:0}
+.m-app .m-endpoints .d-endpoint-secret>.d-sdk-button{flex-shrink:0;min-height:48px;border-radius:14px;padding:0 12px;font-size:14px;background:var(--m-field);border:1px solid var(--m-border);--button-background-color:var(--m-field);--button-background-color-hover:var(--m-field);--button-background-color-active:var(--m-field);--button-border-color:var(--m-border);--button-border-color-hover:var(--m-border)}
+.m-app .m-endpoints .d-endpoint-model-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0 8px}
+.m-app .m-endpoints .d-endpoint-model-heading>label{font-size:15px;font-weight:500;color:var(--m-detail)}
+.m-app .m-endpoints .d-endpoint-test{min-height:34px;padding:6px 12px;border-radius:999px;border:1px solid var(--m-border);background:none;font-size:14px;gap:6px;--button-background-color:none;--button-background-color-hover:none;--button-background-color-active:none;--button-border-color:var(--m-border);--button-border-color-hover:var(--m-border)}
+.m-app .m-endpoints .d-discovered-models{margin:12px 0 0;border:1px solid var(--m-border);border-radius:18px;overflow:hidden}
+.m-app .m-endpoints .d-discovered-models>div:first-child{display:grid;gap:8px;padding:12px;border-bottom:1px solid var(--m-border);font-size:14px}
+.m-app .m-endpoints .d-discovered-models [role=listbox]{max-height:240px;overflow:auto}
+.m-app .m-endpoints .d-discovered-models [role=option]{width:100%;justify-content:space-between;padding:12px 14px;border-radius:0;border:0;border-bottom:1px solid var(--m-border);--button-border-color:transparent;--button-border-color-hover:transparent;background:none;font-size:15px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;--button-background-color:none;--button-background-color-hover:none;--button-background-color-active:none}
+.m-app .m-endpoints .d-discovered-models [role=option][aria-selected=true]{background:var(--m-field);--button-background-color:var(--m-field);--button-background-color-hover:var(--m-field);--button-background-color-active:var(--m-field)}
+.m-app .m-endpoints .d-endpoint-hint{font-size:13px;line-height:19px;color:var(--m-muted);margin:12px 0}
+.m-app .m-endpoints .d-endpoint-status{border-radius:14px;margin:12px 0 0;font-size:14px}
+.m-app .m-endpoints .d-endpoint-form>footer{position:static;display:flex;gap:10px;margin:16px 0 0;padding:0;border:0;background:none}
+.m-app .m-endpoints .d-endpoint-form>footer .d-sdk-button{flex:1;min-height:48px;border-radius:24px;justify-content:center;font-size:16px;font-weight:500}
+.m-app .m-endpoints .d-endpoint-form>footer .d-endpoint-secondary{background:var(--m-field);color:var(--m-text);border:1px solid var(--m-border);--button-background-color:var(--m-field);--button-background-color-hover:var(--m-field);--button-background-color-active:var(--m-field);--button-text-color:var(--m-text);--button-text-color-hover:var(--m-text);--button-border-color:var(--m-border);--button-border-color-hover:var(--m-border)}
+.m-app .m-endpoints .d-endpoint-form>footer .d-endpoint-primary{background:var(--m-text);color:var(--m-bg);border:0;--button-background-color:var(--m-text);--button-background-color-hover:var(--m-text);--button-background-color-active:var(--m-text);--button-text-color:var(--m-bg);--button-text-color-hover:var(--m-bg)}
+.m-app .m-endpoints .d-endpoint-scope{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:19px;color:var(--m-muted);margin:0 16px 24px}
+.m-app .m-endpoints .d-endpoint-scope svg{margin-top:1px;flex:none}
+
+.m-app .m-endpoints .d-discovered-models [role=option]>span,.m-app .m-endpoints .d-endpoint-page>header .d-endpoint-primary>span{width:100%;justify-content:space-between;text-align:left}
+.m-app .m-endpoints .d-endpoint-page>header .d-endpoint-primary>span{justify-content:flex-start;gap:14px}
+.m-app .m-endpoints .d-discovered-models [role=option]:last-child{border-bottom:0}

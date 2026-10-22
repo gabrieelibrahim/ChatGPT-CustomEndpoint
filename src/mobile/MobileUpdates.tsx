@@ -1,19 +1,31 @@
 import { ClientSwitch } from '../components/SDKPrimitives';
 import { updateAction, useAppUpdates } from './appUpdates';
+import { Group, Row } from './SettingsCard';
 import './updates.css';
+
+const STATUS: Record<string, string> = { idle: 'Belum diperiksa', checking: 'Memeriksa rilis terbaru…', current: 'Versi terbaru sudah terpasang', available: 'Pembaruan tersedia', downloading: 'Mengunduh pembaruan…', installing: 'Memasang pembaruan…', ready: 'Siap dipasang', error: 'Pembaruan gagal' };
 
 export function MobileUpdates() {
   const state = useAppUpdates();
-  const toggle = (key: 'autoCheck' | 'autoDownload' | 'autoInstall' | 'wifiOnly', label: string) => <label className="m-update-toggle"><span>{label}</span><ClientSwitch label={label} value={state[key]} change={value => updateAction('configure', { [key]: value })}/></label>;
-  return <section className="m-updates"><p className="m-setting-caption">Rilis stabil dari GitHub SuperGPT. File pembaruan selalu bernama SuperGPT.apk.</p>
-    {state.native ? <><p>Versi terpasang: {state.currentVersion}</p><div className="m-setting-card">{toggle('autoCheck', 'Periksa otomatis')}{toggle('autoDownload', 'Unduh otomatis')}{toggle('autoInstall', 'Pasang otomatis jika diizinkan Android')}{toggle('wifiOnly', 'Unduh hanya lewat Wi-Fi')}</div>
-      <p role="status">{state.phase === 'checking' ? 'Memeriksa rilis terbaru…' : state.message || 'Belum ada pemeriksaan.'}</p>
-      {state.lastChecked > 0 && <p className="m-setting-caption">Diperiksa {new Date(state.lastChecked).toLocaleString('id-ID')}</p>}
-      <div className="m-update-actions"><button disabled={state.phase === 'checking' || state.phase === 'downloading' || state.phase === 'installing'} onClick={() => updateAction('check')}>Periksa sekarang</button>
-      {(state.phase === 'available' || state.phase === 'error' && state.version) && <button onClick={() => updateAction('download')}>Unduh {state.version}</button>}
-      {state.phase === 'ready' && <button onClick={() => updateAction('install')}>Pasang pembaruan</button>}</div>
-      <p className="m-setting-caption">Pemeriksaan dan unduhan berjalan di latar belakang. Pemasangan otomatis dicoba di Android 12+ saat aplikasi tidak digunakan dan tidak ada chat aktif. Android tetap mengendalikan izin serta dapat meminta konfirmasi installer. APK diperiksa ukuran, SHA-256, versi, identitas paket, dan sertifikatnya sebelum pemasangan.</p>
-    </> : <p role="status">Pembaruan otomatis tersedia di APK Android yang mendukung fitur ini. Preview browser tidak memasang aplikasi.</p>}
+  const busy = state.phase === 'checking' || state.phase === 'downloading' || state.phase === 'installing';
+  const toggle = (key: 'autoCheck' | 'autoDownload' | 'autoInstall' | 'wifiOnly', label: string) => <Row title={label}><ClientSwitch label={label} value={state[key]} change={value => updateAction('configure', { [key]: value })}/></Row>;
+  const action = state.phase === 'ready' ? { label: 'Pasang pembaruan', run: () => updateAction('install') }
+    : state.phase === 'available' || (state.phase === 'error' && state.version) ? { label: 'Unduh ' + state.version, run: () => updateAction('download') }
+    : { label: busy ? STATUS[state.phase] : 'Periksa pembaruan', run: () => updateAction('check') };
+  return <section className="m-updates">
+    <div className="m-update-hero" data-phase={state.phase}>
+      <img src="/supergpt-logo.png" alt=""/>
+      <h2>SuperGPT</h2>
+      <p>{state.native ? 'Versi ' + (state.currentVersion || '—') : 'Preview browser'}</p>
+      {state.native && <span className="m-update-status">{busy && <i aria-hidden="true"/>}{STATUS[state.phase]}{(state.phase === 'available' || state.phase === 'ready') && state.version ? ' · ' + state.version : ''}</span>}
+      {state.native ? <button className="m-update-primary" disabled={busy} onClick={action.run}>{action.label}</button>
+        : <p className="m-update-note">Pembaruan otomatis tersedia di aplikasi Android. Preview browser tidak memasang aplikasi.</p>}
+      {state.native && state.message && state.phase !== 'checking' && <p className="m-update-note" role="status">{state.message}</p>}
+      {state.lastChecked > 0 && <p className="m-update-note">Diperiksa {new Date(state.lastChecked).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>}
+    </div>
+    {state.native && <Group title="Otomatis">{toggle('autoCheck', 'Periksa otomatis')}{toggle('autoDownload', 'Unduh otomatis')}{toggle('autoInstall', 'Pasang otomatis')}{toggle('wifiOnly', 'Hanya lewat Wi-Fi')}</Group>}
+    <Group title="Sumber"><Row icon="globe" title="Rilis stabil GitHub" detail="SuperGPT.apk"/></Group>
+    <p className="m-setting-caption">Pemeriksaan dan unduhan berjalan di latar belakang. Pemasangan otomatis dicoba di Android 12+ saat aplikasi tidak digunakan dan tidak ada chat aktif; Android tetap bisa meminta konfirmasi. Sebelum dipasang, APK diperiksa ukuran, SHA-256, versi, identitas paket, dan sertifikatnya.</p>
   </section>;
 }
 export function MobileUpdateBanner() {

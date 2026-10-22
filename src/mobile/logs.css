@@ -1,0 +1,16 @@
+/* App log: category chips, an actions card and the event list, all in the settings card style. */
+.m-log-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px 24px;padding:0 16px}
+.m-log-chips::-webkit-scrollbar{display:none}
+.m-app .m-log-chips button{flex:none;border:1px solid var(--m-border);border-radius:999px;padding:8px 16px;font-size:15px;line-height:20px;background:none;color:var(--m-text);white-space:nowrap}
+.m-app .m-log-chips button[aria-checked=true]{background:var(--m-text);color:var(--m-bg);border-color:var(--m-text)}
+.m-app .m-logs .m-setting-row:has(svg[data-icon=trash]):not(:disabled){color:var(--m-danger)}
+.m-app .m-logs .m-setting-row:disabled{opacity:.45}
+.m-log-list{list-style:none;margin:0;padding:0}
+.m-app .m-log-list li{align-items:flex-start}
+.m-log-list li>i{flex:none;width:8px;height:8px;border-radius:50%;margin:9px 4px 0;background:var(--m-muted)}
+.m-log-list li[data-level=error]>i{background:var(--m-danger)}
+.m-log-list .m-setting-label{display:grid;gap:3px}
+.m-log-list strong{font-size:16px;line-height:22px;font-weight:500}
+.m-log-list li[data-level=error] strong{color:var(--m-danger)}
+.m-log-list time{font-size:13px;line-height:18px;color:var(--m-muted)}
+.m-log-list code{font-size:12px;line-height:18px;color:var(--m-detail);white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}

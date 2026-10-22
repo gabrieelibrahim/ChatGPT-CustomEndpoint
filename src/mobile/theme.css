@@ -39,7 +39,6 @@ html[data-client-theme] .m-app .m-sidebar-skeleton-row>span{background:linear-gr
 .m-app .m-attachments button{background:var(--m-panel);border-color:var(--m-border)}
 .m-app .m-endpoints{--d-bg:var(--m-bg);--d-hover:var(--m-field);--d-fg:var(--m-text);--d-border:var(--m-border)}
 .m-app .m-endpoints :is(.d-endpoint-form>footer,.d-endpoint-auth){border-color:var(--m-border)}
-.m-app .m-endpoints .d-endpoint-card{background:var(--m-panel)}
 .m-app .d-rich-text{color-scheme:inherit;--color-background:var(--m-bg)}
 .m-theme-options{display:grid}
 .m-theme-option{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:55px;padding:12px 16px;font-size:18px;line-height:24px;border-bottom:1px solid var(--m-border);cursor:pointer}

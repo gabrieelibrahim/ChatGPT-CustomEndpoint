@@ -29,7 +29,7 @@ test('streams fragmented UTF-8 / CRLF events and sends configured model/history 
   assert.equal(sent.url, 'https://provider.example/v1/chat/completions');
   assert.equal(sent.options.headers.Authorization, 'Bearer fake-secret');
   assert.equal(sent.options.redirect, 'error'); assert.equal(sent.options.credentials, 'omit');
-  assert.deepEqual(JSON.parse(sent.options.body), { model: 'vendor/selected', stream: true, messages: [{ role: 'user', content: 'Hi' }] });
+  assert.deepEqual(JSON.parse(sent.options.body), { model: 'vendor/selected', stream: true, stream_options: { include_usage: true }, messages: [{ role: 'user', content: 'Hi' }] });
 });
 
 test('streams reasoning_content before text delta and forwards both to onText callback', async () => {
@@ -113,11 +113,11 @@ test('does not call network without required session credential', async () => {
   await assert.rejects(streamEndpointChat(profile, '', profile.model, [], new AbortController().signal, () => {}), /API key sesi/);
 });
 
-test('usage callbacks report actual provider values for JSON and SSE without requesting unsupported options', async () => {
+test('usage callbacks report actual provider values for JSON and SSE, asking streams for their real usage', async () => {
   const reported = []; let body;
   global.fetch = async (_, options) => { body = JSON.parse(options.body); return Response.json({ choices: [{ message: { content: 'Ready' } }], usage: { prompt_tokens: 123, completion_tokens: 45 } }); };
   await streamEndpointChat(profile, 'fake', profile.model, [], new AbortController().signal, () => {}, undefined, value => reported.push(value));
-  assert.deepEqual(reported[0], { input: 123, output: 45 }); assert.equal(body.stream_options, undefined);
+  assert.deepEqual(reported[0], { input: 123, output: 45 }); assert.deepEqual(body.stream_options, { include_usage: true });
   global.fetch = async () => new Response('data: {"choices":[{"delta":{"content":"Ready"}}]}\n\ndata: {"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":2}}\n\ndata: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } });
   await streamEndpointChat(profile, 'fake', profile.model, [], new AbortController().signal, () => {}, undefined, value => reported.push(value));
   assert.deepEqual(reported[1], { input: 10, output: 2 });

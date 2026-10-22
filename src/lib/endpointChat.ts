@@ -1,5 +1,21 @@
 import { normalizeBaseUrl, type EndpointProfile } from './endpointProfiles';
 import { providerFetch, providerStatusError } from './providerTransport';
+import { readUsage } from './usageTokens';
+
+// Endpoints that refused stream_options this session; they are asked again without it.
+const noStreamUsage = new Set<string>();
+/** A streaming Chat Completions request that asks for the real token counts (stream_options.include_usage). A strict
+ * provider that rejects the option is asked once more without it, and is not asked again this session. */
+export async function postStreaming(url: string, key: string, signal: AbortSignal, body: Record<string, unknown>) {
+  const ask = !noStreamUsage.has(url);
+  let response = await providerFetch(url, key, signal, ask ? { ...body, stream_options: { include_usage: true } } : body);
+  if (ask && response.status === 400) {
+    await response.body?.cancel().catch(() => {});
+    response = await providerFetch(url, key, signal, body);
+    if (response.ok) noStreamUsage.add(url);
+  }
+  return response;
+}
 export type ProviderMessage = { role: 'user' | 'assistant'; text: string; images?: string[] };
 
 export function hasMessageContent(message: { role: string; text: string; reasoning?: unknown; agent?: { sources?: unknown[]; items?: unknown[]; notice?: string } }): boolean {
@@ -32,9 +48,9 @@ export function parseThinking(text: string, explicitReasoning?: unknown): { reas
 }
 
 export async function streamEndpointChat(profile: EndpointProfile, key: string, model: string, messages: ProviderMessage[], signal: AbortSignal, onText: (text: string, reasoning?: string) => void, reasoningEffort?: string, onUsage?: (usage: { input?: number; output?: number }) => void): Promise<void> {
-  function usage(value: unknown) { const tokens = value as { prompt_tokens?: unknown; completion_tokens?: unknown } | undefined; if (!tokens) return; const input = typeof tokens.prompt_tokens === 'number' && Number.isFinite(tokens.prompt_tokens) && tokens.prompt_tokens >= 0 ? tokens.prompt_tokens : undefined, output = typeof tokens.completion_tokens === 'number' && Number.isFinite(tokens.completion_tokens) && tokens.completion_tokens >= 0 ? tokens.completion_tokens : undefined; if (input !== undefined || output !== undefined) onUsage?.({ input, output }); }
+  function usage(value: unknown) { const reported = readUsage(value); if (reported) onUsage?.(reported); }
   if (profile.auth === 'bearer' && !key.trim()) throw Error('API key sesi ini belum tersedia. Masukkan ulang di Custom Endpoint.');
-  const response = await providerFetch(normalizeBaseUrl(profile.baseUrl) + '/chat/completions', profile.auth === 'bearer' ? key : '', signal, {
+  const response = await postStreaming(normalizeBaseUrl(profile.baseUrl) + '/chat/completions', profile.auth === 'bearer' ? key : '', signal, {
     model, stream: true, messages: messages.filter(message => message.text || message.images?.length).map(message => ({ role: message.role, content: message.images?.length ? [{ type: 'text', text: message.text }, ...message.images.map(url => ({ type: 'image_url', image_url: { url } }))] : message.text })),
     ...(profile.sendReasoning && reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
   });

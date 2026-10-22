@@ -41,15 +41,6 @@
 .m-app .m-chat-search button{padding:4px;min-width:28px;min-height:36px;justify-content:center}
 .m-chat-search span{font-size:12px;color:var(--m-muted)}
 .m-app .m-chat-match{outline:2px solid color-mix(in srgb,var(--m-action) 55%,transparent);outline-offset:4px;border-radius:4px}
-.m-log-filter{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15px}
-.m-log-actions{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
-.m-app .m-log-actions button{border:1px solid var(--m-border);border-radius:24px;padding:8px 16px;font-size:15px}
-.m-log-list{display:grid;gap:12px;list-style:none;padding:0;margin:0}
-.m-log-list li{display:grid;gap:5px;padding:12px 14px;background:var(--m-panel);border-radius:16px;overflow-wrap:anywhere}
-.m-log-list time{font-size:12px;color:var(--m-muted)}
-.m-log-list strong{font-size:15px;font-weight:500}
-.m-log-list code{font-size:12px;line-height:19px;white-space:pre-wrap}
-.m-log-list [data-level=error] strong{color:var(--m-danger)}
 @keyframes m-conversation-open{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){.m-conversation-menu{animation:none}}
 html[data-reduce-motion=true] .m-conversation-menu{animation:none}

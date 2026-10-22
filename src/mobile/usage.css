@@ -1,0 +1,21 @@
+/* Usage and limits: the hero is a settings card holding the week's real token count and a 7-day bar chart. */
+.m-usage{display:grid;gap:0}
+.m-usage-hero{border-radius:28px;border:1px solid var(--m-border);background:var(--m-card);padding:20px 20px 16px;margin:0 0 32px;display:grid;gap:4px}
+.m-usage-hero>span{font-size:14px;line-height:20px;color:var(--m-detail)}
+.m-usage-hero>span::first-letter{text-transform:uppercase}
+.m-usage-hero>strong{font-size:34px;line-height:42px;font-weight:600;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.m-usage-hero>strong small{font-size:16px;font-weight:400;letter-spacing:0;color:var(--m-detail)}
+.m-usage-hero>p{margin:0;font-size:14px;line-height:20px;color:var(--m-detail);font-variant-numeric:tabular-nums}
+.m-usage-bars{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;height:132px;margin-top:18px;align-items:end}
+.m-app .m-usage-bars button{all:unset;display:grid;grid-template-rows:1fr auto;gap:8px;height:100%;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.m-usage-bars i{align-self:end;width:100%;border-radius:6px 6px 3px 3px;background:var(--m-selected);transition:background .2s ease,height .3s ease}
+.m-usage-bars button:last-child i{background:color-mix(in srgb,var(--client-accent,#2b6bca) 55%,var(--m-selected))}
+.m-usage-bars button[aria-pressed=true] i{background:var(--client-accent,#2b6bca)}
+.m-usage-bars span{font-size:11px;line-height:14px;text-align:center;color:var(--m-muted);white-space:nowrap;text-transform:capitalize}
+.m-usage-bars button[aria-pressed=true] span{color:var(--m-text)}
+.m-usage-model,.m-usage-run{position:relative}
+.m-usage-model .m-setting-label,.m-usage-run .m-setting-label{display:grid;gap:2px;font-size:16px;line-height:22px;overflow-wrap:anywhere}
+.m-usage-model small,.m-usage-run small{font-size:13px;line-height:18px;color:var(--m-muted)}
+.m-usage-model>i{position:absolute;left:16px;bottom:0;height:2px;border-radius:2px;background:var(--client-accent,#2b6bca);opacity:.7;max-width:calc(100% - 32px)}
+.m-usage-run .m-setting-detail{font-size:14px;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.m-usage-bars i{transition:none}}
