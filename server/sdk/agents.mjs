@@ -62,7 +62,7 @@ export async function buildAgent({ session, store, thread, emit, mcpProfiles = [
   if (session.options.images) tools.push(imageGenerationTool());
   if (session.options.vectorStores.length) tools.push(fileSearchTool(session.options.vectorStores));
   try {
-    if (session.options.mcp) for (const profile of mcpProfiles.slice(0, 8)) {
+    if (session.options.mcp) for (const profile of mcpProfiles.slice(0, 16)) {
       const server = new MCPServerStreamableHttp({ name: profile.name, url: safeUrl(profile.url), requestInit: { headers: profile.headers || {} }, clientSessionTimeoutSeconds: session.options.timeoutSeconds, timeout: session.options.timeoutSeconds * 1000, fetch: (url, init) => fetch(url, { ...init, redirect: 'error' }), logger: { debug() {}, info() {}, warn() {}, error() {} } });
       servers.push(server); await server.connect();
     }

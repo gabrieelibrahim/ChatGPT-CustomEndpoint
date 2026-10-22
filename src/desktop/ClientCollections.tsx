@@ -6,7 +6,7 @@ import { ImagesHub } from './ImagesHub';
 
 export type LocalDocument = { id: string; title: string; text: string; updated: number };
 export type LocalTask = { id: string; title: string; prompt: string; due: number; fired?: boolean };
-export type McpProfile = { id: string; name: string; kind: 'http' | 'stdio'; url: string; command: string; args: string[]; enabled: boolean; checkedAt?: number; toolNames?: string[]; catalogId?: string; auth?: 'oauth' | 'token' | 'public' };
+export type McpProfile = { id: string; name: string; kind: 'http' | 'stdio'; url: string; command: string; args: string[]; enabled: boolean; checkedAt?: number; toolNames?: string[]; catalogId?: string; auth?: 'oauth' | 'google' | 'token' | 'public'; googleWrite?: boolean };
 export type ClientData = { documents: LocalDocument[]; sites: { id: string; title: string; url: string }[]; tasks: LocalTask[]; mcp: McpProfile[]; skills: LocalDocument[]; notifications: { id: string; text: string; time: number }[] };
 const dataKey = 'client-local-features-v1';
 function load(): ClientData {

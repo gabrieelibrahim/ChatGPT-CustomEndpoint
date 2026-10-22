@@ -9,12 +9,13 @@ const root = path.resolve(__dirname, '..');
 const cache = new Map();
 function load(file) {
   if (cache.has(file)) return cache.get(file).exports;
+  if (file.endsWith('.json')) return { default: JSON.parse(fs.readFileSync(file, 'utf8')) };
   const mod = { exports: {} }; cache.set(file, mod);
   const output = (file.endsWith('SDKPrimitives.tsx') || file.endsWith('AgentMessageExtras.tsx') || file.endsWith('RichText.tsx')) ? require('esbuild').buildSync({ absWorkingDir: root, entryPoints: [file], bundle: true, write: false, platform: 'node', format: 'cjs', jsx: 'automatic', loader: { '.css': 'empty', '.module.css': 'empty' }, external: ['react', 'react-dom', 'react/jsx-runtime'] }).outputFiles[0].text : ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
   new Function('require', 'module', 'exports', output)(name => {
     if (!name.startsWith('.')) return require(name);
     const base = path.resolve(path.dirname(file), name);
-    return load([base + '.tsx', base + '.ts', base + '/index.ts'].find(candidate => fs.existsSync(candidate)));
+    return load([base, base + '.tsx', base + '.ts', base + '/index.ts'].find(candidate => fs.existsSync(candidate) && fs.statSync(candidate).isFile()));
   }, mod, mod.exports);
   return mod.exports;
 }

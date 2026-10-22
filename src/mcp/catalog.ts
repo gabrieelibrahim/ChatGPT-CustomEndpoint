@@ -1,16 +1,23 @@
+import { googleWorkspace } from './googleWorkspace';
 export type PluginTemplate = {
   id: string; name: string; description: string; categories: string[]; icon?: string;
   url?: string; auth: 'public' | 'token' | 'oauth' | 'custom' | 'builtin';
   website?: string; docs?: string; developer?: string; examples?: string[];
+  provider?: 'google';
 };
 export const pluginCategories = ['Populer', 'Baru & Patut Dicoba', 'Usaha Kecil', 'Produktivitas', 'Kreativitas', 'Alat Pengembang', 'Bisnis & Operasional', 'Data & Analitika', 'Komunikasi', 'Pendidikan', 'Penelitian Ilmiah', 'Keamanan', 'Keuangan', 'Kesehatan', 'Perjalanan', 'Lainnya'];
 const entry = (id: string, name: string, description: string, categories: string[], extra: Partial<PluginTemplate> = {}): PluginTemplate => ({ id, name, description, categories, auth: 'custom', ...extra });
+function googleEntry(id: string): PluginTemplate {
+  const service = googleWorkspace.find(item => item.id === id)!;
+  return entry(service.id, service.name, service.description, service.categories, { icon: service.icon, provider: 'google', auth: 'oauth', url: service.url, developer: 'Google', website: 'https://workspace.google.com/', docs: 'https://developers.google.com/workspace/guides/configure-mcp-servers', examples: service.id === 'gmail' ? ['Ringkas 5 email terbaru dan soroti keputusan serta pertanyaan terbuka.', 'Buat draf balasan untuk email yang saya pilih.'] : [`Cari informasi yang relevan melalui ${service.name} dan sertakan sumbernya.`, `Bantu saya memakai ${service.name} untuk tugas berikut.`] });
+}
 // Names/categories for custom-URL templates follow the supplied catalog recording.
 // Only documented remote MCP endpoints are prefilled. A catalog entry is not an installed connection.
 export const pluginCatalog: PluginTemplate[] = [
-  entry('gmail', 'Gmail', 'Read and manage Gmail', ['Populer'], { icon: 'gmail', website: 'https://workspace.google.com/products/gmail/', examples: ['Ringkas 5 email terbaru dan soroti keputusan serta pertanyaan terbuka.', 'Buat draf balasan singkat dan sopan untuk email yang saya pilih.', 'Ubah email tindak lanjut menjadi daftar tindakan.'] }),
+  googleEntry('gmail'),
   entry('remote-desktop', 'Remote Desktop Commander', 'Use your computer from chat', ['Populer'], { icon: 'remote' }),
-  entry('google-drive', 'Google Drive', 'Drive, Docs, Sheets or Slides', ['Populer'], { icon: 'drive', website: 'https://workspace.google.com/products/drive/', examples: ['Cari dokumen proyek terbaru dan ringkas risiko utamanya.', 'Tulis ulang dokumen yang saya pilih dengan menjaga fakta penting.', 'Ringkas hasil, keputusan, dan pertanyaan terbuka dari folder proyek.'] }),
+  googleEntry('google-drive'),
+  ...googleWorkspace.filter(item => !['gmail', 'google-drive'].includes(item.id)).map(item => googleEntry(item.id)),
   entry('flaim', 'Flaim Fantasy', 'Fantasy Sports Analysis', ['Populer'], { icon: 'flame' }),
   entry('magnific', 'Magnific', 'Create images, video, designs', ['Baru & Patut Dicoba']),
   entry('higgsfield', 'Higgsfield', 'Every image and video model', ['Baru & Patut Dicoba', 'Kreativitas']),

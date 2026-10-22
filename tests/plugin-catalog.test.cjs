@@ -78,8 +78,43 @@ test('adding a custom MCP never overwrites an unrelated legacy profile, and cred
 });
 
 test('OAuth plugin offers browser login and optional Client ID without requesting a bearer token', t => {
-  const app = fixture(t); app.button('Tambahkan Notion').props.onClick(); app.render();
+  const app = fixture(t); nodes(app.tree, item => item.type === 'input' && item.props['aria-label'] === 'Cari plugin')[0].props.onChange({ target: { value: 'Notion' } }); app.render(); app.button('Tambahkan Notion').props.onClick(); app.render();
   assert.ok(text(app.tree).includes('Masuk melalui browser resmi')); assert.ok(app.button('Masuk & sambungkan'));
   assert.equal(nodes(app.tree, item => item.type === 'label' && text(item).startsWith('Bearer token')).length, 0);
   assert.ok(app.field('Client ID')); assert.deepEqual(app.store.data.mcp, []);
+});
+
+test('all official Google Workspace services have OAuth catalog entries and no custom-server placeholder', () => {
+  const google = catalog.exports.pluginCatalog.filter(item => item.provider === 'google'); assert.equal(google.length, 9);
+  assert.ok(google.every(item => item.auth === 'oauth' && item.url.endsWith('.googleapis.com/mcp/v1') && item.developer === 'Google'));
+});
+
+test('Google plugin offers account login and explicit write permission without requesting a client secret', t => {
+  const app = fixture(t); nodes(app.tree, item => item.type === 'input' && item.props['aria-label'] === 'Cari plugin')[0].props.onChange({ target: { value: 'Gmail' } }); app.render(); app.button('Tambahkan Gmail').props.onClick(); app.render();
+  assert.ok(app.button('Lanjutkan dengan Google')); assert.ok(text(app.tree).includes('Developer Preview'));
+  const selects = nodes(app.tree, item => item.type === 'select'); assert.equal(selects[0].props.value, 'read');
+  assert.equal(nodes(app.tree, item => item.type === 'label' && (text(item).startsWith('Bearer token') || text(item).startsWith('Client ID'))).length, 0);
+  assert.equal(app.field('URL server MCP').props.disabled, true); assert.equal(app.field('URL server MCP').props.value, 'https://gmailmcp.googleapis.com/mcp/v1');
+});
+
+test('Google plugin becomes active only after account authorization and real MCP tool discovery', async t => {
+  const app = fixture(t, [saved]), vault = new Map(), authListeners = [], vaultListeners = [], requests = [];
+  window.SuperGPTGoogleAuth = { addEventListener(_, listener) { authListeners.push(listener); }, postMessage(raw) {
+    const request = JSON.parse(raw); assert.equal(request.interactive, true);
+    queueMicrotask(() => authListeners.forEach(listener => listener({ data: JSON.stringify({ id: request.id, ok: true, account: 'fixture@example.test', accessToken: 'google-ui-fixture', grantedScopes: request.scopes }) })));
+  } };
+  window.SuperGPTMcpOAuth = { addEventListener(_, listener) { vaultListeners.push(listener); }, postMessage(raw) {
+    const request = JSON.parse(raw); if (request.op === 'save') { if (request.value) vault.set(request.key, request.value); else vault.delete(request.key); }
+    queueMicrotask(() => vaultListeners.forEach(listener => listener({ data: JSON.stringify({ id: request.id, ok: true, value: vault.get(request.key) || '' }) })));
+  } };
+  global.fetch = async (url, init) => {
+    requests.push({ url, init }); assert.equal(url, 'https://gmailmcp.googleapis.com/mcp/v1'); assert.equal(init.headers.Authorization, 'Bearer google-ui-fixture');
+    const request = JSON.parse(init.body); if (request.method === 'notifications/initialized') return new Response(null, { status: 202 });
+    assert.equal(app.store.data.mcp.length, 1);
+    return Response.json({ jsonrpc: '2.0', id: request.id, result: request.method === 'initialize' ? { protocolVersion: '2025-11-25', capabilities: { tools: {} } } : { tools: [{ name: 'gmail.search_threads', inputSchema: { type: 'object' } }] } });
+  };
+  nodes(app.tree, item => item.type === 'input' && item.props['aria-label'] === 'Cari plugin')[0].props.onChange({ target: { value: 'Gmail' } }); app.render(); app.button('Tambahkan Gmail').props.onClick(); app.render();
+  nodes(app.tree, item => item.type === 'form')[0].props.onSubmit({ preventDefault() {} }); await new Promise(resolve => setImmediate(resolve)); app.render();
+  assert.equal(app.store.data.mcp.length, 2, text(app.tree)); const profile = app.store.data.mcp[1]; assert.equal(profile.auth, 'google'); assert.equal(profile.googleWrite, false); assert.deepEqual(profile.toolNames, ['gmail.search_threads']);
+  assert.equal(vault.size, 1); assert.equal(JSON.stringify(app.store.data).includes('fixture@example.test'), false); assert.equal(JSON.stringify(app.store.data).includes('google-ui-fixture'), false); assert.ok(requests.length >= 3);
 });

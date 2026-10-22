@@ -18,7 +18,7 @@ export class MainChatService {
   prune() { for (const [key, run] of this.runs) if (!run.busy && Date.now() - run.touched > 15 * 60 * 1000) this.runs.delete(key); }
   async execute(session, payload, emit, signal, serverMcp) {
     this.prune(); let run, approval;
-    const mcpProfiles = [...(session.options.mcp ? session.mcpProfiles || [] : []), ...(session.options.mcp ? serverMcp : [])].slice(0, 8);
+    const mcpProfiles = [...(session.options.mcp ? session.mcpProfiles || [] : []), ...(session.options.mcp ? serverMcp : [])].slice(0, 16);
     if (payload.resume) {
       run = this.runs.get(payload.resume);
       if (!run || run.owner !== session.owner || run.session !== session.token || run.busy || !run.thread.pending) throw inputError('Permintaan tool sudah berakhir. Kirim ulang pesan.');

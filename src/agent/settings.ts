@@ -2,6 +2,7 @@ import { mcpToken } from '../mcp/httpClient';
 import { loadSdkConfig, sdkServer } from '../chatkit/config';
 import { usesLocalProviderRelay } from '../lib/providerTransport';
 import { mcpOAuthToken } from '../mcp/oauth';
+import { googleAccessToken } from '../mcp/googleAuth';
 export type MainAiSettings = { enabled: boolean; server: string; api: 'chat' | 'responses'; web: boolean; webSearch: 'exa' | 'provider'; mcp: boolean; runtime: 'auto' | 'device' | 'server' };
 export const mainAiKey = 'supergpt-main-ai-v1';
 export function loadMainAi(): MainAiSettings {
@@ -15,10 +16,14 @@ export function mainAgentAvailable(settings = loadMainAi()) { return settings.en
 export function mainServerToken(value?: string) { if (value !== undefined) sessionStorage.setItem('supergpt-main-server-token', value); return sessionStorage.getItem('supergpt-main-server-token') || ''; }
 export async function mainMcpProfiles(signal = new AbortController().signal) {
   let profiles: any[] = [];
-  try { const data = JSON.parse(localStorage.getItem('client-local-features-v1') || '{}'); profiles = Array.isArray(data.mcp) ? data.mcp.filter((item: any) => item?.enabled === true && item.kind === 'http' && typeof item.url === 'string' && typeof item.name === 'string').slice(0, 8) : []; } catch { return []; }
-  return Promise.all(profiles.map(async item => {
-    const token = typeof item.id === 'string' ? item.auth === 'oauth' ? await mcpOAuthToken(item.id, item.url, signal) : mcpToken(item.id) : '';
-    if (item.auth === 'oauth' && !token) throw Error('Hubungkan ulang ' + item.name + ': sesi OAuth tidak tersedia.');
-    return { name: item.name, url: item.url, token };
-  }));
+  try { const data = JSON.parse(localStorage.getItem('client-local-features-v1') || '{}'); profiles = Array.isArray(data.mcp) ? data.mcp.filter((item: any) => item?.enabled === true && item.kind === 'http' && typeof item.url === 'string' && typeof item.name === 'string').slice(0, 16) : []; } catch { return []; }
+  const connected: { name: string; url: string; token: string }[] = [];
+  // Google Identity permits one native authorization at a time, including silent refreshes.
+  for (const item of profiles) {
+    signal.throwIfAborted();
+    const token = typeof item.id === 'string' ? item.auth === 'google' ? await googleAccessToken(item.id, item.url, signal) : item.auth === 'oauth' ? await mcpOAuthToken(item.id, item.url, signal) : mcpToken(item.id) : '';
+    if (['google', 'oauth'].includes(item.auth) && !token) throw Error('Hubungkan ulang ' + item.name + ': sesi OAuth tidak tersedia.');
+    connected.push({ name: item.name, url: item.url, token });
+  }
+  return connected;
 }
