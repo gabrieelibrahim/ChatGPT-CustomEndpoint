@@ -74,8 +74,17 @@ export function MobileApp() {
   const streamContent = useRef<HTMLDivElement>(null);
   const initialKeyboard = useRef(false);
   const nativeKeyboardOpen = useRef<boolean | null>(null);
+  const app = useRef<HTMLDivElement>(null), keyboardLift = useRef(0), keyboardFallback = useRef(false);
   useEffect(() => { configureTaskNotifications(preferences.settings.notifications); }, [preferences.settings.notifications]);
-  useEffect(() => observeComposerKeyboard(open => { nativeKeyboardOpen.current = open; setComposerState(state => ({ ...state, keyboardOpen: open, focused: open ? document.activeElement === textarea.current : state.keyboardOpen ? false : state.focused, phase: !open && state.keyboardOpen && state.phase === 'first-focus' ? 'compact' : state.phase })); }), []);
+  useEffect(() => observeComposerKeyboard(open => { nativeKeyboardOpen.current = open; setComposerState(state => ({ ...state, keyboardOpen: open, focused: open ? document.activeElement === textarea.current : state.keyboardOpen ? false : state.focused, phase: !open && state.keyboardOpen && state.phase === 'first-focus' ? 'compact' : state.phase })); }, lift => {
+    // Follow the keyboard frame by frame (Android 11+): the app shrinks by the lift without a React render, and a
+    // chat that was at its latest message stays there.
+    const root = app.current, list = scroll.current;
+    if (lift === null || !root || keyboardFallback.current) return;
+    const atBottom = !!list && list.scrollHeight - list.scrollTop - list.clientHeight < 48;
+    keyboardLift.current = lift; root.style.setProperty('--m-ime-lift', lift + 'px');
+    if (atBottom && list) list.scrollTop = list.scrollHeight;
+  }), []);
   useEffect(() => {
     const preview = (event: Event) => { const close = (event as CustomEvent<unknown>).detail; mediaClose.current = typeof close === 'function' ? close as () => void : null; setMediaPreview(!!mediaClose.current); };
     window.addEventListener('client-media-preview', preview); return () => window.removeEventListener('client-media-preview', preview);
@@ -87,7 +96,17 @@ export function MobileApp() {
     return () => cancelAnimationFrame(frame);
   }, [profile, page]);
   useEffect(() => {
-    const resize = () => { const nextHeight = window.visualViewport?.height || window.innerHeight; setHeight(nextHeight); setComposerState(state => resizeComposer(state, nextHeight, window.innerWidth, document.activeElement === textarea.current && nativeKeyboardOpen.current !== false)); };
+    let resting = window.visualViewport?.height || window.innerHeight, width = window.innerWidth;
+    const resize = () => {
+      const nextHeight = window.visualViewport?.height || window.innerHeight;
+      if (Math.abs(window.innerWidth - width) > 40) { width = window.innerWidth; resting = nextHeight; } else resting = Math.max(resting, nextHeight);
+      // If this WebView still shrinks its own viewport for the keyboard, frame tracking would lift the composer twice:
+      // stop following and keep the plain resize.
+      if (keyboardLift.current > 80 && !keyboardFallback.current && resting - nextHeight > 120) { keyboardFallback.current = true; keyboardLift.current = 0; app.current?.style.setProperty('--m-ime-lift', '0px'); logDiagnostic('app', 'keyboard-tracking-off', { shrink: Math.round(resting - nextHeight) }); }
+      setHeight(nextHeight);
+      // A tracked keyboard counts as the same shrink the plain resize would have made.
+      setComposerState(state => resizeComposer(state, nextHeight - keyboardLift.current, window.innerWidth, document.activeElement === textarea.current && nativeKeyboardOpen.current !== false));
+    };
     window.visualViewport?.addEventListener('resize', resize); window.addEventListener('resize', resize);
     return () => { window.visualViewport?.removeEventListener('resize', resize); window.removeEventListener('resize', resize); };
   }, []);
@@ -175,7 +194,7 @@ export function MobileApp() {
   let pinned: string[] = [];
   try { const value = JSON.parse(localStorage.getItem('desktop-pinned') || '[]'); if (Array.isArray(value)) pinned = value.filter(title => typeof title === 'string'); } catch { /* Empty lists are safe. */ }
 
-  return <div className={`m-app${page === 'chat' && home ? ' m-home' : ''}${chat.temporary ? ' m-temporary' : ''}`} style={{ height, '--m-action': preferences.settings.accent === '#2b6bca' ? '#2861df' : preferences.settings.accent } as CSSProperties} onKeyDown={event => {
+  return <div ref={app} className={`m-app${page === 'chat' && home ? ' m-home' : ''}${chat.temporary ? ' m-temporary' : ''}`} style={{ '--m-app-height': height + 'px', '--m-action': preferences.settings.accent === '#2b6bca' ? '#2861df' : preferences.settings.accent } as CSSProperties} onKeyDown={event => {
     if (event.key === 'Escape') { if (inSettings && !drawer && !speechMode) backFromSettings(); else { setDrawer(false); setSheet(''); closeSpeech(); } }
     if (event.key === 'Tab' && (drawer || sheet || speechMode === 'voice' || mediaPreview)) {
       const dialog = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="dialog"],[role="menu"]')].at(-1);

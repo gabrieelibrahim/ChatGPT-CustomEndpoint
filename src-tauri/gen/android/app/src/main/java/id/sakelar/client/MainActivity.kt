@@ -157,6 +157,10 @@ class MainActivity : TauriActivity() {
           }
           return@addWebMessageListener
         }
+        if (action == "track-ime") {
+          runOnUiThread { if (!KeyboardInsets.install(webView, reply)) try { reply.postMessage(JSONObject().put("event", "ime-unsupported").toString()) } catch (_: Exception) { } }
+          return@addWebMessageListener
+        }
         if (action != "show" && action != "hide") return@addWebMessageListener
         pendingComposerKeyboard = action == "show"
         if (pendingComposerKeyboard) showComposerKeyboard() else webView.post {
