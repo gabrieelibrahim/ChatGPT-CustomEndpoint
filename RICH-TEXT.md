@@ -28,3 +28,20 @@ activity stream renders real commentary, summaries and tools in event order.
 Adjacent completed command batches collapse into Ran commands; running, failed
 and stopped tools keep their actual state. Shell command/output details are
 expandable. Summaries are shown only while actually supplied by the runtime.
+
+## Rich answer formats (v0.1.22)
+
+Settings → Umum → **Format jawaban interaktif** (on by default) adds formatting guidance to each request; **Contoh format jawaban** shows every format locally with mock data, no model call. Answers stay ordinary Markdown text in history, so export, copy and other clients are unaffected.
+
+Beyond Markdown (headings, lists, task lists, tables, quotes, code with copy, KaTeX), the renderer recognises fenced blocks:
+
+| Fence | Content | Renders |
+| --- | --- | --- |
+| ` ```ui ` | JSON component tree, schema `src/rich/schema.ts` (version `1.0`) | badges, cards, grid/row/stack, title/text/markdown, callout, counter, form (text, textarea, radio, checkbox, select, slider, native date), segmented control, accordion, carousel, popover, icon grid, image gallery, writing block, sources |
+| ` ```chart ` | JSON data, `src/rich/chart.ts` | line, area, bar, pie, donut, scatter as plain SVG with tap-to-inspect and a data table |
+| ` ```mermaid ` | Mermaid source | diagram (Mermaid 12, `securityLevel: strict`, lazy loaded) with source toggle, copy, zoom and SVG download |
+| ` ````file name="x.md" description="…" ` | file text | file card that saves through the existing export bridge |
+
+Safety: model output is untrusted. Components and props are allowlisted; `__proto__`/`constructor` keys, unknown types, non-http(s) image and link URLs, nesting over 8, more than 200 nodes or 100 KB are rejected with a readable fallback. No model-provided HTML or JavaScript runs. Blocks can only copy, share, save a file, change local state, or put text in the composer (the user still presses Send) — each after a tap. Remote images in galleries load only after a tap, without a referrer.
+
+Streaming: only the block still being written counts as live; an unfinished `ui`/`chart`/`mermaid` block shows a placeholder and renders when complete, so earlier interactive blocks keep their state. Tests: `tests/rich-content.test.cjs`.

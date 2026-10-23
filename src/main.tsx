@@ -51,6 +51,7 @@ import './mobile/composer-motion.css';
 
 import './mobile/voice-attachments.css';
 import './mobile/media-rich-text.css';
+import './rich/rich-blocks.css';
 
 import './mobile/reference-motion.css';
 import './mobile/media-menu-refinements.css';

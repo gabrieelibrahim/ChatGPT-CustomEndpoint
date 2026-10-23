@@ -1,0 +1,2 @@
+// Icon names a model may use in ```ui blocks (kept tiny: the chat prompt imports it eagerly).
+export const ICON_NAMES = ['house', 'settings', 'search', 'bell', 'user', 'users', 'shield-check', 'cpu', 'database', 'globe', 'terminal', 'key-round', 'sparkles', 'check-circle', 'alert-triangle', 'heart', 'download', 'info', 'code', 'chat', 'bolt', 'star', 'lock', 'mail', 'calendar', 'image', 'file', 'folder', 'chart', 'lightbulb', 'link', 'phone', 'map-pin', 'clock', 'brain', 'bug'] as const;

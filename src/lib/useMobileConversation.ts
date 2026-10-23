@@ -10,6 +10,7 @@ import { notifyTaskComplete } from '../mobile/deviceActions';
 import { isNativeDesktop } from './nativeDesktop';
 import { changeConversationName } from './mobileConversationMetadata';
 import { logDiagnostic } from './diagnosticLog';
+import { richUiInstructions } from '../rich/richPrompt';
 
 export type MobileMessage = { role: 'user' | 'assistant'; text: string; reasoning?: string; timestamp?: number; generationId?: string; attachments?: FileRef[]; agent?: AgentMessageState };
 function read<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) || 'null') ?? fallback; } catch { return fallback; } }
@@ -82,7 +83,7 @@ export function useMobileConversation() {
     publish(next, true);
     try {
       const hydrated = await resolveMessageFiles(next, controller.signal);
-      await streamMainChat(endpoint, key, endpoint.model, prepareChatMessages(hydrated, settings, { suppressMemories: temporary && !personalization.memories, suppressInstructions: temporary && !personalization.instructions }), controller.signal, (value, thought) => {
+      await streamMainChat(endpoint, key, endpoint.model, prepareChatMessages(hydrated, settings, { suppressMemories: temporary && !personalization.memories, suppressInstructions: temporary && !personalization.instructions, formatting: settings.richUi ? richUiInstructions : '' }), controller.signal, (value, thought) => {
         answer = value; reasoning = thought || ''; publish(current());
       }, personalization.reasoningEffort || ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'][settings.defaultEffort], value => { reported = value; }, value => { agent = value; publish(current()); }, temporary);
     } catch (failure) {

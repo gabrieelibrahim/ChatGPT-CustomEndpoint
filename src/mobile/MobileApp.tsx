@@ -36,6 +36,7 @@ import { endpointVaultState } from '../lib/mobileEndpointVault';
 import { signOutMobileProfile } from '../lib/mobileProfile';
 import { pickStarters } from '../lib/homeStarters';
 import { pluginMark } from './PluginIcon';
+import { COMPOSE_EVENT } from '../rich/richActions';
 import { QUOTA_ERROR } from '../lib/providerTransport';
 import { isSakelarEndpoint, openSakelarTopup } from '../lib/sakelarConnect';
 
@@ -120,6 +121,11 @@ export function MobileApp() {
   }, []);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 4000); return () => clearTimeout(timer); }, [notice]);
   useEffect(() => { if (!aboveBottom) scroll.current?.scrollTo({ top: scroll.current.scrollHeight }); }, [chat.messages, aboveBottom]);
+  // A rich form's "compose" action fills the message box; the user still decides whether to send.
+  useEffect(() => {
+    const compose = (event: Event) => { const text = (event as CustomEvent<string>).detail; if (typeof text !== 'string' || !text) return; setDraft(previous => previous.trim() ? previous + '\n' + text : text); setNotice('Jawaban dimasukkan ke kolom pesan.'); };
+    window.addEventListener(COMPOSE_EVENT, compose); return () => window.removeEventListener(COMPOSE_EVENT, compose);
+  }, []);
   useEffect(() => { if (drawer) closeDrawer.current?.focus({ preventScroll: true }); else if (sheet && sheet !== 'attachments') closeSheet.current?.focus({ preventScroll: true }); }, [drawer, sheet]);
   useEffect(() => {
     const element = footer.current;
@@ -156,7 +162,7 @@ export function MobileApp() {
     if (!window.dispatchEvent(new Event('client-settings-back', { cancelable: true }))) return;
     if (sheet) { setSheet(''); return; }
     if (page !== 'settings') { navigate('settings'); return; }
-    if (settingsScreen !== 'root') setSettingsScreen(settingsScreen === 'deviceLibrary' ? 'storage' : 'root'); else navigate('chat');
+    if (settingsScreen !== 'root') setSettingsScreen(settingsScreen === 'deviceLibrary' ? 'storage' : settingsScreen === 'richShowcase' ? 'general' : 'root'); else navigate('chat');
   }
   const settingsBack = useRef(backFromSettings); settingsBack.current = () => {
     if (mediaClose.current) { mediaClose.current(); return; }

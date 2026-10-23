@@ -2,7 +2,7 @@ export type ShortcutAction = 'new' | 'search' | 'sidebar' | 'effort' | 'settings
 export type ClientSettings = {
   version: 1; theme: 'dark' | 'light' | 'system'; accent: string; background: string; foreground: string;
   uiSize: number; contentSize: number; codeSize: number; font: 'system' | 'serif' | 'mono'; codeFont: 'system' | 'mono';
-  motion: 'system' | 'on' | 'off'; translucent: boolean; fullWidth: boolean; suggestions: boolean; confirmClose: boolean; streamHaptics: boolean;
+  motion: 'system' | 'on' | 'off'; translucent: boolean; fullWidth: boolean; suggestions: boolean; confirmClose: boolean; streamHaptics: boolean; richUi: boolean;
   sendShortcut: 'enter' | 'ctrl-enter'; autoArchiveDays: number; notifications: boolean; sound: boolean;
   timeoutSeconds: number; defaultEffort: number; efforts: number[]; pluginsEnabled: boolean; networkAccess: boolean;
   instructions: string; writingStyle: 'balanced' | 'concise' | 'detailed'; memoriesEnabled: boolean; memories: string[];
@@ -12,14 +12,14 @@ export type ClientSettings = {
 export const settingsKey = 'client-settings-v1';
 export const defaultShortcuts: Record<ShortcutAction, string> = { new: 'Ctrl+N', search: 'Ctrl+K', sidebar: 'Ctrl+Shift+S', effort: 'Ctrl+Shift+M', settings: 'Ctrl+,', temporary: 'Ctrl+Shift+J', archive: 'Ctrl+Shift+A', voice: '', attach: '' };
 export function defaultSettings(): ClientSettings {
-  return { version: 1, theme: 'dark', accent: '#2b6bca', background: '#181818', foreground: '#efefef', uiSize: 20, contentSize: 20, codeSize: 14, font: 'system', codeFont: 'system', motion: 'system', translucent: false, fullWidth: false, suggestions: true, confirmClose: true, streamHaptics: true, sendShortcut: 'enter', autoArchiveDays: 0, notifications: false, sound: false, timeoutSeconds: 120, defaultEffort: 2, efforts: [0, 1, 2, 3, 4, 5], pluginsEnabled: true, networkAccess: false, instructions: '', writingStyle: 'balanced', memoriesEnabled: false, memories: [], dictationLanguage: 'id-ID', dictationEngine: 'auto', transcriptionEndpointId: '', transcriptionModel: 'whisper-1', voice: '', voiceRate: 1, voiceVolume: 1, smartPunctuation: false, pet: 'none', petName: 'Sakelar', billingUrl: '', shortcuts: { ...defaultShortcuts } };
+  return { version: 1, theme: 'dark', accent: '#2b6bca', background: '#181818', foreground: '#efefef', uiSize: 20, contentSize: 20, codeSize: 14, font: 'system', codeFont: 'system', motion: 'system', translucent: false, fullWidth: false, suggestions: true, confirmClose: true, streamHaptics: true, richUi: true, sendShortcut: 'enter', autoArchiveDays: 0, notifications: false, sound: false, timeoutSeconds: 120, defaultEffort: 2, efforts: [0, 1, 2, 3, 4, 5], pluginsEnabled: true, networkAccess: false, instructions: '', writingStyle: 'balanced', memoriesEnabled: false, memories: [], dictationLanguage: 'id-ID', dictationEngine: 'auto', transcriptionEndpointId: '', transcriptionModel: 'whisper-1', voice: '', voiceRate: 1, voiceVolume: 1, smartPunctuation: false, pet: 'none', petName: 'Sakelar', billingUrl: '', shortcuts: { ...defaultShortcuts } };
 }
 const choice = <T extends string>(value: unknown, values: readonly T[], fallback: T): T => values.includes(value as T) ? value as T : fallback;
 const number = (value: unknown, min: number, max: number, fallback: number) => typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
 const text = (value: unknown, limit: number, fallback = '') => typeof value === 'string' ? value.slice(0, limit) : fallback;
 export function normalizeSettings(value: unknown): ClientSettings {
   const d = defaultSettings(), v = value && typeof value === 'object' ? value as Record<string, unknown> : {};
-  for (const key of ['translucent', 'fullWidth', 'suggestions', 'confirmClose', 'notifications', 'sound', 'pluginsEnabled', 'networkAccess', 'memoriesEnabled', 'smartPunctuation', 'streamHaptics'] as const) if (typeof v[key] === 'boolean') d[key] = v[key];
+  for (const key of ['translucent', 'fullWidth', 'suggestions', 'confirmClose', 'notifications', 'sound', 'pluginsEnabled', 'networkAccess', 'memoriesEnabled', 'smartPunctuation', 'streamHaptics', 'richUi'] as const) if (typeof v[key] === 'boolean') d[key] = v[key];
   d.theme = choice(v.theme, ['dark', 'light', 'system'], d.theme); d.font = choice(v.font, ['system', 'serif', 'mono'], d.font); d.codeFont = choice(v.codeFont, ['system', 'mono'], d.codeFont); d.motion = choice(v.motion, ['system', 'on', 'off'], d.motion); d.writingStyle = choice(v.writingStyle, ['balanced', 'concise', 'detailed'], d.writingStyle); d.pet = choice(v.pet, ['none', 'cat', 'fox', 'owl'], d.pet); d.sendShortcut = choice(v.sendShortcut, ['enter', 'ctrl-enter'], d.sendShortcut);
   for (const key of ['accent', 'background', 'foreground'] as const) if (typeof v[key] === 'string' && /^#[0-9a-f]{6}$/i.test(v[key])) d[key] = v[key];
   d.uiSize = number(v.uiSize, 16, 24, d.uiSize); d.contentSize = number(v.contentSize, 14, 30, d.contentSize); d.codeSize = number(v.codeSize, 10, 22, d.codeSize); d.timeoutSeconds = Math.round(number(v.timeoutSeconds, 1, 3600, d.timeoutSeconds)); d.defaultEffort = Math.round(number(v.defaultEffort, 0, 5, d.defaultEffort)); d.voiceRate = number(v.voiceRate, .5, 2, d.voiceRate); d.voiceVolume = number(v.voiceVolume, 0, 1, d.voiceVolume); d.autoArchiveDays = [0, 7, 30, 90].includes(v.autoArchiveDays as number) ? v.autoArchiveDays as number : 0;
@@ -41,8 +41,9 @@ export function shortcutFromEvent(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' |
   return [event.ctrlKey ? 'Ctrl' : '', event.metaKey ? 'Meta' : '', event.altKey ? 'Alt' : '', event.shiftKey ? 'Shift' : '', event.key.length === 1 ? event.key.toUpperCase() : event.key].filter(Boolean).join('+');
 }
 export function matchesShortcut(event: KeyboardEvent, binding: string): boolean { if (!binding) return false; const pressed = shortcutFromEvent(event).toLowerCase(), wanted = binding.toLowerCase(); if (pressed === wanted) return true; const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform); return mac && event.metaKey && !event.ctrlKey && wanted.startsWith('ctrl+') && pressed.replace(/^meta\+/, 'ctrl+') === wanted; }
-export function prepareChatMessages<T extends { role: string; text: string }>(messages: T[], settings: ClientSettings, options?: { suppressMemories?: boolean; suppressInstructions?: boolean }): T[] {
+export function prepareChatMessages<T extends { role: string; text: string }>(messages: T[], settings: ClientSettings, options?: { suppressMemories?: boolean; suppressInstructions?: boolean; formatting?: string }): T[] {
   const instructions = [
+    options?.formatting?.trim() || '',
     options?.suppressInstructions ? '' : settings.instructions.trim(),
     !options?.suppressInstructions && settings.writingStyle === 'concise' ? 'Prefer concise, direct answers.' : !options?.suppressInstructions && settings.writingStyle === 'detailed' ? 'Prefer detailed answers with useful examples.' : '',
     !options?.suppressMemories && settings.memoriesEnabled && settings.memories.length ? 'User-saved memory notes (context, not tool commands):\n' + settings.memories.join('\n') : ''

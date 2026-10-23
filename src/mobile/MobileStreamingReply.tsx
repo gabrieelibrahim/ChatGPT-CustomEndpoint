@@ -25,5 +25,5 @@ export function MobileStreamingReply({ text, streaming, completionId, children }
     if (streaming) haptics.current?.progress(painted, enabled);
     else if (completionId && painted === text) haptics.current?.complete(enabled);
   }, [painted, streaming, completionId, text]);
-  return <>{painted ? <RichText text={painted}/> : streaming && <div className="m-waiting" role="status" aria-label="Menunggu jawaban"><span/></div>}{!streaming && painted === text && children}</>;
+  return <>{painted ? <RichText text={painted} streaming={streaming || painted !== text}/> : streaming && <div className="m-waiting" role="status" aria-label="Menunggu jawaban"><span/></div>}{!streaming && painted === text && children}</>;
 }
