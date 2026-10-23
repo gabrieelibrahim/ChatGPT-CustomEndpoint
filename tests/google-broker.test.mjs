@@ -66,7 +66,7 @@ test('Google confidential OAuth exchanges code with internal PKCE and releases o
   const pending = await f.result(flow); assert.equal(pending.status, 202); assert.deepEqual(await pending.json(), { pending: true });
   await f.authorize(flow);
   assert.equal((await f.result(flow, { verifier: randomBytes(32).toString('base64url') })).status, 403);
-  const response = await f.result(flow), value = await response.json(); assert.equal(response.status, 200); assert.equal(value.serviceId, 'gmail'); assert.equal(value.resource, 'https://gmailmcp.googleapis.com/mcp/v1'); assert.equal(value.account, 'fixture@example.test'); assert.ok(value.connectionToken); assert.equal(value.accessToken, undefined); assert.equal(value.refreshToken, undefined);
+  const response = await f.result(flow), value = await response.json(); assert.equal(response.status, 200); assert.equal(value.serviceId, 'gmail'); assert.equal(value.resource, 'https://google.supergpt.invalid/mcp/gmail'); assert.equal(value.account, 'fixture@example.test'); assert.ok(value.connectionToken); assert.equal(value.accessToken, undefined); assert.equal(value.refreshToken, undefined);
   assert.equal((await f.result(flow)).status, 403); assert.equal(f.tokenCalls, 1);
   const access = await f.request('/__google/access', { token: value.connectionToken, body: { serviceId: 'gmail', resource: value.resource } }); assert.equal(access.status, 200); assert.equal((await access.json()).accessToken, 'fixture-access');
 });
@@ -104,7 +104,7 @@ test('invalid Google refresh removes persisted session and requests reconnect', 
 test('Google connection cannot be used for another service or an arbitrary MCP resource', async t => {
   const f = await fixture(t), connection = await f.connection();
   assert.equal((await f.request('/__google/access', { token: connection.connectionToken, body: { serviceId: 'gmail', resource: 'https://attacker.example/mcp' } })).status, 400);
-  assert.equal((await f.request('/__google/access', { token: connection.connectionToken, body: { serviceId: 'google-drive', resource: 'https://drivemcp.googleapis.com/mcp/v1' } })).status, 401);
+  assert.equal((await f.request('/__google/access', { token: connection.connectionToken, body: { serviceId: 'google-drive', resource: 'https://google.supergpt.invalid/mcp/google-drive' } })).status, 401);
   assert.equal((await f.request('/__google/connection', { method: 'DELETE', token: connection.connectionToken })).status, 204);
   assert.equal((await f.request('/__google/access', { token: connection.connectionToken, body: { serviceId: 'gmail', resource: connection.resource } })).status, 401);
 });

@@ -29,7 +29,7 @@ function nativeFixture(t, config = {}) {
 }
 test('all nine official Google services have OAuth endpoints and request only their selected scopes', () => {
   assert.equal(workspace.googleWorkspace.length, 9); assert.equal(new Set(workspace.googleWorkspace.map(item => item.id)).size, 9);
-  for (const service of workspace.googleWorkspace) { assert.ok(service.url.endsWith('.googleapis.com/mcp/v1')); const read = workspace.googleScopes(service), write = workspace.googleScopes(service, true); assert.ok(read.includes(workspace.googleIdentityScope)); assert.ok(write.length >= read.length); assert.ok(!read.includes('https://mail.google.com/')); }
+  for (const service of workspace.googleWorkspace) { assert.equal(service.url, 'https://google.supergpt.invalid/mcp/' + service.id); const read = workspace.googleScopes(service), write = workspace.googleScopes(service, true); assert.ok(read.includes(workspace.googleIdentityScope)); assert.ok(write.length >= read.length); assert.ok(!read.includes('https://mail.google.com/')); }
 });
 test('native Google login stores account binding in encrypted vault, no token or identity in configuration', async t => {
   const f = nativeFixture(t), controller = new AbortController();
