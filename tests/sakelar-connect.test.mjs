@@ -111,3 +111,12 @@ test('on Android a failed browser open does not abandon the connection (the plug
   assert.ok(messages.some(m => m.includes('Buka lagi browser Sakelar')));
   delete globalThis.__opened;
 });
+
+test('top up is offered only for the Sakelar endpoint and opens the console top-up page', () => {
+  assert.equal(connect.sakelarTopupUrl, 'https://app.sakelar.web.id/console/topup');
+  assert.equal(connect.isSakelarEndpoint('https://api.sakelar.web.id/v1'), true);
+  assert.equal(connect.isSakelarEndpoint('https://api.openai.com/v1'), false);
+  assert.equal(connect.isSakelarEndpoint('https://api.sakelar.web.id.evil.test/v1'), false);
+  assert.equal(connect.isSakelarEndpoint(''), false);
+  assert.equal(connect.isSakelarEndpoint('not a url'), false);
+});

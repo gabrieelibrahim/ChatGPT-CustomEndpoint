@@ -34,6 +34,15 @@ export async function openSakelarBrowser(value:string){
   popup.opener=null;popup.location.href=target;
  }
 }
+export const sakelarTopupUrl=sakelarOrigin+'/console/topup';
+/** Only a Sakelar endpoint runs on Sakelar balance, so only then does topping up fix a quota error. */
+export function isSakelarEndpoint(baseUrl:string|undefined){
+ try{return!!baseUrl&&new URL(baseUrl).origin===new URL(sakelarBaseUrl).origin}catch{return false}
+}
+export async function openSakelarTopup(){
+ if(isNativeDesktop())await(await import('@tauri-apps/plugin-opener')).openUrl(sakelarTopupUrl);
+ else if(!window.open(sakelarTopupUrl,'_blank','noopener'))location.href=sakelarTopupUrl;
+}
 async function json(response:Response){
  if(!response.headers.get('content-type')?.includes('application/json')){await response.body?.cancel();throw Error('Koneksi otomatis Sakelar belum tersedia pada server.');}
  if(!response.body)throw Error('Respons Sakelar kosong.');
