@@ -2,6 +2,7 @@ import { randomBytes, createHash, createCipheriv, createDecipheriv, timingSafeEq
 import { readFile, mkdir, writeFile, rename, unlink } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { isIP } from 'node:net';
 
 const AUTHORIZATION = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN = 'https://oauth2.googleapis.com/token';
@@ -51,9 +52,10 @@ export function createGoogleOAuthBroker(options = {}) {
     origin = url.origin;
   } catch { /* An unconfigured broker exposes only readiness, never an incomplete login. */ }
   try { key = Buffer.isBuffer(options.tokenKey) ? options.tokenKey : Buffer.from(options.tokenKey || '', 'base64'); if (key.length !== 32) key = undefined; } catch { key = undefined; }
-  const ready = !!(origin && key && clientId && clientSecret && (serverToken || options.allowLoopback === true));
+  const ready = !!(origin && key && clientId && clientSecret && (serverToken || options.allowLoopback === true || options.publicLogin === true));
   if (origin) origins.add(origin);
   const redirectUri = origin ? origin + '/__google/callback' : '';
+  const admissions = new Map();
   const flows = new Map(), states = new Map(), refreshes = new Map(), revisions = new Map(), controllers = new Set();
   let closed = false;
   const clean = () => { for (const [id, flow] of flows) if (flow.created + FLOW_TTL < now()) { flows.delete(id); states.delete(flow.state); } };
@@ -118,7 +120,18 @@ export function createGoogleOAuthBroker(options = {}) {
     if (supplied === undefined) return true;
     return origins.has(supplied) || (options.allowLoopback === true && loopbackAddress(req.socket.remoteAddress) && loopbackHost(req.headers.host) && supplied === 'http://' + req.headers.host);
   }
+  function admitLogin(req) {
+    const socketIp = req.socket.remoteAddress || 'unknown';
+    const forwarded = options.trustLoopbackProxy === true && loopbackAddress(socketIp) ? req.headers['x-real-ip'] : undefined;
+    const identity = typeof forwarded === 'string' && isIP(forwarded) ? forwarded : socketIp;
+    for (const [ip, value] of admissions) if (value.until <= now()) admissions.delete(ip);
+    const prior = admissions.get(identity);
+    if (prior && prior.count >= 10 || !prior && admissions.size >= 2048) throw failure(429, 'google_login_rate_limited');
+    admissions.set(identity, { count: (prior?.count || 0) + 1, until: prior?.until || now() + 15 * 60 * 1000 });
+  }
   function admin(req) {
+    // Opt-in public login creates no account access until Google consent. Result/cancel still require the per-flow PKCE proof.
+    if (options.publicLogin === true) return;
     const trustedLocal = options.allowLoopback === true && loopbackAddress(req.socket.remoteAddress) && loopbackHost(req.headers.host) && req.headers.origin === 'http://' + req.headers.host;
     if (!trustedLocal && !(serverToken && equal(bearer(req), serverToken))) throw failure(403, 'google_server_access_denied');
   }
@@ -156,11 +169,12 @@ export function createGoogleOAuthBroker(options = {}) {
       if (url.pathname === '/__google/config' && req.method === 'GET') { send(res, 200, { ready, services: catalog.map(({ id, name, url }) => ({ id, name, resource: url })), ...(ready ? { redirectUri } : {}) }); return true; }
       if (!ready) throw failure(503, 'google_oauth_not_configured');
       clean();
-      if (url.pathname === '/__google/complete' && req.method === 'GET') { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); res.end('Proses login Google selesai. Kembali ke SuperGPT untuk menyelesaikan koneksi.'); return true; }
+      if (url.pathname === '/__google/complete' && req.method === 'GET') { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Return to SuperGPT</title><h1>Google sign-in finished</h1><p>Return to SuperGPT to check your connection.</p><p><a href="supergpt://sakelar">Return to SuperGPT / Kembali ke SuperGPT</a></p><p>In a web browser, return to the SuperGPT tab. You may close this page.</p></html>'); return true; }
       if (url.pathname === '/__google/callback' && req.method === 'GET') { await callback(req, res, url); return true; }
       if (['/__google/start', '/__google/result', '/__google/cancel'].includes(url.pathname) && req.method === 'POST') {
         admin(req); const body = await jsonBody(req);
         if (url.pathname === '/__google/start') {
+          admitLogin(req);
           if (!/^[A-Za-z0-9_-]{43}$/.test(body.challenge) || typeof body.write !== 'boolean') throw failure(400, 'invalid_google_start');
           if (flows.size >= MAX_FLOWS) throw failure(429, 'google_login_busy');
           const service = serviceFor(body.serviceId), scopes = requiredScopes(service, body.write), flowId = random(), state = random(), googleVerifier = random();
@@ -191,5 +205,5 @@ export function createGoogleOAuthBroker(options = {}) {
 }
 
 export function googleOAuthBrokerFromEnvironment(options = {}) {
-  return createGoogleOAuthBroker({ directory: options.directory, origins: options.origins || (process.env.SUPERGPT_ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean), serverToken: process.env.SUPERGPT_SERVER_TOKEN || '', publicOrigin: process.env.SUPERGPT_PUBLIC_ORIGIN || '', clientId: process.env.SUPERGPT_GOOGLE_CLIENT_ID || '', clientSecret: process.env.SUPERGPT_GOOGLE_CLIENT_SECRET || '', tokenKey: process.env.SUPERGPT_GOOGLE_TOKEN_KEY || '', ...options });
+  return createGoogleOAuthBroker({ directory: options.directory, origins: options.origins || (process.env.SUPERGPT_ALLOWED_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean), serverToken: process.env.SUPERGPT_SERVER_TOKEN || '', publicOrigin: process.env.SUPERGPT_PUBLIC_ORIGIN || '', clientId: process.env.SUPERGPT_GOOGLE_CLIENT_ID || '', clientSecret: process.env.SUPERGPT_GOOGLE_CLIENT_SECRET || '', tokenKey: process.env.SUPERGPT_GOOGLE_TOKEN_KEY || '', publicLogin: process.env.SUPERGPT_GOOGLE_PUBLIC_LOGIN === 'true', trustLoopbackProxy: process.env.SUPERGPT_GOOGLE_TRUST_PROXY === 'true', ...options });
 }

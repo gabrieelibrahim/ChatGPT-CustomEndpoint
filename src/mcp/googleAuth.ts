@@ -1,7 +1,7 @@
 import { isNativeDesktop } from '../lib/nativeDesktop';
-import { hasOAuthVault, oauthNativeRequest, prepareOAuthBrowser } from './oauthBrowser';
-import { oauthFetch, oauthJson } from './oauthTransport';
-import { googleBrowserClientId } from './googleClient';
+import { hasOAuthVault, oauthNativeRequest } from './oauthBrowser';
+import { oauthJson } from './oauthTransport';
+import { googleOAuthServer } from './googleClient';
 import { googleScopes, googleService, googleScopeGranted, type GoogleWorkspaceService } from './googleWorkspace';
 
 type NativeBridge = { postMessage(value: string): void; addEventListener(type: 'message', listener: (event: MessageEvent) => void): void };
@@ -10,11 +10,8 @@ type GoogleCredential = CommonCredential & ({ mode: 'native' } | { mode: 'broker
 export type GoogleLoginOptions = { write?: boolean; mode?: 'auto' | 'browser' | 'native' | 'broker'; server?: string; serverToken?: string };
 const bridge = () => typeof window === 'undefined' ? undefined : (window as Window & { SuperGPTGoogleAuth?: NativeBridge }).SuperGPTGoogleAuth;
 export const hasNativeGoogleAuth = () => !!bridge();
-// Google's own account chooser in the system browser, returning through the app's loopback callback.
-export const hasBrowserGoogleAuth = () => hasOAuthVault() && !!googleBrowserClientId();
-const googleTokenEndpoint = 'https://oauth2.googleapis.com/token';
-// Access tokens from a refresh live only in memory, keyed by connection revision.
-const fresh = new Map<string, { token: string; expires: number }>(), refreshing = new Map<string, Promise<string>>();
+// Browser sign-in uses a Web client on the broker; no Desktop client secret or loopback exchange in the APK.
+export const hasBrowserGoogleAuth = () => !!googleOAuthServer();
 const key = (id: string) => 'supergpt-mcp-oauth:google:' + id;
 let epoch = 0, connected: NativeBridge | undefined, storageTail: Promise<unknown> = Promise.resolve();
 const versions = new Map<string, number>();
@@ -86,27 +83,9 @@ async function brokerRequest(server: string, path: string, signal: AbortSignal, 
   const fetcher = isNativeDesktop() ? (await import('@tauri-apps/plugin-http')).fetch : fetch;
   return fetcher(origin + '/__google/' + path, { method: method || (body ? 'POST' : 'GET'), headers: { Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}), ...(authentication ? { Authorization: 'Bearer ' + authentication } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]), credentials: 'omit', cache: 'no-store', redirect: 'error', referrerPolicy: 'no-referrer', ...(isNativeDesktop() ? { maxRedirections: 0 } : {}) });
 }
-async function googleAccount(accessToken: string, signal: AbortSignal) {
-  const fetcher = isNativeDesktop() ? (await import('@tauri-apps/plugin-http')).fetch : fetch;
-  const profile = await oauthJson(await fetcher('https://openidconnect.googleapis.com/v1/userinfo', { headers: { Accept: 'application/json', Authorization: 'Bearer ' + token(accessToken) }, signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]), credentials: 'omit', redirect: 'error', cache: 'no-store', referrerPolicy: 'no-referrer', ...(isNativeDesktop() ? { maxRedirections: 0 } : {}) }));
-  if (profile.email_verified !== true) throw Error('Akun Google tidak dapat diverifikasi.');
-  return account(profile.email);
-}
-function browserAccess(record: GoogleCredential & { mode: 'browser' }, signal: AbortSignal, owner: string): Promise<string> {
-  const slot = owner + ':' + revision(owner), cached = fresh.get(slot);
-  if (cached && cached.expires > Date.now() + 60000) return Promise.resolve(cached.token);
-  if (refreshing.has(slot)) return refreshing.get(slot)!;
-  const run = (async () => {
-    if (record.clientId !== googleBrowserClientId()) { await save(owner); throw Error('Login Google aplikasi ini berubah. Hubungkan ulang plugin.'); }
-    const response = await oauthFetch(googleTokenEndpoint, signal, new URLSearchParams({ grant_type: 'refresh_token', client_id: record.clientId, refresh_token: record.refreshToken }));
-    if ([400, 401].includes(response.status)) { await response.body?.cancel(); await save(owner); throw Error('Izin Google dicabut atau kedaluwarsa. Hubungkan ulang plugin.'); }
-    const value = await oauthJson(response), service = googleService(record.serviceId)!;
-    if (typeof value.scope === 'string') scopes(value.scope.split(/\s+/).filter(Boolean), service, record.write);
-    const accessToken = token(value.access_token);
-    if (revision(owner) + '' === slot.slice(owner.length + 1)) fresh.set(slot, { token: accessToken, expires: Date.now() + Math.max(60, Number(value.expires_in) || 3600) * 1000 });
-    return accessToken;
-  })();
-  refreshing.set(slot, run); return run.finally(() => refreshing.delete(slot));
+async function browserAccess(_record: GoogleCredential & { mode: 'browser' }, _signal: AbortSignal, owner: string): Promise<string> {
+  await save(owner);
+  throw Error('Alur login Google sudah diperbarui. Hubungkan ulang plugin melalui server OAuth.');
 }
 async function access(record: GoogleCredential, signal: AbortSignal, owner: string): Promise<string> {
   if (record.mode === 'browser') return browserAccess(record, signal, owner);
@@ -148,42 +127,25 @@ export async function loginGoogleConnection(id: string, serviceId: string, optio
   validateId(id); signal.throwIfAborted();
   const service = googleService(serviceId); if (!service) throw Error('Layanan Google ini belum didukung.');
   const write = options.write === true, version = revision(id);
-  const useBrowser = options.mode === 'browser' || ((!options.mode || options.mode === 'auto') && hasBrowserGoogleAuth());
-  if (useBrowser && !hasBrowserGoogleAuth()) throw Error('Login Google lewat browser belum disiapkan pada versi aplikasi ini.');
-  const useNative = !useBrowser && options.mode !== 'broker' && hasNativeGoogleAuth();
+  const selectedServer = options.server?.trim() || googleOAuthServer();
+  const useBroker = options.mode === 'broker' || options.mode === 'browser' || ((!options.mode || options.mode === 'auto') && !!selectedServer);
+  const useNative = !useBroker && hasNativeGoogleAuth();
+  if (options.mode === 'browser' && !selectedServer) throw Error('Server login Google belum dikonfigurasi.');
   if (options.mode === 'native' && !useNative) throw nativeError('unavailable');
   // Create a browser popup while still in the originating click, before any asynchronous work.
-  const popup = !useNative && !useBrowser && !isNativeDesktop() ? window.open('about:blank', '_blank', 'popup,width=520,height=720') : undefined;
-  if (!useNative && !useBrowser && !isNativeDesktop() && !popup) throw Error('Izinkan jendela login Google di browser, lalu coba lagi.');
-  const deadline = AbortSignal.any([signal, AbortSignal.timeout(300000)]);
+  const popup = !useNative && !isNativeDesktop() ? window.open('about:blank', '_blank', 'popup,width=520,height=720') : undefined;
+  if (!useNative && !isNativeDesktop() && !popup) throw Error('Izinkan jendela login Google di browser, lalu coba lagi.');
+  const deadline = AbortSignal.any([signal, AbortSignal.timeout(useNative ? 300000 : 600000)]);
   let record: GoogleCredential | undefined, completed = false, flowId = '', verifier = '', server = '';
   try {
     let accessToken: string;
-    if (useBrowser) {
-      const clientId = googleBrowserClientId(), browser = await prepareOAuthBrowser(deadline, { root: true });
-      try {
-        const verifier = random(), state = random(), url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-        for (const [key, value] of Object.entries({ client_id: clientId, redirect_uri: browser.redirectUri, response_type: 'code', scope: googleScopes(service, write).join(' '), code_challenge: await challenge(verifier), code_challenge_method: 'S256', state, access_type: 'offline', prompt: 'select_account consent', include_granted_scopes: 'true' })) url.searchParams.set(key, value);
-        progress('Pilih akun Google di browser…');
-        const callback = new URL(await browser.authorize(url.href, state)), expected = new URL(browser.redirectUri);
-        if (callback.origin !== expected.origin || callback.pathname !== expected.pathname || callback.searchParams.getAll('state').length !== 1 || callback.searchParams.get('state') !== state) throw Error('Callback Google tidak cocok. Login dibatalkan.');
-        if (callback.searchParams.has('error')) throw Error('Login Google dibatalkan atau izin ditolak.');
-        const code = callback.searchParams.get('code'); if (!code || code.length > 8192) throw Error('Kode login Google tidak tersedia.');
-        progress('Menyelesaikan login Google…');
-        const value = await oauthJson(await oauthFetch(googleTokenEndpoint, deadline, new URLSearchParams({ grant_type: 'authorization_code', client_id: clientId, code, redirect_uri: browser.redirectUri, code_verifier: verifier })));
-        accessToken = token(value.access_token);
-        if (typeof value.refresh_token !== 'string' || !value.refresh_token || value.refresh_token.length > 8192) throw Error('Google tidak memberi akses berkelanjutan. Hubungkan ulang dan setujui izin.');
-        const granted = scopes(String(value.scope || '').split(/\s+/).filter(Boolean), service, write);
-        record = { mode: 'browser', clientId, refreshToken: value.refresh_token, serviceId: service.id, resource: service.url, account: await googleAccount(accessToken, deadline), scopes: granted, write };
-        fresh.set(id + ':' + version, { token: accessToken, expires: Date.now() + Math.max(60, Number(value.expires_in) || 3600) * 1000 });
-      } finally { browser.close(); }
-    } else if (useNative) {
+    if (useNative) {
       progress('Pilih akun Google dan tinjau izin layanan…');
       const result = await nativeRequest(id, 'authorize', { scopes: googleScopes(service, write), interactive: true }, deadline);
       accessToken = token(result.accessToken);
       record = { mode: 'native', serviceId: service.id, resource: service.url, account: account(result.account), scopes: scopes(result.grantedScopes, service, write), write };
     } else {
-      server = brokerOrigin(options.server); progress('Memeriksa layanan login Google…');
+      server = brokerOrigin(selectedServer); progress('Memeriksa layanan login Google…');
       const configuration = await oauthJson(await brokerRequest(server, 'config', deadline));
       if (configuration.ready !== true) throw Error('Server OAuth Google belum dikonfigurasi. Ikuti panduan pendaftaran SuperGPT.');
       verifier = random();

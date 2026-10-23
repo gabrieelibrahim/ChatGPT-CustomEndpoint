@@ -54,15 +54,19 @@ Client Android pemilik sudah dibuat dengan package/sertifikat tersebut. Client I
 
 Silent authorization terikat email terverifikasi akun sebelumnya; bila perlu consent lagi, koneksi meminta hubungkan ulang. Tidak menyimpan client secret atau refresh token di APK. Metadata koneksi disimpan dengan vault Android Keystore. Access token hanya berada dalam memori; tiap chat memperoleh token lewat jalur yang sudah ada. Bila token habis dalam chat panjang, sambungkan ulang dan tinjau hasil sebelum mengulangi operasi tulis.
 
-## 2a. Android: login Google di browser (bawaan sejak v0.1.21)
+## 2a. Android: browser login via OAuth broker
 
-Halaman "Pilih akun" Google terbuka di browser sistem, lalu tombol **Kembali ke SuperGPT** (deep link `supergpt://sakelar`) membawa pengguna ke aplikasi. Mode ini memakai OAuth client **Desktop app** dengan PKCE dan redirect loopback `http://127.0.0.1:PORT/`. Desktop client adalah public client: tidak ada client secret di APK.
+The previous Desktop-client loopback flow failed at token exchange with `client_secret is missing`. Do not add a Google client secret to the APK.
 
-1. Di proyek Google Cloud yang sama dengan client Android (API produk, scope Data Access dan test users sudah ada di sana): Google Auth Platform → Clients → Create client → **Desktop app**.
-2. Di laptop build, isi `.env.local` (di-ignore Git): `VITE_GOOGLE_OAUTH_CLIENT_ID=<client-id>.apps.googleusercontent.com`.
-3. Build APK seperti biasa. Bila variabel kosong, aplikasi kembali ke pemilih akun native Android (bagian 2).
+1. Create a **Web application** client in the same Google project. Register exactly `https://sakelar.web.id/__google/callback`.
+2. Put its client ID, client secret and AES-GCM token key in private server environment configuration only.
+3. Set `VITE_GOOGLE_OAUTH_SERVER=https://sakelar.web.id` in ignored `.env.local` on the build machine. The Desktop client ID is no longer used.
+4. Automatic sign-in opens the system browser through the broker. After consent, use **Return to SuperGPT**. Explicit native Android authorization remains available.
+5. `server/google/main.mjs` exposes only Google OAuth routes on loopback port 1431. Reverse proxy `/__google/`, preserve the public Host and overwrite `X-Real-IP`. Disable callback access logs so OAuth codes are not logged.
+6. Public app login is opt-in through `SUPERGPT_GOOGLE_PUBLIC_LOGIN=true`. Set `SUPERGPT_GOOGLE_TRUST_PROXY=true` only behind a trusted loopback proxy. Login starts are limited to 10 per IP per 15 minutes, with at most 100 outstanding flows. Each result/cancel requires the app's per-flow PKCE proof; accessing tokens requires an unguessable connection capability.
+7. Set `SUPERGPT_GOOGLE_DATA` to a private directory, use a 32-byte base64 `SUPERGPT_GOOGLE_TOKEN_KEY`, and explicitly set `SUPERGPT_ALLOWED_ORIGINS`. Never embed a shared server admin token in the APK.
 
-Refresh token disimpan di vault Android Keystore. Access token hanya ada di memori dan diperbarui sekali untuk permintaan yang berjalan bersamaan. Grant yang dicabut menghapus koneksi dan meminta hubungkan ulang. Mengganti client ID juga meminta hubungkan ulang.
+Google refresh tokens remain encrypted on the broker. Android stores its connection capability in the existing encrypted vault. Google data used by tools may be sent to the selected AI provider as disclosed in the privacy policy.
 
 ## 3. Web/iOS: broker OAuth
 

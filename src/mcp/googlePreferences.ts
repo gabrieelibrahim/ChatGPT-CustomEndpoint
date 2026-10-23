@@ -1,7 +1,8 @@
+import { googleOAuthServer } from './googleClient';
 import { sdkServer } from '../chatkit/config';
 const key = 'supergpt-google-broker-v1', secret = 'supergpt-google-broker-token';
 export function loadGoogleBroker() {
-  try { const value = JSON.parse(localStorage.getItem(key) || '{}'); const server = typeof value.server === 'string' ? value.server : ''; if (server) sdkServer(server); return { server }; } catch { return { server: '' }; }
+  try { const value = JSON.parse(localStorage.getItem(key) || '{}'); const server = typeof value.server === 'string' && value.server.trim() ? value.server : googleOAuthServer(); if (server) sdkServer(server); return { server }; } catch { return { server: googleOAuthServer() }; }
 }
 export function googleBrokerToken(value?: string) {
   if (value !== undefined) {
