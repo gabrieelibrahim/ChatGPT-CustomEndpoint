@@ -18,12 +18,13 @@ async function fixture(t, config = {}) {
     requests.push({ path: req.url, auth: req.headers.authorization, cookie: req.headers.cookie, raw });
     res.setHeader('Content-Type', 'application/json');
     const reply = (status, data) => { res.writeHead(status); res.end(JSON.stringify(data)); };
-    if (req.url === '/mcp') { res.setHeader('WWW-Authenticate', 'Bearer resource_metadata="' + base + '/resource", scope="read"'); return reply(401, {}); }
-    if (req.url === '/resource') return reply(200, { resource: config.wrongResource ? base + '/other' : base + '/mcp', authorization_servers: [base], scopes_supported: ['read', 'write'] });
-    if (req.url?.startsWith('/.well-known/')) return reply(200, { issuer: config.wrongIssuer ? base + '/other' : base, authorization_endpoint: base + '/authorize', token_endpoint: base + '/token', registration_endpoint: config.noDcr ? undefined : base + '/register', code_challenge_methods_supported: config.noPkce ? [] : ['S256'], token_endpoint_auth_methods_supported: config.secretOnly ? ['client_secret_basic'] : ['none'] });
-    if (req.url === '/register') { const data = JSON.parse(raw); assert.equal(data.token_endpoint_auth_method, 'none'); redirect = data.redirect_uris[0]; clientId = 'public-fixture-client'; return reply(201, { client_id: clientId, token_endpoint_auth_method: 'none' }); }
+    if (req.url === '/mcp') { res.setHeader('WWW-Authenticate', config.noPrm ? 'Bearer realm="fixture"' : 'Bearer resource_metadata="' + base + '/resource", scope="read"'); return reply(401, {}); }
+    if (req.url === '/resource') return reply(200, { resource: config.wrongResource ? base + '/other' : config.parentResource ? base : base + '/mcp', authorization_servers: [base], scopes_supported: ['read', 'write'] });
+    if (req.url?.startsWith('/.well-known/oauth-protected-resource')) return reply(404, {});
+    if (req.url?.startsWith('/.well-known/')) return reply(200, { issuer: config.wrongIssuer ? base + '/other' : base, authorization_endpoint: base + '/authorize', token_endpoint: base + '/token', registration_endpoint: config.noDcr ? undefined : base + '/register', code_challenge_methods_supported: config.noPkce ? [] : ['S256'], token_endpoint_auth_methods_supported: config.secretOnly ? ['client_secret_basic'] : config.dcrSecret ? ['client_secret_basic', 'client_secret_post'] : ['none'] });
+    if (req.url === '/register') { const data = JSON.parse(raw); assert.equal(data.token_endpoint_auth_method, config.dcrSecret ? 'client_secret_post' : 'none'); redirect = data.redirect_uris[0]; clientId = 'public-fixture-client'; return reply(201, { client_id: clientId, token_endpoint_auth_method: data.token_endpoint_auth_method, ...(config.dcrSecret ? { client_secret: 'installation-secret' } : {}) }); }
     if (req.url === '/token') {
-      const form = new URLSearchParams(raw); assert.equal(form.get('resource'), base + '/mcp'); assert.equal(form.get('client_id'), clientId || 'pre-registered');
+      const form = new URLSearchParams(raw); assert.equal(form.get('resource'), audience()); assert.equal(form.get('client_id'), clientId || 'pre-registered'); assert.equal(form.get('client_secret'), config.dcrSecret ? 'installation-secret' : null);
       if (form.get('grant_type') === 'refresh_token') { refreshes++; if (config.badRefresh) return reply(400, { error: 'invalid_grant' }); if (config.refreshWait) await config.refreshWait(); return reply(200, { access_token: 'refreshed-fixture', refresh_token: 'rotated-fixture', token_type: 'Bearer', expires_in: 3600 }); }
       assert.equal(form.get('code'), 'fixture-code'); assert.equal(form.get('redirect_uri'), redirect);
       assert.equal(createHash('sha256').update(form.get('code_verifier')).digest('base64url'), challenge);
@@ -32,9 +33,10 @@ async function fixture(t, config = {}) {
     reply(404, {});
   });
   base = await listen(server);
+  const audience = () => config.parentResource ? base + '/' : base + '/mcp';
   function authorize(url) {
     opens++; const target = new URL(url); state = target.searchParams.get('state'); challenge = target.searchParams.get('code_challenge'); redirect = target.searchParams.get('redirect_uri');
-    assert.equal(target.searchParams.get('code_challenge_method'), 'S256'); assert.equal(target.searchParams.get('resource'), base + '/mcp'); assert.equal(target.searchParams.get('scope'), 'read');
+    assert.equal(target.searchParams.get('code_challenge_method'), 'S256'); assert.equal(target.searchParams.get('resource'), audience()); assert.equal(target.searchParams.get('scope'), config.noPrm ? null : 'read');
     return redirect + '?state=' + (config.badState ? 'wrong-state' : state) + (config.denied ? '&error=access_denied' : '&code=fixture-code');
   }
   if (config.browser) {
@@ -75,6 +77,23 @@ test('OAuth discovers resource/issuer, registers a public client, uses PKCE/reso
 for (const [label, config, message] of [['resource mismatch', { wrongResource: true }, /metadata OAuth MCP/], ['issuer mismatch', { wrongIssuer: true }, /metadata atau PKCE/], ['missing S256', { noPkce: true }, /metadata atau PKCE/], ['confidential-only client', { secretOnly: true }, /server rahasia/], ['missing client registration', { noDcr: true }, /pendaftaran SuperGPT/], ['wrong callback state', { badState: true }, /Callback OAuth/], ['denied consent', { denied: true }, /izin ditolak/], ['non-bearer token', { badType: true }, /bukan bearer/]]) {
   test('OAuth refuses ' + label + ' without saving a session', async t => { const f = await fixture(t, config); await assert.rejects(f.login(), message); assert.equal(f.vault.size, 0); assert.equal(f.requests.filter(request => request.path === '/token').length, config.badType ? 1 : 0); });
 }
+test('a parent resource on the same origin is accepted and becomes the token audience', async t => {
+  const f = await fixture(t, { parentResource: true }); assert.equal(await f.login(), 'access-fixture');
+  const record = JSON.parse(f.vault.get('fixture')); assert.equal(record.resource, f.base + '/mcp'); assert.equal(record.audience, f.base + '/');
+  assert.equal(await oauth.mcpOAuthToken('fixture', f.base + '/mcp', new AbortController().signal), 'access-fixture');
+});
+test('servers without resource metadata use the MCP origin as their authorization server', async t => {
+  const f = await fixture(t, { noPrm: true }); assert.equal(await f.login(), 'access-fixture'); assert.equal(JSON.parse(f.vault.get('fixture')).audience, undefined);
+});
+test('a client secret issued by dynamic registration is kept in the vault and sent on token and refresh requests', async t => {
+  const f = await fixture(t, { dcrSecret: true }); assert.equal(await f.login(), 'access-fixture');
+  const record = JSON.parse(f.vault.get('fixture')); assert.equal(record.clientSecret, 'installation-secret'); record.expiresAt = 1; f.vault.set('fixture', JSON.stringify(record));
+  assert.equal(await oauth.mcpOAuthToken('fixture', f.base + '/mcp', new AbortController().signal), 'refreshed-fixture'); assert.equal(f.refreshes, 1);
+  assert.equal(localStorage.getItem('supergpt-mcp-oauth:fixture'), null);
+});
+test('a pre-registered client id cannot be used with a confidential-only provider', async t => {
+  const f = await fixture(t, { dcrSecret: true }); await assert.rejects(f.login(undefined, 'pre-registered'), /server rahasia/); assert.equal(f.vault.size, 0);
+});
 test('pre-registered public client skips dynamic registration', async t => { const f = await fixture(t, { noDcr: true }); assert.equal(await f.login(undefined, 'pre-registered'), 'access-fixture'); assert.equal(f.requests.some(request => request.path === '/register'), false); });
 test('expired OAuth token refreshes once for concurrent chat requests and rotates refresh token', async t => {
   const f = await fixture(t); await f.login(); const record = JSON.parse(f.vault.get('fixture')); record.expiresAt = 1; f.vault.set('fixture', JSON.stringify(record));

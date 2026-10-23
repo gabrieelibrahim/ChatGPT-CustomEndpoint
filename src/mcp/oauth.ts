@@ -2,7 +2,9 @@ import { mcpUrl } from './httpClient';
 import { hasOAuthVault, oauthNativeRequest, prepareOAuthBrowser } from './oauthBrowser';
 import { oauthFetch, oauthJson, oauthUrl } from './oauthTransport';
 
-type Credential = { resource: string; issuer: string; tokenEndpoint: string; clientId: string; redirectUri: string; accessToken: string; refreshToken?: string; expiresAt?: number; scope?: string };
+// audience is the protected-resource identifier sent as `resource`; it may be the server's origin while resource is
+// the exact MCP URL. clientSecret only exists when this installation registered itself as a confidential client.
+type Credential = { resource: string; audience?: string; issuer: string; tokenEndpoint: string; clientId: string; clientSecret?: string; redirectUri: string; accessToken: string; refreshToken?: string; expiresAt?: number; scope?: string };
 const storageKey = (id: string) => 'supergpt-mcp-oauth:' + id;
 const locks = new Map<string, Promise<string>>();
 let epoch = 0;
@@ -14,6 +16,13 @@ function persist(operation: () => Promise<void>) {
 }
 const random = () => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const sameResource = (a: string, b: string) => a.replace(/\/+$/, '') === b.replace(/\/+$/, '');
+// RFC 9728 metadata may name a parent of the MCP URL (e.g. https://mcp.example.com for /mcp). Accept only the same
+// origin and a whole-segment path prefix, the rule the official MCP SDK applies.
+function coversResource(parent: string, resource: string) {
+  const outer = new URL(parent), inner = new URL(resource), path = outer.pathname.replace(/\/+$/, '');
+  return outer.origin === inner.origin && !outer.search && (inner.pathname.replace(/\/+$/, '') === path || inner.pathname.startsWith(path + '/'));
+}
+const withSecret = (record: Pick<Credential, 'clientSecret'>, form: URLSearchParams) => { if (record.clientSecret) form.set('client_secret', record.clientSecret); return form; };
 function metadataUrl(value: string, resource: string) {
   const url = oauthUrl(value);
   if (resource.startsWith('https:') && !url.startsWith('https:')) throw Error('Layanan OAuth HTTPS tidak boleh dialihkan ke HTTP.');
@@ -57,7 +66,7 @@ export async function mcpOAuthToken(id: string, resource: string, signal: AbortS
     if (!sameResource(record.resource, mcpUrl(resource))) throw Error('URL plugin berubah. Login ulang untuk URL baru.');
     if (!record.expiresAt || record.expiresAt > Date.now() + 60000) return record.accessToken;
     if (!record.refreshToken) throw Error('Login plugin kedaluwarsa. Hubungkan ulang plugin.');
-    const response = await oauthFetch(record.tokenEndpoint, signal, new URLSearchParams({ grant_type: 'refresh_token', refresh_token: record.refreshToken, client_id: record.clientId, resource: record.resource }));
+    const response = await oauthFetch(record.tokenEndpoint, signal, withSecret(record, new URLSearchParams({ grant_type: 'refresh_token', refresh_token: record.refreshToken, client_id: record.clientId, resource: record.audience || record.resource })));
     if ([400, 401, 403].includes(response.status)) { await response.body?.cancel(); await write(id); throw Error('Login plugin kedaluwarsa atau dicabut. Hubungkan ulang plugin.'); }
     const next = tokens(await oauthJson(response), record); signal.throwIfAborted(); if (revision(id) !== version) throw Error('Sesi plugin sudah dihapus.'); await write(id, next); return next.accessToken;
   })();
@@ -77,7 +86,10 @@ export async function discoverMcpOAuth(resource: string, signal: AbortSignal) {
     if ([404, 405].includes(response.status) && !hint) { await response.body?.cancel(); continue; }
     metadata = await oauthJson(response); break;
   }
-  if (!metadata || typeof metadata.resource !== 'string' || !sameResource(oauthUrl(metadata.resource), resource) || !Array.isArray(metadata.authorization_servers) || !metadata.authorization_servers.length) throw Error('Server belum menyediakan metadata OAuth MCP yang cocok. Gunakan koneksi publik/token jika itu metode server ini.');
+  // MCP 2025-03-26 servers (e.g. Atlassian) have no resource metadata; their authorization server is the MCP origin.
+  if (!metadata && !hint && /^Bearer\b/i.test(challenge)) metadata = { resource, authorization_servers: [base.origin] };
+  if (!metadata || typeof metadata.resource !== 'string' || !coversResource(oauthUrl(metadata.resource), resource) || !Array.isArray(metadata.authorization_servers) || !metadata.authorization_servers.length) throw Error('Server belum menyediakan metadata OAuth MCP yang cocok. Gunakan koneksi publik/token jika itu metode server ini.');
+  const audience = sameResource(metadata.resource, resource) ? resource : oauthUrl(metadata.resource);
   const issuer = metadataUrl(metadata.authorization_servers[0], resource); const authority = new URL(issuer), path = authority.pathname.replace(/\/$/, '');
   if (authority.search) throw Error('Issuer OAuth tidak boleh memuat query.');
   const locations = [...new Set([authority.origin + '/.well-known/oauth-authorization-server' + path, authority.origin + '/.well-known/openid-configuration' + path, authority.origin + path + '/.well-known/openid-configuration'])];
@@ -86,8 +98,10 @@ export async function discoverMcpOAuth(resource: string, signal: AbortSignal) {
     const response = await oauthFetch(url, signal); if ([404, 405].includes(response.status)) { await response.body?.cancel(); continue; } auth = await oauthJson(response); break;
   }
   if (!auth || typeof auth.issuer !== 'string' || !sameResource(oauthUrl(auth.issuer), issuer) || !auth.code_challenge_methods_supported?.includes('S256')) throw Error('Penyedia OAuth belum menyediakan metadata atau PKCE S256 yang diperlukan.');
-  if (auth.token_endpoint_auth_methods_supported && !auth.token_endpoint_auth_methods_supported.includes('none')) throw Error('Penyedia memerlukan server rahasia aplikasi; OAuth langsung dari APK tidak didukung layanan ini.');
-  return { resource, issuer, authorizationEndpoint: metadataUrl(auth.authorization_endpoint, resource), tokenEndpoint: metadataUrl(auth.token_endpoint, resource), registrationEndpoint: auth.registration_endpoint ? metadataUrl(auth.registration_endpoint, resource) : '', scope: scope ?? (Array.isArray(metadata.scopes_supported) ? metadata.scopes_supported.join(' ') : '') };
+  // Public clients when allowed; otherwise a secret this installation receives from dynamic registration.
+  const methods = auth.token_endpoint_auth_methods_supported;
+  const authMethod: 'none' | 'client_secret_post' = !methods || methods.includes('none') ? 'none' : methods.includes('client_secret_post') && auth.registration_endpoint ? 'client_secret_post' : (() => { throw Error('Penyedia memerlukan server rahasia aplikasi; OAuth langsung dari APK tidak didukung layanan ini.'); })();
+  return { resource, audience, authMethod, issuer, authorizationEndpoint: metadataUrl(auth.authorization_endpoint, resource), tokenEndpoint: metadataUrl(auth.token_endpoint, resource), registrationEndpoint: auth.registration_endpoint ? metadataUrl(auth.registration_endpoint, resource) : '', scope: scope ?? (Array.isArray(metadata.scopes_supported) ? metadata.scopes_supported.join(' ') : '') };
 }
 export async function loginMcpOAuth(id: string, resource: string, signal: AbortSignal, clientId = '', progress: (value: string) => void = () => {}) {
   const version = revision(id);
@@ -95,24 +109,28 @@ export async function loginMcpOAuth(id: string, resource: string, signal: AbortS
   try {
     progress('Memeriksa layanan login…');
     const metadata = await discoverMcpOAuth(resource, signal);
+    let clientSecret: string | undefined;
+    if (clientId.trim() && metadata.authMethod !== 'none') throw Error('Penyedia memerlukan server rahasia aplikasi; OAuth langsung dari APK tidak didukung layanan ini.');
     if (!clientId.trim()) {
       if (!metadata.registrationEndpoint) throw Error('Penyedia memerlukan pendaftaran SuperGPT. Isi Client ID milik aplikasi yang sudah disetujui penyedia.');
-      const registration = await oauthJson(await oauthFetch(metadata.registrationEndpoint, signal, { client_name: 'SuperGPT', redirect_uris: [browser.redirectUri], grant_types: ['authorization_code', 'refresh_token'], response_types: ['code'], token_endpoint_auth_method: 'none' }));
-      if (registration.token_endpoint_auth_method && registration.token_endpoint_auth_method !== 'none') throw Error('Penyedia mewajibkan client secret. Gunakan server OAuth milik aplikasi.');
+      const registration = await oauthJson(await oauthFetch(metadata.registrationEndpoint, signal, { client_name: 'SuperGPT', redirect_uris: [browser.redirectUri], grant_types: ['authorization_code', 'refresh_token'], response_types: ['code'], token_endpoint_auth_method: metadata.authMethod }));
+      const method = registration.token_endpoint_auth_method || metadata.authMethod;
+      if (method === 'client_secret_post' && typeof registration.client_secret === 'string' && registration.client_secret && registration.client_secret.length <= 4096) clientSecret = registration.client_secret;
+      else if (method !== 'none') throw Error('Penyedia mewajibkan client secret. Gunakan server OAuth milik aplikasi.');
       clientId = registration.client_id;
     }
     if (typeof clientId !== 'string' || !clientId.trim() || clientId.length > 2048) throw Error('Client ID OAuth tidak valid.');
     const verifier = random(), state = random(); const challenge = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     const url = new URL(metadata.authorizationEndpoint);
-    for (const [key, value] of Object.entries({ response_type: 'code', client_id: clientId, redirect_uri: browser.redirectUri, code_challenge: challenge, code_challenge_method: 'S256', state, resource: metadata.resource, ...(metadata.scope ? { scope: metadata.scope } : {}) })) url.searchParams.set(key, value);
+    for (const [key, value] of Object.entries({ response_type: 'code', client_id: clientId, redirect_uri: browser.redirectUri, code_challenge: challenge, code_challenge_method: 'S256', state, resource: metadata.audience, ...(metadata.scope ? { scope: metadata.scope } : {}) })) url.searchParams.set(key, value);
     progress('Selesaikan login di browser…');
     const callback = new URL(await browser.authorize(url.href, state)); const expected = new URL(browser.redirectUri);
     if (callback.origin !== expected.origin || callback.pathname !== expected.pathname || callback.hash || callback.searchParams.getAll('state').length !== 1 || callback.searchParams.get('state') !== state) throw Error('Callback OAuth tidak cocok. Login dibatalkan.');
     if (callback.searchParams.has('error')) throw Error('Login dibatalkan atau izin ditolak oleh penyedia.');
     const code = callback.searchParams.get('code'); if (!code || code.length > 8192 || callback.searchParams.getAll('code').length !== 1) throw Error('Kode login OAuth tidak tersedia.');
     progress('Menyelesaikan login…');
-    const response = await oauthFetch(metadata.tokenEndpoint, signal, new URLSearchParams({ grant_type: 'authorization_code', client_id: clientId, code, redirect_uri: browser.redirectUri, code_verifier: verifier, resource: metadata.resource }));
-    const record = tokens(await oauthJson(response), { resource: metadata.resource, issuer: metadata.issuer, tokenEndpoint: metadata.tokenEndpoint, clientId, redirectUri: browser.redirectUri, scope: metadata.scope });
+    const response = await oauthFetch(metadata.tokenEndpoint, signal, withSecret({ clientSecret }, new URLSearchParams({ grant_type: 'authorization_code', client_id: clientId, code, redirect_uri: browser.redirectUri, code_verifier: verifier, resource: metadata.audience })));
+    const record = tokens(await oauthJson(response), { resource: metadata.resource, ...(metadata.audience !== metadata.resource ? { audience: metadata.audience } : {}), issuer: metadata.issuer, tokenEndpoint: metadata.tokenEndpoint, clientId, ...(clientSecret ? { clientSecret } : {}), redirectUri: browser.redirectUri, scope: metadata.scope });
     signal.throwIfAborted(); if (revision(id) !== version) throw Error('Sesi plugin sudah dihapus.'); await write(id, record); return record.accessToken;
   } finally { browser.close(); }
 }
