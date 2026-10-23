@@ -47,6 +47,7 @@
     "@tauri-apps/plugin-http": "^2.8.3",
     "@tauri-apps/plugin-opener": "^2.7.2",
     "katex": "0.18.2",
+    "mermaid": "12.2.0",
     "openai": "7.38.0",
     "pdfjs-dist": "6.4.299",
     "react": "^19.1.0",

@@ -116,7 +116,7 @@ test('mobile sends via shared provider transport and preserves desktop history a
     assert.equal(await app.render().send('Halo', [], false, { memories: false, instructions: true }, reply => { spokenReply = reply; }), true);
     assert.equal(spokenReply, 'Halo mobile');
     const view = app.render();
-    assert.equal(payload.model, 'test'); assert.equal(payload.messages[0].content, 'Halo');
+    assert.equal(payload.model, 'test'); assert.match(payload.messages[0].content, /Answer formatting \(SuperGPT renders this\)/); assert.match(payload.messages[0].content, /Current request:\nHalo$/);
     assert.equal(view.busy, false); assert.equal(view.answerText(view.messages.at(-1)), 'Halo mobile');
     const saved = JSON.parse(localStorage.getItem('desktop-chat-content'));
     assert.equal(saved.Existing[0].text, 'Earlier'); assert.equal(saved.Halo.at(-1).reasoning, 'Provider reasoning');
@@ -160,7 +160,8 @@ test('temporary personalization applies only the selected local context and neve
     global.fetch = async (_, init) => { payload = JSON.parse(init.body); return answer(); };
     app.render().reset(true);
     await app.render().send('Hello', [], false, { memories: false, instructions: false });
-    assert.equal(payload.messages[0].content, 'Hello');
+    // Rendering guidance is not personal context, so it stays; saved notes and custom instructions do not.
+    assert.match(payload.messages[0].content, /Current request:\nHello$/); assert.doesNotMatch(payload.messages[0].content, /Local saved note|Use Indonesian/);
     app.render().reset(true);
     await app.render().send('Hello', [], false, { memories: true, instructions: false });
     assert.match(payload.messages[0].content, /Local saved note/);

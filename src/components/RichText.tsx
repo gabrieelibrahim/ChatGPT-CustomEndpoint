@@ -11,6 +11,6 @@ class RichTextBoundary extends Component<{ children: ReactNode; text: string }, 
   render() { return this.state.failed ? <span className="d-rich-fallback">{this.props.text}</span> : this.props.children; }
 }
 
-export const RichText = memo(function RichText({ text }: { text: string }) {
-  return <div className="d-rich-text"><RichTextBoundary text={text}><Suspense fallback={<span className="d-rich-loading" role="status" aria-label="Menyiapkan format pesan"><span/><span/></span>}><Renderer text={text}/></Suspense></RichTextBoundary></div>;
+export const RichText = memo(function RichText({ text, streaming = false }: { text: string; streaming?: boolean }) {
+  return <div className="d-rich-text"><RichTextBoundary text={text}><Suspense fallback={<span className="d-rich-loading" role="status" aria-label="Menyiapkan format pesan"><span/><span/></span>}><Renderer text={text} streaming={streaming}/></Suspense></RichTextBoundary></div>;
 });
