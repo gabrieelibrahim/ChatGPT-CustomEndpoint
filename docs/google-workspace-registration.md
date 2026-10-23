@@ -54,6 +54,16 @@ Client Android pemilik sudah dibuat dengan package/sertifikat tersebut. Client I
 
 Silent authorization terikat email terverifikasi akun sebelumnya; bila perlu consent lagi, koneksi meminta hubungkan ulang. Tidak menyimpan client secret atau refresh token di APK. Metadata koneksi disimpan dengan vault Android Keystore. Access token hanya berada dalam memori; tiap chat memperoleh token lewat jalur yang sudah ada. Bila token habis dalam chat panjang, sambungkan ulang dan tinjau hasil sebelum mengulangi operasi tulis.
 
+## 2a. Android: login Google di browser (bawaan sejak v0.1.21)
+
+Halaman "Pilih akun" Google terbuka di browser sistem, lalu tombol **Kembali ke SuperGPT** (deep link `supergpt://sakelar`) membawa pengguna ke aplikasi. Mode ini memakai OAuth client **Desktop app** dengan PKCE dan redirect loopback `http://127.0.0.1:PORT/`. Desktop client adalah public client: tidak ada client secret di APK.
+
+1. Di proyek Google Cloud yang sama dengan client Android (API produk, scope Data Access dan test users sudah ada di sana): Google Auth Platform → Clients → Create client → **Desktop app**.
+2. Di laptop build, isi `.env.local` (di-ignore Git): `VITE_GOOGLE_OAUTH_CLIENT_ID=<client-id>.apps.googleusercontent.com`.
+3. Build APK seperti biasa. Bila variabel kosong, aplikasi kembali ke pemilih akun native Android (bagian 2).
+
+Refresh token disimpan di vault Android Keystore. Access token hanya ada di memori dan diperbarui sekali untuk permintaan yang berjalan bersamaan. Grant yang dicabut menghapus koneksi dan meminta hubungkan ulang. Mengganti client ID juga meminta hubungkan ulang.
+
 ## 3. Web/iOS: broker OAuth
 
 Source broker tersedia pada `server/google/oauthBroker.mjs`, terhubung ke `server/sdk/main.mjs`. Belum dideploy. iOS memerlukan broker ini karena bridge Google Identity Android tidak tersedia. iOS/web menyimpan koneksi selama sesi, belum Keychain iOS.

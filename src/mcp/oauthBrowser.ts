@@ -28,9 +28,9 @@ export async function oauthNativeRequest(op: string, data: object = {}, signal?:
 }
 export const hasOAuthVault = () => !!native();
 export type OAuthBrowser = { redirectUri: string; authorize: (url: string, state: string) => Promise<string>; close: () => void };
-export async function prepareOAuthBrowser(signal: AbortSignal): Promise<OAuthBrowser> {
+export async function prepareOAuthBrowser(signal: AbortSignal, options: { root?: boolean } = {}): Promise<OAuthBrowser> {
   if (native()) {
-    const { redirectUri, handle } = await oauthNativeRequest('prepare', {}, signal);
+    const { redirectUri, handle } = await oauthNativeRequest('prepare', options.root ? { root: true } : {}, signal);
     return { redirectUri, authorize: async (url, state) => (await oauthNativeRequest('authorize', { url, state, handle }, signal)).callback, close: () => { void oauthNativeRequest('cancel', { handle }).catch(() => {}); } };
   }
   if (isNativeDesktop()) throw Error('Login OAuth ini tersedia di Android dan browser. Gunakan bearer token untuk desktop ini.');

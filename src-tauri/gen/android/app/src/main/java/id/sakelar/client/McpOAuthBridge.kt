@@ -57,6 +57,18 @@ class McpOAuthBridge(private val activity: Activity) {
     String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8)
   }
   fun close() { logins.values.forEach { try { it.socket.close() } catch (_: Exception) {} }; logins.clear(); executor.shutdownNow() }
+  // The browser tab the provider redirected to. supergpt://sakelar brings the waiting app back (singleTask).
+  private fun callbackPage(valid: Boolean): String {
+    val title = if (valid) "Login berhasil" else "Login tidak cocok"
+    val text = if (valid) "Kembali ke SuperGPT untuk menyelesaikan koneksi." else "Ulangi login dari SuperGPT."
+    val refresh = if (valid) "<meta http-equiv=\"refresh\" content=\"0;url=supergpt://sakelar/oauth-done\">" else ""
+    return "<!doctype html><html lang=\"id\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">$refresh<title>$title</title>" +
+      "<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#fff;color:#1f1f1f;font:16px/1.5 system-ui,sans-serif}main{max-width:320px;padding:24px;text-align:center}" +
+      "h1{font-size:24px;font-weight:500;margin:0 0 8px}p{color:#5f6368;margin:0 0 28px}a{display:inline-block;padding:12px 28px;border-radius:24px;background:#0b57d0;color:#fff;text-decoration:none;font-weight:500}" +
+      "@media(prefers-color-scheme:dark){body{background:#131314;color:#e3e3e3}p{color:#9aa0a6}a{background:#a8c7fa;color:#062e6f}}</style></head>" +
+      "<body><main><h1>$title</h1><p>$text</p>" + (if (valid) "<a href=\"supergpt://sakelar/oauth-done\">Kembali ke SuperGPT</a>" else "") + "</main></body></html>"
+  }
+
   fun install(webView: WebView, origins: Set<String>) {
     WebViewCompat.addWebMessageListener(webView, "SuperGPTMcpOAuth", origins) { _, message, _, mainFrame, reply ->
       if (!mainFrame || message.type != WebMessageCompat.TYPE_STRING) return@addWebMessageListener
@@ -73,7 +85,8 @@ class McpOAuthBridge(private val activity: Activity) {
               logins.entries.removeIf { (_, login) -> if (System.currentTimeMillis() - login.created > 300000) { login.socket.close(); true } else false }
               require(logins.isEmpty())
               val socket = ServerSocket(0, 4, InetAddress.getByName("127.0.0.1")).apply { soTimeout = 300000 }
-              val handle = UUID.randomUUID().toString(); val path = "/oauth/" + UUID.randomUUID().toString()
+              // Google desktop clients accept loopback redirects at the root path only; state still binds the callback.
+              val handle = UUID.randomUUID().toString(); val path = if (request.optBoolean("root", false)) "/" else "/oauth/" + UUID.randomUUID().toString()
               val redirect = "http://127.0.0.1:${socket.localPort}$path"
               logins[handle] = Login(socket, path, redirect, System.currentTimeMillis())
               result.put("handle", handle).put("redirectUri", redirect)
@@ -102,9 +115,8 @@ class McpOAuthBridge(private val activity: Activity) {
                     val target = parts.getOrNull(1) ?: ""
                     val uri = Uri.parse("http://127.0.0.1:${login.socket.localPort}$target")
                     val valid = parts.firstOrNull() == "GET" && target.startsWith(login.path + "?") && uri.path == login.path && uri.getQueryParameters("state") == listOf(state)
-                    val body = if (valid) "Login diterima. Kembali ke SuperGPT." else "Callback tidak cocok."
-                    val bytes = body.toByteArray(Charsets.UTF_8)
-                    socket.getOutputStream().write(("HTTP/1.1 " + (if (valid) "200 OK" else "400 Bad Request") + "\r\nContent-Type: text/plain; charset=utf-8\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'none'\r\nConnection: close\r\nContent-Length: ${bytes.size}\r\n\r\n").toByteArray(Charsets.UTF_8) + bytes)
+                    val bytes = callbackPage(valid).toByteArray(Charsets.UTF_8)
+                    socket.getOutputStream().write(("HTTP/1.1 " + (if (valid) "200 OK" else "400 Bad Request") + "\r\nContent-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nContent-Security-Policy: default-src 'none'; style-src 'unsafe-inline'\r\nConnection: close\r\nContent-Length: ${bytes.size}\r\n\r\n").toByteArray(Charsets.UTF_8) + bytes)
                     if (valid) callback = login.redirect + target.removePrefix(login.path)
                   }
                 }

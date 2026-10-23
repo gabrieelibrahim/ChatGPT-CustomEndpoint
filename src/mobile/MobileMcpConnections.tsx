@@ -11,7 +11,7 @@ import { MobilePageTransition } from './MobilePageTransition';
 import { MobilePluginSkeleton } from './MobilePluginSkeleton';
 import { PluginIcon } from './PluginIcon';
 import { clearMcpOAuth, loginMcpOAuth } from '../mcp/oauth';
-import { clearGoogleConnection, hasNativeGoogleAuth, loginGoogleConnection } from '../mcp/googleAuth';
+import { clearGoogleConnection, hasBrowserGoogleAuth, hasNativeGoogleAuth, loginGoogleConnection } from '../mcp/googleAuth';
 import { googleService } from '../mcp/googleWorkspace';
 import { googleBrokerToken, loadGoogleBroker, saveGoogleBroker } from '../mcp/googlePreferences';
 import './mcp-connections.css';
@@ -29,7 +29,7 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
   const [name, setName] = useState(''), [url, setUrl] = useState(''), [token, setToken] = useState(''), [pendingPrompt, setPendingPrompt] = useState('');
   const [ai, setAi] = useState(loadMainAi);
   const [auth, setAuth] = useState<'oauth' | 'token'>('token'), [clientId, setClientId] = useState(''), [progress, setProgress] = useState('');
-  const [googleWrite, setGoogleWrite] = useState(false), [googleMode, setGoogleMode] = useState<'auto' | 'native' | 'broker'>('auto');
+  const [googleWrite, setGoogleWrite] = useState(false), [googleMode, setGoogleMode] = useState<'auto' | 'browser' | 'native' | 'broker'>('auto');
   const [googleServer, setGoogleServer] = useState(() => loadGoogleBroker().server), [googleToken, setGoogleToken] = useState(googleBrokerToken);
   const autoStart = useRef(false), request = useRef<AbortController | null>(null), mounted = useRef(true), scroll = useRef<HTMLDivElement>(null), offsets = useRef(new Map<string, number>());
   const view = path[path.length - 1], pageId = identity(view);
@@ -59,7 +59,7 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
     setAuth(['google', 'oauth'].includes(profile?.auth || plugin?.auth || '') ? 'oauth' : 'token'); setClientId(''); setProgress(''); setGoogleWrite(profile?.googleWrite === true); setGoogleMode('auto');
     // On Android a new Google plugin goes straight to Google's own account chooser; the form stays as the fallback
     // and for changing an existing connection.
-    autoStart.current = plugin?.provider === 'google' && !profile && hasNativeGoogleAuth();
+    autoStart.current = plugin?.provider === 'google' && !profile && (hasBrowserGoogleAuth() || hasNativeGoogleAuth());
     push({ kind: 'connection', plugin, profileId: profile?.id });
   }
   useEffect(() => { if (view.kind === 'connection' && autoStart.current) { autoStart.current = false; void connect(); } }, [pageId]);
@@ -147,8 +147,8 @@ export function MobileMcpConnections({ store, onClose, onNotice, backLabel, onDr
         {isGoogle ? <>
           <label>Akses yang diminta<select disabled={busy} value={googleWrite ? 'write' : 'read'} onChange={event => setGoogleWrite(event.target.value === 'write')}><option value="read">Baca data layanan ini</option>{!!google?.writeScopes.length && <option value="write">Baca dan izinkan perubahan</option>}</select></label>
           <p className="m-plugin-form-caption">Izin ditinjau di layar Google. Izin akun yang pernah diberikan dapat tetap berlaku; setiap tindakan tool tetap meminta persetujuan di chat.</p>
-          <details><summary>Koneksi Google</summary><label>Metode otorisasi Google<select disabled={busy} value={googleMode} onChange={event => setGoogleMode(event.target.value as typeof googleMode)}><option value="auto">Otomatis</option><option value="native" disabled={!hasNativeGoogleAuth()}>Google di perangkat Android</option><option value="broker">Server OAuth SuperGPT</option></select></label>
-          <p>{hasNativeGoogleAuth() ? 'Google Identity tersedia pada aplikasi ini. Akun dan izin diperiksa saat masuk.' : 'Versi ini memakai server OAuth untuk login Google. Daftarkan dan konfigurasi server terlebih dahulu.'}</p>
+          <details><summary>Koneksi Google</summary><label>Metode otorisasi Google<select disabled={busy} value={googleMode} onChange={event => setGoogleMode(event.target.value as typeof googleMode)}><option value="auto">Otomatis</option><option value="browser" disabled={!hasBrowserGoogleAuth()}>Login Google di browser</option><option value="native" disabled={!hasNativeGoogleAuth()}>Google di perangkat Android</option><option value="broker">Server OAuth SuperGPT</option></select></label>
+          <p>{hasBrowserGoogleAuth() ? 'Halaman login Google terbuka di browser untuk memilih akun dan izin, lalu kembali ke SuperGPT.' : hasNativeGoogleAuth() ? 'Google Identity tersedia pada aplikasi ini. Akun dan izin diperiksa saat masuk.' : 'Versi ini memakai server OAuth untuk login Google. Daftarkan dan konfigurasi server terlebih dahulu.'}</p>
           {isAppleMobileDevice() && <p className="m-plugin-form-caption">iPhone/iPad: selesaikan login Google di browser, lalu kembali ke SuperGPT. Sesi koneksi hanya disimpan selama sesi aplikasi; hubungkan ulang jika sesi hilang.</p>}<label>Server OAuth Google<input type="url" disabled={busy} value={googleServer} placeholder="https://server-supergpt.example" onChange={event => setGoogleServer(event.target.value)}/></label>
           <label>Token akses server Google<input type="password" disabled={busy} autoComplete="off" value={googleToken} maxLength={4096} onChange={event => setGoogleToken(event.target.value)}/></label><p className="m-plugin-form-caption">Client secret Google dipasang pada server. Token akses server hanya disimpan selama sesi aplikasi.</p></details>
         </> : <><label>Metode masuk<select disabled={busy} value={auth} onChange={event => { setAuth(event.target.value as 'oauth' | 'token'); setToken(''); setError(''); }}><option value="oauth">Masuk dengan OAuth</option><option value="token">Token / tanpa login</option></select></label>
