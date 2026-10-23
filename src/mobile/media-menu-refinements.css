@@ -17,9 +17,20 @@
 .m-app .m-composer-files .m-file-media img{width:98px;height:122px;object-fit:cover}
 .m-app .m-composer-files .m-file-card .m-file-remove{right:4px;top:4px;width:24px;height:24px;min-height:24px;border:0;padding:3px;background:#666b;color:white}
 .m-app .m-composer-files .m-file-remove svg{width:20px!important;height:20px!important}
-.m-app .m-composer-files textarea{left:8px;top:142px;transform:none;width:calc(100% - 16px);padding:4px 8px;max-height:136px}
-.m-app .m-composer-files .m-file-video{align-self:center;margin-top:40px;max-width:250px}
-.m-app .m-composer-files .m-file-card:not(.m-file-media):not(.m-file-video){align-self:center;margin-top:30px}
+/* Out-rank the expanded first-focus layout so text never sits on top of the attachments. */
+.m-app .m-footer .m-composer.m-composer-files textarea{left:8px;top:142px;transform:none;width:calc(100% - 16px);padding:4px 8px;max-height:136px}
+/* Composer attachments sit in one top row like ChatGPT: photo and video tiles, document cards. */
+.m-app .m-composer-files .m-file-media .m-file-open:not(:has(img)){display:flex;flex-direction:column;justify-content:center;gap:8px;height:100%;padding:10px}
+.m-app .m-composer-files .m-file-media .m-file-type{width:36px;height:40px;background:color-mix(in srgb,var(--m-text) 8%,transparent);color:var(--m-file-purple)}
+.m-app .m-composer-files .m-file-media .m-file-label{align-items:center;max-width:100%}
+.m-app .m-composer-files .m-file-media .m-file-label strong{font-size:12px;line-height:16px;max-width:100%}
+.m-app .m-composer-files .m-file-card:not(.m-file-media){width:220px;height:64px;flex-shrink:0;border:0;border-radius:15px;background:var(--m-panel)}
+.m-app .m-composer-files .m-file-card:not(.m-file-media) .m-file-open{justify-content:flex-start;height:64px;min-height:64px;padding:10px 36px 10px 10px;text-align:left}
+.m-app .m-footer .m-composer.m-composer-files:not(:has(.m-file-media)){height:max(167px,calc(131px + var(--m-input-height,36px)));min-height:167px}
+.m-app .m-composer-files:not(:has(.m-file-media)) .m-attachments{height:80px}
+.m-app .m-footer .m-composer.m-composer-files:not(:has(.m-file-media)) textarea{top:84px}
+.m-app .m-file-video-thumb .m-file-open{position:relative}
+.m-app .m-file-video-thumb .m-file-play{inset:auto;left:50%;top:50%;width:36px;height:36px;transform:translate(-50%,-50%);border-radius:50%;background:#0009;color:#fff;text-shadow:none}
 .m-app .m-composer-files>button{bottom:8px}
 .m-app .m-media-preview>img{background:#000}
 .m-app .m-conversation-overlay>.m-backdrop{background:transparent}

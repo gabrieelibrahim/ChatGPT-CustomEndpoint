@@ -2,10 +2,26 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const ts = require('typescript');
-const code = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/lib/fileLibrary.ts'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-const loaded = { exports: {} }; new Function('module', 'exports', code)(loaded, loaded.exports);
+const zlib = require('node:zlib');
+const Module = require('node:module');
+const { buildSync } = require('esbuild');
+// pdf.js and the browser media decoders stay out of the Node bundle.
+const built = buildSync({ entryPoints: [path.join(__dirname, '../src/lib/fileLibrary.ts')], bundle: true, write: false, platform: 'node', format: 'cjs', external: ['pdfjs-dist*'] });
+const loaded = new Module(__filename + '.fixture', module); loaded._compile(built.outputFiles[0].text, __filename);
 const { saveLibraryFile, libraryFiles, removeLibraryFile, resolveMessageFiles } = loaded.exports;
+
+// Office files are ZIP archives; build real deflated ones so the reader is tested end to end.
+function zip(files) {
+  const locals = [], centrals = []; let offset = 0;
+  for (const [name, text] of Object.entries(files)) {
+    const nameBytes = Buffer.from(name), data = zlib.deflateRawSync(Buffer.from(text));
+    const local = Buffer.alloc(30); local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(8, 8); local.writeUInt32LE(data.length, 18); local.writeUInt32LE(Buffer.byteLength(text), 22); local.writeUInt16LE(nameBytes.length, 26);
+    const central = Buffer.alloc(46); central.writeUInt32LE(0x02014b50, 0); central.writeUInt16LE(8, 10); central.writeUInt32LE(data.length, 20); central.writeUInt32LE(Buffer.byteLength(text), 24); central.writeUInt16LE(nameBytes.length, 28); central.writeUInt32LE(offset, 42);
+    locals.push(local, nameBytes, data); centrals.push(central, nameBytes); offset += 30 + nameBytes.length + data.length;
+  }
+  const directory = Buffer.concat(centrals), end = Buffer.alloc(22); end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(Object.keys(files).length, 10); end.writeUInt32LE(directory.length, 12); end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, directory, end]);
+}
 
 // Minimal asynchronous IndexedDB API fixture. Tests the client lifecycle and
 // request hydration, not a browser's native IndexedDB implementation.
@@ -46,8 +62,10 @@ test('vision hydration generates image data only for supported image types', asy
 test('missing and unsupported attachments still fail before sending', async () => {
   const signal = new AbortController().signal;
   await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: [{ id: 'missing', name: 'missing.txt' }] }], signal), /tidak ditemukan/);
-  const binary = await saveLibraryFile(new File(['pdf'], 'file.pdf', { type: 'application/pdf' }));
+  const binary = await saveLibraryFile(new File([new Uint8Array([80, 75, 3, 4, 0, 0, 1])], 'archive.bin', { type: 'application/octet-stream' }));
   await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: [binary] }], signal), /belum didukung/);
+  const audio = await saveLibraryFile(new File(['id3'], 'voice.m4a', { type: 'audio/mp4' }));
+  await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: [audio] }], signal), /Audio voice.m4a belum didukung/);
 });
 
 test('attachment count and earlier turns are forwarded without truncation', async () => {
@@ -81,4 +99,22 @@ test('aborted attachment resolution does not prepare provider context', async ()
   const ref = await saveLibraryFile(new File(['secret source'], 'file.txt', { type: 'text/plain' }));
   const controller = new AbortController(); controller.abort();
   await assert.rejects(resolveMessageFiles([{ role: 'user', text: '', attachments: [ref] }], controller.signal), error => error.name === 'AbortError');
+});
+
+test('Word, PowerPoint and Excel files are sent as their text', async () => {
+  const signal = new AbortController().signal;
+  const docx = await saveLibraryFile(new File([zip({ 'word/document.xml': '<w:document><w:body><w:p><w:r><w:t>Laporan</w:t></w:r><w:r><w:tab/><w:t xml:space="preserve">Q3 &amp; Q4</w:t></w:r></w:p><w:p><w:r><w:t>Baris dua</w:t></w:r></w:p></w:body></w:document>' })], 'laporan.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
+  const pptx = await saveLibraryFile(new File([zip({ 'ppt/slides/slide10.xml': '<p:sld><a:p><a:r><a:t>Penutup</a:t></a:r></a:p></p:sld>', 'ppt/slides/slide2.xml': '<p:sld><a:p><a:r><a:t>Pembuka</a:t></a:r></a:p></p:sld>' })], 'deck.pptx', { type: '' }));
+  const xlsx = await saveLibraryFile(new File([zip({ 'xl/workbook.xml': '<workbook><sheets><sheet name="Penjualan" sheetId="1"/></sheets></workbook>', 'xl/sharedStrings.xml': '<sst><si><t>Produk</t></si><si><r><t>Kop</t></r><r><t>i</t></r></si></sst>', 'xl/worksheets/sheet1.xml': '<worksheet><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="inlineStr"><is><t>Harga</t></is></c></row><row r="2"><c r="A2" t="s"><v>1</v></c><c r="B2"><v>25000</v></c><c r="C2"/></row></sheetData></worksheet>' })], 'data.xlsx', { type: '' }));
+  const [resolved] = await resolveMessageFiles([{ role: 'user', text: 'Ringkas', attachments: [docx, pptx, xlsx] }], signal);
+  assert.match(resolved.text, /\[Attached file: laporan.docx\]\nLaporan\tQ3 & Q4\nBaris dua\n\[End attached file\]/);
+  assert.match(resolved.text, /--- Slide 1 ---\nPembuka\n\n--- Slide 2 ---\nPenutup/);
+  assert.match(resolved.text, /--- Sheet Penjualan ---\nProduk\tHarga\nKopi\t25000\t/);
+  assert.equal(resolved.images, undefined);
+});
+
+test('files with unknown extensions are sent when they are readable text', async () => {
+  const ref = await saveLibraryFile(new File(['FROM node:24\nRUN npm ci'], 'Dockerfile', { type: '' }));
+  const [resolved] = await resolveMessageFiles([{ role: 'user', text: '', attachments: [ref] }], new AbortController().signal);
+  assert.match(resolved.text, /Attached file: Dockerfile\]\nFROM node:24/);
 });

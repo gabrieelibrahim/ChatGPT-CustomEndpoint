@@ -1,3 +1,4 @@
+import { attachmentPart, type AttachmentPart } from './attachmentContent';
 export type FileRef = { id: string; name: string; type: string };
 export type LibraryFile = FileRef & { blob: Blob; size: number; added: number };
 const databaseName = 'client-file-library-v1';
@@ -16,20 +17,24 @@ export async function saveLibraryFile(file: File, id = crypto.randomUUID()): Pro
 export function libraryFiles() { return operation<LibraryFile[]>('readonly', store => store.getAll()); }
 export function libraryFile(id: string) { return operation<LibraryFile | undefined>('readonly', store => store.get(id)); }
 export async function removeLibraryFile(id: string) { await operation('readwrite', store => store.delete(id)); window.dispatchEvent(new Event('client-files-changed')); }
-function dataUrl(blob: Blob): Promise<string> { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(Error('Gambar tidak bisa dibaca.')); reader.readAsDataURL(blob); }); }
+// Expensive conversions (video frames, PDF pages) are reused for later turns of the same chat.
+const parts = new Map<string, AttachmentPart>();
 export async function resolveMessageFiles<T extends { role: string; text: string; attachments?: FileRef[] }>(messages: T[], signal: AbortSignal): Promise<(T & { images?: string[] })[]> {
   const output = [];
   for (const message of messages) {
-    let context = ''; const images: string[] = [];
+    const context: string[] = [], images: string[] = [];
     for (const reference of message.attachments || []) {
-      signal.throwIfAborted(); const file = await libraryFile(reference.id); if (!file) throw Error('Lampiran ' + reference.name + ' tidak ditemukan di library perangkat ini.');
-      if (/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
-        images.push(await dataUrl(file.blob));
-      } else if (file.type.startsWith('text/') || /\.(txt|md|json|csv|js|jsx|ts|tsx|css|html|py|log|yaml|yml)$/i.test(file.name)) {
-        context += '\n\n[Attached file: ' + file.name + ']\n' + await file.blob.text() + '\n[End attached file]';
-      } else throw Error('Format ' + file.name + ' belum didukung model bridge. Gunakan file teks atau gambar PNG/JPEG/WebP/GIF.');
+      signal.throwIfAborted();
+      let part = parts.get(reference.id);
+      if (!part) {
+        const file = await libraryFile(reference.id); if (!file) throw Error('Lampiran ' + reference.name + ' tidak ditemukan di library perangkat ini.');
+        part = await attachmentPart(file, signal);
+        if (part.images.length > 1 || part.text.length > 4096) { if (parts.size >= 24) parts.delete(parts.keys().next().value!); parts.set(reference.id, part); }
+      }
+      if (part.text) context.push(part.text);
+      images.push(...part.images);
     }
-    output.push({ ...message, text: message.text + (context ? '\n\nThe following attachments are source data for this request:\n' + context : ''), ...(images.length ? { images } : {}) });
+    output.push({ ...message, text: message.text + (context.length ? '\n\nThe following attachments are source data for this request:\n\n' + context.join('\n\n') : ''), ...(images.length ? { images } : {}) });
   }
   signal.throwIfAborted(); return output;
 }
