@@ -65,6 +65,8 @@ object ReleaseUpdater {
     val p = prefs(c)
     if (!force && System.currentTimeMillis() - p.getLong("lastAttempt", 0) < 6 * 60 * 60 * 1000L) return
     if (p.getString("phase", "") == "installing") return
+    val remembered = p.getString("version", "") ?: ""
+    if (remembered.isNotEmpty() && !ReleasePolicy.newer(remembered, installed(c).versionName ?: "0.0.0")) { forgetRelease(c); apk(c).delete(); if (p.getString("phase", "") == "ready") state(c, "idle") }
     if (p.getLong("downloadId", -1) != -1L || p.getString("phase", "") == "ready") { reconcile(c); return }
     p.edit().putLong("lastAttempt", System.currentTimeMillis()).apply(); state(c, "checking")
     try {
@@ -115,13 +117,13 @@ object ReleaseUpdater {
     }
     try {
       manager(c).query(DownloadManager.Query().setFilterById(id)).use { cursor ->
-        if (!cursor.moveToFirst()) { p.edit().remove("downloadId").apply(); state(c, "error", "Unduhan tidak ditemukan. Coba unduh lagi."); return }
+        if (!cursor.moveToFirst()) { forgetRelease(c); state(c, "error", "Unduhan tidak ditemukan. Ketuk Periksa pembaruan."); return }
         when (cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))) {
           DownloadManager.STATUS_SUCCESSFUL -> { p.edit().remove("downloadId").apply(); verify(c); state(c, "ready", "Pembaruan siap dipasang."); notifyReady(c); tryAutoInstall(c) }
-          DownloadManager.STATUS_FAILED -> { p.edit().remove("downloadId").apply(); apk(c).delete(); state(c, "error", "Unduhan gagal. Periksa jaringan dan ruang penyimpanan.") }
+          DownloadManager.STATUS_FAILED -> { forgetRelease(c); apk(c).delete(); state(c, "error", "Unduhan gagal. Periksa jaringan dan ruang penyimpanan, lalu periksa pembaruan lagi.") }
         }
       }
-    } catch (error: Exception) { p.edit().remove("downloadId").apply(); apk(c).delete(); state(c, "error", error.message ?: "APK gagal diverifikasi.") }
+    } catch (error: Exception) { forgetRelease(c); apk(c).delete(); state(c, "error", error.message ?: "APK gagal diverifikasi.") }
   }
   @Suppress("DEPRECATION") private fun signers(info: android.content.pm.PackageInfo): Set<String> {
     val signatures = if (Build.VERSION.SDK_INT >= 28) info.signingInfo?.apkContentsSigners else info.signatures
@@ -153,6 +155,8 @@ object ReleaseUpdater {
       }
     } catch (error: Exception) { state(activity, "error", error.message ?: "Pembaruan ditolak.") } }
   }
+  /** Drops a remembered release so the next tap checks GitHub again instead of reusing an old download. */
+  private fun forgetRelease(c: Context) { prefs(c).edit().remove("downloadId").remove("version").remove("url").remove("sha256").remove("size").apply() }
   private fun clearSession(c: Context) {
     val p = prefs(c); val session = p.getInt("installSession", -1); p.edit().remove("installSession").apply()
     if (session != -1) try { c.packageManager.packageInstaller.abandonSession(session) } catch (_: Exception) { }
