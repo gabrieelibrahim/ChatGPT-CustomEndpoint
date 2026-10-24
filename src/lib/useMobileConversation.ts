@@ -88,7 +88,7 @@ export function useMobileConversation() {
       }, personalization.reasoningEffort || ['minimal', 'low', 'medium', 'high', 'xhigh', 'max'][settings.defaultEffort], value => { reported = value; }, value => { agent = value; publish(current()); }, temporary);
     } catch (failure) {
       failed = true;
-      if (active.current === controller) setError(controller.signal.aborted ? controller.signal.reason === 'timeout' ? 'Penyedia terlalu lama merespons.' : 'Jawaban dihentikan.' : providerErrorMessage(failure, isNativeDesktop(), 'Jawaban gagal dimuat.'));
+      if (active.current === controller) setError(controller.signal.aborted ? controller.signal.reason === 'timeout' ? 'Penyedia terlalu lama merespons.' : 'Jawaban dihentikan.' : answer.trim() ? 'Koneksi terputus saat jawaban masih dikirim, jadi jawaban di atas belum lengkap. Periksa sinyal lalu kirim ulang.' : providerErrorMessage(failure, isNativeDesktop(), 'Jawaban gagal dimuat.'));
     } finally {
       if (!failed && !controller.signal.aborted && answer.trim() && loadSettings().notifications) notifyTaskComplete(name);
       releaseBackground(); clearTimeout(timeout);
