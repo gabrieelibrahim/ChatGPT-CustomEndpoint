@@ -46,7 +46,7 @@ object ReleaseUpdater {
     val jobs = c.getSystemService(android.app.job.JobScheduler::class.java)
     if (!prefs(c).getBoolean("autoCheck", true)) { jobs.cancel(JOB); return }
     if (jobs.getPendingJob(JOB) == null) jobs.schedule(android.app.job.JobInfo.Builder(JOB, ComponentName(c, UpdateCheckJob::class.java))
-      .setRequiredNetworkType(android.app.job.JobInfo.NETWORK_TYPE_ANY).setPeriodic(12 * 60 * 60 * 1000L).setPersisted(true).build())
+      .setRequiredNetworkType(android.app.job.JobInfo.NETWORK_TYPE_ANY).setPeriodic(6 * 60 * 60 * 1000L).setPersisted(true).build())
   }
   fun resume(c: Context) { schedule(c); submit { reconcile(c); if (prefs(c).getBoolean("autoCheck", true)) check(c, false) } }
   fun background(c: Context) { android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ submit { tryAutoInstall(c.applicationContext) } }, 2000) }
@@ -63,11 +63,19 @@ object ReleaseUpdater {
   }
   fun check(c: Context, force: Boolean) {
     val p = prefs(c)
-    if (!force && System.currentTimeMillis() - p.getLong("lastAttempt", 0) < 6 * 60 * 60 * 1000L) return
+    if (!force && System.currentTimeMillis() - p.getLong("lastAttempt", 0) < 45 * 60 * 1000L) return
     if (p.getString("phase", "") == "installing") return
     val remembered = p.getString("version", "") ?: ""
     if (remembered.isNotEmpty() && !ReleasePolicy.newer(remembered, installed(c).versionName ?: "0.0.0")) { forgetRelease(c); apk(c).delete(); if (p.getString("phase", "") == "ready") state(c, "idle") }
-    if (p.getLong("downloadId", -1) != -1L || p.getString("phase", "") == "ready") { reconcile(c); return }
+    if (p.getLong("downloadId", -1) != -1L || p.getString("phase", "") == "ready") {
+      // A newer release may have appeared while an older one was waiting: replace it instead of installing a stale build.
+      val waiting = p.getString("version", "") ?: ""
+      val latest = try { json(API).optString("tag_name") } catch (_: Exception) { "" }
+      if (waiting.isNotEmpty() && latest.matches(Regex("v[0-9]+\\.[0-9]+\\.[0-9]+")) && ReleasePolicy.newer(latest, waiting)) {
+        val id = p.getLong("downloadId", -1); if (id != -1L) try { manager(c).remove(id) } catch (_: Exception) { }
+        clearSession(c); forgetRelease(c); apk(c).delete(); state(c, "idle")
+      } else { reconcile(c); return }
+    }
     p.edit().putLong("lastAttempt", System.currentTimeMillis()).apply(); state(c, "checking")
     try {
       val release = json(API)
